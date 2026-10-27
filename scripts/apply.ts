@@ -1,32 +1,33 @@
 /**
- * Idempotent copy-in of quality-kit templates.
+ * Idempotent copy-in of quality-kit templates by language pack.
  * - Copies missing files only (never overwrites existing config)
- * - Merges package.json scripts / devDependencies / lint-staged
- * - Seeds empty complexity + rev-dep baselines when missing
+ * - Merges package.json scripts / devDependencies / lint-staged when js-ts selected
  *
- * Usage: pnpm apply -- --target /path/to/repo [--python] [--force-scripts]
+ * Usage: pnpm apply -- --target /path/to/repo [--packs a,b] [--python] [--force-scripts]
  *
- * --python: include Python templates even if no .py detected
+ * --packs: override detection (comma-separated: js-ts,python,rust,dart)
+ * --python: add python pack (back-compat)
  * --force-scripts: overwrite matching script keys with kit values
  */
 
 import { existsSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import {
-	COPY_PATHS,
+	composedGateFast,
 	copyIfMissing,
+	copyPathsForPacks,
 	expectedDevDeps,
 	expectedLintStaged,
 	expectedScripts,
-	hasPython,
-	PYTHON_COPY_PATHS,
+	packTemplatesRoot,
+	resolvePacks,
 	resolveTarget,
-	templatesRoot,
+	type PackId,
 } from "./lib";
 
 function mergePackageJson(
 	target: string,
-	withPy: boolean,
+	packs: PackId[],
 	forceScripts: boolean,
 ): void {
 	const pkgPath = join(target, "package.json");
@@ -43,7 +44,10 @@ function mergePackageJson(
 	};
 
 	pkg.scripts ??= {};
-	const wantScripts = expectedScripts(withPy);
+	const wantScripts = expectedScripts(packs);
+	const gateFast = composedGateFast(packs);
+	if (gateFast) wantScripts["gate:fast"] = gateFast;
+
 	for (const [name, value] of Object.entries(wantScripts)) {
 		const existed = Object.hasOwn(pkg.scripts, name);
 		if (!existed || forceScripts) {
@@ -56,15 +60,8 @@ function mergePackageJson(
 		}
 	}
 
-	// Compose gate:fast with lint:py when Python present and gate:fast was just kit-default
-	if (withPy && pkg.scripts["gate:fast"] === wantScripts["gate:fast"]) {
-		pkg.scripts["gate:fast"] =
-			"pnpm lint && pnpm lint:graph && pnpm lint:complexity && pnpm typecheck && pnpm lint:py";
-		console.log("  script set  gate:fast (+ lint:py)");
-	}
-
 	pkg.devDependencies ??= {};
-	const wantDeps = expectedDevDeps();
+	const wantDeps = expectedDevDeps(packs);
 	for (const [name, version] of Object.entries(wantDeps)) {
 		if (!(name in pkg.devDependencies)) {
 			pkg.devDependencies[name] = version;
@@ -75,7 +72,7 @@ function mergePackageJson(
 	}
 
 	if (!pkg["lint-staged"]) {
-		pkg["lint-staged"] = expectedLintStaged();
+		pkg["lint-staged"] = expectedLintStaged(packs);
 		console.log("  lint-staged added");
 	} else {
 		console.log("  lint-staged skip (exists)");
@@ -93,7 +90,6 @@ function mergePackageJson(
 function main(): void {
 	const argv = process.argv.slice(2);
 	const target = resolveTarget(argv);
-	const forcePython = argv.includes("--python");
 	const forceScripts = argv.includes("--force-scripts");
 
 	if (!existsSync(target)) {
@@ -101,40 +97,54 @@ function main(): void {
 		process.exit(2);
 	}
 
-	const withPy = forcePython || hasPython(target);
-	const paths = [...COPY_PATHS, ...(withPy ? PYTHON_COPY_PATHS : [])];
+	const packs = resolvePacks(target, argv);
+	const entries = copyPathsForPacks(packs);
 
 	console.log(`# quality-kit apply → ${target}`);
-	console.log(`Python templates: ${withPy ? "yes" : "no"}`);
+	console.log(`Packs: ${packs.length ? packs.join(", ") : "(none)"}`);
 	console.log("");
 
+	if (entries.length === 0) {
+		console.log("## files");
+		console.log("  (no templates for selected packs — stub or empty)");
+		console.log("");
+		if (!packs.includes("js-ts")) {
+			console.log("Nothing to apply. Add a pack with templates (e.g. js-ts).");
+			return;
+		}
+	}
+
 	console.log("## files");
-	for (const rel of paths) {
-		const src = join(templatesRoot, rel);
+	for (const { pack, rel } of entries) {
+		const src = join(packTemplatesRoot(pack), rel);
 		const dest = join(target, rel);
 		const result = copyIfMissing(src, dest);
-		console.log(`  ${result.padEnd(8)} ${rel}`);
+		console.log(`  ${result.padEnd(8)} [${pack}] ${rel}`);
 		if (result === "copied" && rel.endsWith(".sh")) {
 			chmodSync(dest, 0o755);
 		}
 	}
 
-	console.log("");
-	console.log("## package.json");
-	mergePackageJson(target, withPy, forceScripts);
+	if (packs.includes("js-ts")) {
+		console.log("");
+		console.log("## package.json");
+		mergePackageJson(target, packs, forceScripts);
 
-	console.log("");
-	console.log("Next:");
-	console.log("  1. Adjust rev-dep.config.json entry points / moduleBoundaries");
-	console.log("  2. If pnpm-workspace.yaml already existed, merge allowBuilds: esbuild");
-	console.log("  3. pnpm install");
-	console.log("  4. Seed complexity: pnpm lint:complexity -- --update");
-	console.log(
-		"  5. Seed rev-dep:    pnpm lint:graph -- --update-snapshot  (creates .rev-dep.baseline.json + .rev-dep.duplicates.json; do not hand-write them)",
-	);
-	console.log("  6. Merge AGENTS.quality.md into AGENTS.md");
-	if (withPy) {
-		console.log("  7. Refine tach.toml modules; uvx vulture@2.16 --make-whitelist");
+		console.log("");
+		console.log("Next (see languages/js-ts/MODULE.md):");
+		console.log("  1. Adjust rev-dep.config.json entry points / moduleBoundaries");
+		console.log("  2. If pnpm-workspace.yaml already existed, merge allowBuilds: esbuild");
+		console.log("  3. pnpm install");
+		console.log("  4. Seed complexity: pnpm lint:complexity -- --update");
+		console.log(
+			"  5. Seed rev-dep:    pnpm lint:graph -- --update-snapshot  (creates .rev-dep.baseline.json + .rev-dep.duplicates.json; do not hand-write them)",
+		);
+		console.log("  6. Merge AGENTS.quality.md into AGENTS.md");
+		if (packs.includes("python")) {
+			console.log(
+				"  7. Refine tach.toml modules; uvx vulture@2.16 --make-whitelist",
+			);
+		}
 	}
 }
 

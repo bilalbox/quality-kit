@@ -10,10 +10,21 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const kitRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-export const templatesRoot = join(kitRoot, "templates");
+export const languagesRoot = join(kitRoot, "languages");
 
-/** Files copied into target repos. Manifest JSON fragments are handled separately. */
-export const COPY_PATHS = [
+export const PACK_IDS = ["js-ts", "python", "rust", "dart"] as const;
+export type PackId = (typeof PACK_IDS)[number];
+
+export type Pack = {
+	id: PackId;
+	/** Relpaths under languages/<id>/templates/ → target root. */
+	copyPaths: readonly string[];
+	/** Script names to append into gate:fast when this pack is selected with js-ts. */
+	gateFragments?: readonly string[];
+};
+
+/** Files copied for js-ts. Manifest JSON fragments are handled separately. */
+const JS_TS_COPY_PATHS = [
 	"biome.json",
 	"biome.complexity.json",
 	"tsconfig.base.json",
@@ -44,18 +55,34 @@ export const COPY_PATHS = [
 	"AGENTS.quality.md",
 ] as const;
 
-export const PYTHON_COPY_PATHS = [
+const PYTHON_COPY_PATHS = [
 	"pyproject.toml",
 	"tach.toml",
 	"vulture_whitelist.py",
 ] as const;
 
+export const PACKS: Record<PackId, Pack> = {
+	"js-ts": { id: "js-ts", copyPaths: JS_TS_COPY_PATHS },
+	python: {
+		id: "python",
+		copyPaths: PYTHON_COPY_PATHS,
+		gateFragments: ["lint:py"],
+	},
+	rust: { id: "rust", copyPaths: [] },
+	dart: { id: "dart", copyPaths: [] },
+};
+
 export type DriftKind = "missing" | "match" | "drift" | "present-custom";
 
 export type FileReport = {
 	path: string;
+	pack: PackId;
 	kind: DriftKind;
 };
+
+export function packTemplatesRoot(id: PackId): string {
+	return join(languagesRoot, id, "templates");
+}
 
 export function hasPython(target: string): boolean {
 	const walk = (dir: string, depth: number): boolean => {
@@ -74,6 +101,40 @@ export function hasPython(target: string): boolean {
 		return false;
 	};
 	return walk(target, 0);
+}
+
+export function detectPacks(target: string): PackId[] {
+	const found: PackId[] = [];
+	if (existsSync(join(target, "package.json"))) found.push("js-ts");
+	if (hasPython(target)) found.push("python");
+	if (existsSync(join(target, "Cargo.toml"))) found.push("rust");
+	if (existsSync(join(target, "pubspec.yaml"))) found.push("dart");
+	return found;
+}
+
+/** Parse --packs and --python from argv; merge with detection when --packs omitted. */
+export function resolvePacks(target: string, argv: string[]): PackId[] {
+	const packsIdx = argv.indexOf("--packs");
+	let packs: PackId[];
+	if (packsIdx !== -1 && argv[packsIdx + 1]) {
+		const raw = argv[packsIdx + 1]!.split(",").map((s) => s.trim());
+		packs = [];
+		for (const id of raw) {
+			if (!(PACK_IDS as readonly string[]).includes(id)) {
+				console.error(
+					`Unknown pack "${id}". Valid: ${PACK_IDS.join(", ")}`,
+				);
+				process.exit(2);
+			}
+			if (!packs.includes(id as PackId)) packs.push(id as PackId);
+		}
+	} else {
+		packs = detectPacks(target);
+	}
+	if (argv.includes("--python") && !packs.includes("python")) {
+		packs.push("python");
+	}
+	return packs;
 }
 
 export function readText(path: string): string {
@@ -100,20 +161,31 @@ export function copyIfMissing(
 	return existed ? "overwrote" : "copied";
 }
 
-export function reportFile(targetRoot: string, rel: string): FileReport {
-	const templatePath = join(templatesRoot, rel);
+export function reportFile(
+	targetRoot: string,
+	pack: PackId,
+	rel: string,
+): FileReport {
+	const templatePath = join(packTemplatesRoot(pack), rel);
 	const targetPath = join(targetRoot, rel);
-	if (!existsSync(targetPath)) return { path: rel, kind: "missing" };
-	if (!existsSync(templatePath)) return { path: rel, kind: "present-custom" };
+	if (!existsSync(targetPath)) return { path: rel, pack, kind: "missing" };
+	if (!existsSync(templatePath))
+		return { path: rel, pack, kind: "present-custom" };
 	const a = normalize(readText(templatePath));
 	const b = normalize(readText(targetPath));
-	return { path: rel, kind: a === b ? "match" : "drift" };
+	return { path: rel, pack, kind: a === b ? "match" : "drift" };
 }
 
-export function expectedScripts(withPy: boolean): Record<string, string> {
+function jsTsManifest(name: string): string {
+	return join(packTemplatesRoot("js-ts"), name);
+}
+
+export function expectedScripts(packs: PackId[]): Record<string, string> {
+	if (!packs.includes("js-ts")) return {};
 	const scripts = JSON.parse(
-		readText(join(templatesRoot, "package.scripts.json")),
+		readText(jsTsManifest("package.scripts.json")),
 	) as Record<string, string>;
+	const withPy = packs.includes("python");
 	if (!withPy) {
 		delete scripts["lint:py"];
 		delete scripts["gate:fast:py"];
@@ -121,26 +193,62 @@ export function expectedScripts(withPy: boolean): Record<string, string> {
 	return scripts;
 }
 
-export function expectedDevDeps(): Record<string, string> {
+/** Composed gate:fast including gateFragments from selected packs. */
+export function composedGateFast(packs: PackId[]): string | null {
+	if (!packs.includes("js-ts")) return null;
+	const base = expectedScripts(packs)["gate:fast"];
+	if (!base) return null;
+	const extras: string[] = [];
+	for (const id of packs) {
+		for (const frag of PACKS[id].gateFragments ?? []) {
+			extras.push(`pnpm ${frag}`);
+		}
+	}
+	if (extras.length === 0) return base;
+	return `${base} && ${extras.join(" && ")}`;
+}
+
+export function expectedDevDeps(packs: PackId[]): Record<string, string> {
+	if (!packs.includes("js-ts")) return {};
 	return JSON.parse(
-		readText(join(templatesRoot, "package.devDependencies.json")),
+		readText(jsTsManifest("package.devDependencies.json")),
 	) as Record<string, string>;
 }
 
-export function expectedLintStaged(): Record<string, string[]> {
+export function expectedLintStaged(
+	packs: PackId[],
+): Record<string, string[]> {
+	if (!packs.includes("js-ts")) return {};
 	return JSON.parse(
-		readText(join(templatesRoot, "package.lint-staged.json")),
+		readText(jsTsManifest("package.lint-staged.json")),
 	) as Record<string, string[]>;
 }
 
 export function resolveTarget(argv: string[]): string {
 	const idx = argv.indexOf("--target");
 	if (idx !== -1 && argv[idx + 1]) return argv[idx + 1]!;
-	const positional = argv.find((a) => !a.startsWith("-"));
+	const positional = argv.find(
+		(a, i) =>
+			!a.startsWith("-") &&
+			argv[i - 1] !== "--target" &&
+			argv[i - 1] !== "--packs",
+	);
 	if (positional) return positional;
 	return process.cwd();
 }
 
 export function relToKit(path: string): string {
 	return relative(kitRoot, path) || ".";
+}
+
+export function copyPathsForPacks(
+	packs: PackId[],
+): { pack: PackId; rel: string }[] {
+	const out: { pack: PackId; rel: string }[] = [];
+	for (const id of packs) {
+		for (const rel of PACKS[id].copyPaths) {
+			out.push({ pack: id, rel });
+		}
+	}
+	return out;
 }
