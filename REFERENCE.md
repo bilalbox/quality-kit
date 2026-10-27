@@ -42,7 +42,7 @@ Finding ID: `file|functionName`, with `|line` when anonymous or ambiguous.
 
 ## Python pins
 
-Scripts use: `ruff@0.17.2`, `basedpyright@1.1.414`, `tach@0.35.3`, `vulture@2.16`.
+Scripts use: `ruff@0.17.2`, `basedpyright@1.40.2`, `tach@0.35.3`, `vulture@2.16`.
 
 - `tach.toml`: run `uvx tach@0.35.3 init` then refine `[[modules]]`. Keep `forbid_circular_dependencies = true`.
 - Vulture: commit `vulture_whitelist.py` from `--make-whitelist`; treat like a baseline.
