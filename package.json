@@ -1,0 +1,18 @@
+{
+	"name": "quality-kit",
+	"private": true,
+	"type": "module",
+	"description": "Copy-in quality gate templates and skill for JS/TS (+ optional Python) repos",
+	"scripts": {
+		"audit": "tsx scripts/audit.ts",
+		"apply": "tsx scripts/apply.ts"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.0",
+		"tsx": "^4.20.0",
+		"typescript": "^5.9.0"
+	},
+	"engines": {
+		"node": ">=24.0.0"
+	}
+}

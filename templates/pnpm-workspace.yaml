@@ -1,0 +1,3 @@
+# pnpm v11+ allowBuilds (supply-chain). Approve additions with: pnpm approve-builds <pkg>
+allowBuilds:
+  esbuild: true

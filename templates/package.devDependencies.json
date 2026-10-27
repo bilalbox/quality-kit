@@ -1,0 +1,8 @@
+{
+	"@biomejs/biome": "^2.6.3",
+	"husky": "^9.1.7",
+	"lint-staged": "^17.6.0",
+	"rev-dep": "^3.3.0",
+	"tsx": "^4.20.0",
+	"typescript": "^5.9.0"
+}
