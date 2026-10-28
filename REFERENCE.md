@@ -24,7 +24,8 @@ Finding ID shape is pack-specific (see js-ts module for complexity IDs).
 
 Principles (js-ts host today):
 
-- pre-commit: fast staged checks (`lint-staged`)
+- pre-commit: fast staged checks (Betterleaks `git --staged` + `lint-staged`)
+
 - pre-push / CI: full `gate` (+ ratchet contract tests in the quality-gate action)
 - Pin runtime via `.nvmrc` / `engines`; `engine-strict=true`
 - `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
