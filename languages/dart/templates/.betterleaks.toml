@@ -1,0 +1,28 @@
+# Quality-kit Betterleaks v1 config (pin binary to 1.x until v2 is stable).
+# Extends built-in rules. Pass -c explicitly — auto-load requires --unsafe-auto-load-config.
+
+title = "quality-kit dart secret detection"
+betterleaksMinVersion = "v1.9.0"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore tests, mocks, Flutter/Android build caches, and local secret files"
+paths = [
+  '''(?i)tests?\/.*''',
+  '''(?i).*_test\.dart$''',
+  '''(?i)fixtures\/.*''',
+  '''(?i)\.dart_tool\/''',
+  '''(?i)(?:^|/)build/''',
+  '''(?i)(?:^|/)android/\.gradle/''',
+  '''(?i)(?:^|/)android/app/build/''',
+  '''(?:^|/)\.env$''',
+  '''(?:^|/)\.env\.''',
+  '''(?:^|/)\.dev\.vars$''',
+  '''(?:^|/)\.dev\.vars\.''',
+  # Local Android signing secrets (gitignored; still caught if staged/committed).
+  '''(?i)(?:^|/)key\.properties$''',
+  '''(?i)\.jks$''',
+  '''(?i)\.keystore$'''
+]

@@ -1,0 +1,10 @@
+name: Quality gate
+description: Format, analyze, secrets, dependency_validator, and tests
+runs:
+  using: composite
+  steps:
+    - name: Gate
+      run: ./tools/quality/gate.sh full
+      shell: bash
+      env:
+        CI: "true"

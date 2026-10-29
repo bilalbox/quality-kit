@@ -1,6 +1,6 @@
 # quality-kit
 
-Copy-in templates and a skill for shared quality gates by language pack: JS/TS (Biome, `tsc -b`, rev-dep, complexity ratchet, husky/CI), optional Python (`uvx`), with Rust/Dart packs reserved.
+Copy-in templates and a skill for shared quality gates by language pack: JS/TS (Biome, `tsc -b`, rev-dep, complexity ratchet, husky/CI), optional Python (`uvx`), Dart/Flutter (format, analyze, Betterleaks, dependency_validator, lefthook/CI), with Rust reserved.
 
 ## Use
 
@@ -9,9 +9,12 @@ pnpm install
 pnpm run audit -- --target ~/mycode/<repo>
 pnpm apply -- --target ~/mycode/<repo>
 pnpm apply -- --target ~/mycode/<repo> --packs js-ts,python
+pnpm apply -- --target ~/mycode/<repo> --packs dart
 ```
 
 Packs are detected from the target, or set with `--packs`. `--python` adds the python pack.
+
+`js-ts` detection ignores stub `package.json` files with no dependencies (common in Flutter repos). Override with `--packs` when needed.
 
 Agent skill: [SKILL.md](SKILL.md) (symlinked as `quality-gates`, user-invoked). Shared reference: [REFERENCE.md](REFERENCE.md). Pack modules: `languages/*/MODULE.md`.
 

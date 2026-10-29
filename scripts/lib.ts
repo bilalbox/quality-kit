@@ -64,6 +64,33 @@ const PYTHON_COPY_PATHS = [
 	"vulture_whitelist.py",
 ] as const;
 
+/** Repo-root files for the dart host pack. Package-level files go via dartPackageCopyPaths. */
+const DART_COPY_PATHS = [
+	"quality-kit.dart.json",
+	"lefthook.yml",
+	".editorconfig",
+	".betterleaks.toml",
+	".betterleaksignore",
+	"Makefile",
+	"AGENTS.quality.md",
+	".github/workflows/ci.yml",
+	".github/actions/setup-flutter/action.yml",
+	".github/actions/quality-gate/action.yml",
+	"tools/quality/lib.sh",
+	"tools/quality/gate.sh",
+	"tools/quality/run-secret-scan.sh",
+	"tools/quality/run-format.sh",
+	"tools/quality/run-analyze.sh",
+	"tools/quality/run-deps.sh",
+	"tools/quality/run-test.sh",
+] as const;
+
+/** Copied into each Dart package root (see resolveDartRoots). */
+export const DART_PACKAGE_COPY_PATHS = [
+	"analysis_options.yaml",
+	"dart_dependency_validator.yaml",
+] as const;
+
 export const PACKS: Record<PackId, Pack> = {
 	"js-ts": { id: "js-ts", copyPaths: JS_TS_COPY_PATHS },
 	python: {
@@ -72,7 +99,7 @@ export const PACKS: Record<PackId, Pack> = {
 		gateFragments: ["lint:py"],
 	},
 	rust: { id: "rust", copyPaths: [] },
-	dart: { id: "dart", copyPaths: [] },
+	dart: { id: "dart", copyPaths: DART_COPY_PATHS },
 };
 
 export type DriftKind = "missing" | "match" | "drift" | "present-custom";
@@ -87,12 +114,42 @@ export function packTemplatesRoot(id: PackId): string {
 	return join(languagesRoot, id, "templates");
 }
 
+const SKIP_DIRS = new Set([
+	"node_modules",
+	".git",
+	"dist",
+	"build",
+	".dart_tool",
+	".idea",
+	".vscode",
+	"ephemeral", // Flutter iOS/macOS generated helpers (e.g. flutter_lldb_helper.py)
+]);
+
+/** True when package.json looks like a real JS/TS project (not a Flutter stub). */
+export function hasJsTs(target: string): boolean {
+	const pkgPath = join(target, "package.json");
+	if (!existsSync(pkgPath)) return false;
+	try {
+		const pkg = JSON.parse(readText(pkgPath)) as {
+			dependencies?: Record<string, string>;
+			devDependencies?: Record<string, string>;
+		};
+		const deps = {
+			...(pkg.dependencies ?? {}),
+			...(pkg.devDependencies ?? {}),
+		};
+		// Stub package.json + orphan lockfile (common in Flutter repos) → not js-ts.
+		return Object.keys(deps).length > 0;
+	} catch {
+		return true;
+	}
+}
+
 export function hasPython(target: string): boolean {
 	const walk = (dir: string, depth: number): boolean => {
 		if (depth > 4 || !existsSync(dir)) return false;
 		for (const entry of readdirSync(dir)) {
-			if (entry === "node_modules" || entry === ".git" || entry === "dist")
-				continue;
+			if (SKIP_DIRS.has(entry)) continue;
 			const path = join(dir, entry);
 			const st = statSync(path);
 			if (st.isDirectory()) {
@@ -106,12 +163,77 @@ export function hasPython(target: string): boolean {
 	return walk(target, 0);
 }
 
+/** True when any pubspec.yaml exists within depth 3 (root Flutter app or nested `app/`). */
+export function hasDart(target: string): boolean {
+	const walk = (dir: string, depth: number): boolean => {
+		if (depth > 3 || !existsSync(dir)) return false;
+		for (const entry of readdirSync(dir)) {
+			if (SKIP_DIRS.has(entry)) continue;
+			const path = join(dir, entry);
+			const st = statSync(path);
+			if (st.isDirectory()) {
+				if (walk(path, depth + 1)) return true;
+			} else if (entry === "pubspec.yaml") {
+				return true;
+			}
+		}
+		return false;
+	};
+	return walk(target, 0);
+}
+
+/**
+ * Package dirs that contain pubspec.yaml.
+ * Uses quality-kit.dart.json `roots` when non-empty; otherwise auto-detects
+ * (`.` if root pubspec, else depth-1 then depth-2 package dirs).
+ */
+export function resolveDartRoots(target: string): string[] {
+	const cfgPath = join(target, "quality-kit.dart.json");
+	if (existsSync(cfgPath)) {
+		try {
+			const cfg = JSON.parse(readText(cfgPath)) as { roots?: unknown };
+			if (Array.isArray(cfg.roots) && cfg.roots.length > 0) {
+				return cfg.roots.filter((r): r is string => typeof r === "string");
+			}
+		} catch {
+			/* fall through to auto-detect */
+		}
+	}
+
+	if (existsSync(join(target, "pubspec.yaml"))) return ["."];
+
+	const depth1: string[] = [];
+	for (const entry of readdirSync(target)) {
+		if (SKIP_DIRS.has(entry)) continue;
+		const dir = join(target, entry);
+		if (!statSync(dir).isDirectory()) continue;
+		if (existsSync(join(dir, "pubspec.yaml"))) depth1.push(entry);
+	}
+	if (depth1.length > 0) return depth1.sort();
+
+	const depth2: string[] = [];
+	for (const entry of readdirSync(target)) {
+		if (SKIP_DIRS.has(entry)) continue;
+		const dir = join(target, entry);
+		if (!statSync(dir).isDirectory()) continue;
+		for (const child of readdirSync(dir)) {
+			if (SKIP_DIRS.has(child)) continue;
+			const sub = join(dir, child);
+			if (!statSync(sub).isDirectory()) continue;
+			if (existsSync(join(sub, "pubspec.yaml"))) {
+				depth2.push(join(entry, child));
+			}
+		}
+	}
+	return depth2.sort();
+}
+
 export function detectPacks(target: string): PackId[] {
 	const found: PackId[] = [];
-	if (existsSync(join(target, "package.json"))) found.push("js-ts");
+	if (hasJsTs(target)) found.push("js-ts");
 	if (hasPython(target)) found.push("python");
 	if (existsSync(join(target, "Cargo.toml"))) found.push("rust");
-	if (existsSync(join(target, "pubspec.yaml"))) found.push("dart");
+	if (hasDart(target)) found.push("dart");
 	return found;
 }
 

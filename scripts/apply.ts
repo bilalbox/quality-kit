@@ -16,10 +16,12 @@ import {
 	composedGateFast,
 	copyIfMissing,
 	copyPathsForPacks,
+	DART_PACKAGE_COPY_PATHS,
 	expectedDevDeps,
 	expectedLintStaged,
 	expectedScripts,
 	packTemplatesRoot,
+	resolveDartRoots,
 	resolvePacks,
 	resolveTarget,
 	type PackId,
@@ -125,6 +127,23 @@ function main(): void {
 		}
 	}
 
+	if (packs.includes("dart")) {
+		console.log("");
+		console.log("## dart package files");
+		const roots = resolveDartRoots(target);
+		if (roots.length === 0) {
+			console.log("  (no package roots found — set quality-kit.dart.json roots)");
+		}
+		for (const root of roots) {
+			for (const rel of DART_PACKAGE_COPY_PATHS) {
+				const src = join(packTemplatesRoot("dart"), "package", rel);
+				const dest = join(target, root === "." ? rel : join(root, rel));
+				const result = copyIfMissing(src, dest);
+				console.log(`  ${result.padEnd(8)} [${root}] ${rel}`);
+			}
+		}
+	}
+
 	if (packs.includes("js-ts")) {
 		console.log("");
 		console.log("## package.json");
@@ -145,6 +164,17 @@ function main(): void {
 				"  7. Refine tach.toml modules; uvx vulture@2.16 --make-whitelist",
 			);
 		}
+	}
+
+	if (packs.includes("dart")) {
+		console.log("");
+		console.log("Next (see languages/dart/MODULE.md):");
+		console.log("  1. Set quality-kit.dart.json roots (e.g. [\"app\"]) and flutterEnv if needed");
+		console.log("  2. Install Betterleaks v1.9.0+ and lefthook on the host");
+		console.log("  3. lefthook install");
+		console.log("  4. If Makefile already existed, wire gate / gate-fast to tools/quality/gate.sh");
+		console.log("  5. Merge AGENTS.quality.md into AGENTS.md");
+		console.log("  6. ./tools/quality/gate.sh full");
 	}
 }
 

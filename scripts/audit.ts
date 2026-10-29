@@ -9,14 +9,48 @@ import { join } from "node:path";
 import {
 	composedGateFast,
 	copyPathsForPacks,
+	DART_PACKAGE_COPY_PATHS,
 	expectedDevDeps,
 	expectedLintStaged,
 	expectedScripts,
+	normalize,
+	packTemplatesRoot,
+	readText,
 	reportFile,
+	resolveDartRoots,
 	resolvePacks,
 	resolveTarget,
 	type FileReport,
 } from "./lib";
+
+function reportDartPackageFile(
+	targetRoot: string,
+	packageRoot: string,
+	rel: string,
+): FileReport {
+	const templatePath = join(packTemplatesRoot("dart"), "package", rel);
+	const targetPath = join(
+		targetRoot,
+		packageRoot === "." ? rel : join(packageRoot, rel),
+	);
+	if (!existsSync(targetPath)) {
+		return { path: `${packageRoot}/${rel}`, pack: "dart", kind: "missing" };
+	}
+	if (!existsSync(templatePath)) {
+		return {
+			path: `${packageRoot}/${rel}`,
+			pack: "dart",
+			kind: "present-custom",
+		};
+	}
+	const a = normalize(readText(templatePath));
+	const b = normalize(readText(targetPath));
+	return {
+		path: `${packageRoot}/${rel}`,
+		pack: "dart",
+		kind: a === b ? "match" : "drift",
+	};
+}
 
 function main(): void {
 	const argv = process.argv.slice(2);
@@ -31,6 +65,14 @@ function main(): void {
 	const reports: FileReport[] = entries.map(({ pack, rel }) =>
 		reportFile(target, pack, rel),
 	);
+
+	if (packs.includes("dart")) {
+		for (const root of resolveDartRoots(target)) {
+			for (const rel of DART_PACKAGE_COPY_PATHS) {
+				reports.push(reportDartPackageFile(target, root, rel));
+			}
+		}
+	}
 
 	const pkgPath = join(target, "package.json");
 	const pkg = existsSync(pkgPath)
@@ -117,6 +159,17 @@ function main(): void {
 			pkg?.engines?.node
 				? `  engines.node: ${pkg.engines.node}`
 				: "  engines.node missing",
+		);
+	}
+
+	if (packs.includes("dart")) {
+		console.log("");
+		console.log("## dart roots");
+		const roots = resolveDartRoots(target);
+		console.log(
+			roots.length
+				? `  ${roots.join(", ")}`
+				: "  (none — set quality-kit.dart.json roots)",
 		);
 	}
 

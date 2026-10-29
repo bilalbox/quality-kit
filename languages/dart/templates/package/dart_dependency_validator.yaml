@@ -1,0 +1,10 @@
+# quality-kit defaults for dependency_validator 5.x
+allow_pins: true
+ignore:
+  # Analyzer config / codegen tooling — not imported from lib/
+  - flutter_lints
+  - flutter_launcher_icons
+  - build_runner
+  - json_serializable
+  - freezed
+  - freezed_annotation
