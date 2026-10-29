@@ -1,0 +1,4 @@
+{
+	"lint:py": "uvx ruff@0.17.2 check . && uvx ruff@0.17.2 format --check . && uvx basedpyright@1.40.2 && uvx tach@0.35.3 check && uvx vulture@2.16 . vulture_whitelist.py",
+	"gate:fast:py": "pnpm gate:fast && pnpm lint:py"
+}

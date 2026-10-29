@@ -13,10 +13,18 @@ Shrink-only baseline comparison (js-ts complexity uses `scripts/ratchets/compare
 
 Finding ID shape is pack-specific (see js-ts module for complexity IDs). Dart pack v1 has no complexity ratchet yet.
 
+## Desired state
+
+Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Contribution**. Those merge into one **Desired state** for the **Target**: root file placements, optional package-scoped placements (dart), and optional `package.json` expectations (js-ts Host, plus Fragment script/gate pieces).
+
+- Overlapping target paths: **first-wins** by Pack selection order (detect order, or `--packs` order).
+- Fragment without Host (e.g. `--packs python`): file placements still apply; `package.json` expectations only when the js-ts Host is selected.
+- Kit code: `scripts/desired-state.ts` (`desiredState`, `diffAgainst`); Pack adapters in `scripts/packs/`.
+
 ## apply / audit semantics
 
-- **apply** copies missing files only; never overwrites. Merges missing `package.json` scripts/devDeps/`lint-staged`/`engines` when the `js-ts` pack is selected. For `dart`, also copies package-level files (`analysis_options.yaml`, `dart_dependency_validator.yaml`) into each resolved package root.
-- **audit** reports match / missing / drift vs pack templates (read-only).
+- **apply** builds Desired state, copies missing placement files only (never overwrites), sets executable bit when the placement asks for it, and merges missing `package.json` scripts/devDeps/`lint-staged`/`engines` from Desired state. Policy flags like `--force-scripts` stay in the apply adapter.
+- **audit** builds the same Desired state, diffs the Target via `diffAgainst` (content/presence; mode ignored), and exits non-zero on gaps.
 - Template updates: audit shows drift; humans re-copy deliberately (no auto-overwrite).
 - Packs: detect from target, or `--packs a,b`. `--python` adds the `python` pack.
 

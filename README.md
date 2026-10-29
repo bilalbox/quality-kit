@@ -22,4 +22,7 @@ Agent skill: [SKILL.md](SKILL.md) (symlinked as `quality-gates`, user-invoked). 
 
 - `languages/<pack>/templates/` — files `apply` copies into a target repo
 - `languages/<pack>/MODULE.md` — pack tools, pins, post-apply steps
-- `scripts/audit.ts` / `scripts/apply.ts` — conformance report and idempotent copy-in
+- `scripts/packs/` — Pack adapters (detect + Contribution)
+- `scripts/desired-state.ts` — Desired state build + diff
+- `scripts/audit.ts` / `scripts/apply.ts` — thin adapters over Desired state
+- `GLOSSARY.md` — domain terms (Pack, Desired state, Target, …)

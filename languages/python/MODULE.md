@@ -2,7 +2,7 @@
 
 Detect: any `.py` within depth 4. Force with `--packs …,python` or `--python`. Templates: `languages/python/templates/`.
 
-Composes onto a `js-ts` host: adds `lint:py` and appends it to `gate:fast`.
+Fragment Pack onto a `js-ts` Host: contributes `package.scripts.json` (`lint:py`, `gate:fast:py`) and appends `lint:py` onto Desired-state `gate:fast`.
 
 ## Tools
 

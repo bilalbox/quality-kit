@@ -64,5 +64,6 @@ Before pack-specific steps, **read** each selected pack's module:
 
 ## Reference
 
-- Shared ratchet / apply / CI: [REFERENCE.md](REFERENCE.md)
+- Domain terms: [GLOSSARY.md](GLOSSARY.md)
+- Shared ratchet / Desired state / apply / CI: [REFERENCE.md](REFERENCE.md)
 - Adoption specs: [sim-iq#296](https://github.com/bilalbox/sim-iq/issues/296), [lenses#2](https://github.com/bilalbox/lenses/issues/2), [taseel#7](https://github.com/bilalbox/taseel/issues/7), [arcgym#23](https://github.com/bilalbox/arcgym/issues/23)

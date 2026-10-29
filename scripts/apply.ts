@@ -1,37 +1,29 @@
 /**
  * Idempotent copy-in of quality-kit templates by language pack.
- * - Copies missing files only (never overwrites existing config)
- * - Merges package.json scripts / devDependencies / lint-staged when js-ts selected
+ * Builds Desired state, then writes missing files / merges package.json.
  *
  * Usage: pnpm apply -- --target /path/to/repo [--packs a,b] [--python] [--force-scripts]
- *
- * --packs: override detection (comma-separated: js-ts,python,rust,dart)
- * --python: add python pack (back-compat)
- * --force-scripts: overwrite matching script keys with kit values
  */
 
-import { existsSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-	composedGateFast,
 	copyIfMissing,
-	copyPathsForPacks,
-	DART_PACKAGE_COPY_PATHS,
-	expectedDevDeps,
-	expectedLintStaged,
-	expectedScripts,
+	desiredState,
 	packTemplatesRoot,
-	resolveDartRoots,
 	resolvePacks,
 	resolveTarget,
-	type PackId,
+	type DesiredState,
 } from "./lib";
 
 function mergePackageJson(
 	target: string,
-	packs: PackId[],
+	state: DesiredState,
 	forceScripts: boolean,
 ): void {
+	const want = state.packageJson;
+	if (!want) return;
+
 	const pkgPath = join(target, "package.json");
 	if (!existsSync(pkgPath)) {
 		console.error("No package.json in target; create one first.");
@@ -42,15 +34,10 @@ function mergePackageJson(
 		devDependencies?: Record<string, string>;
 		"lint-staged"?: Record<string, string[]>;
 		engines?: { node?: string };
-		prepare?: string;
 	};
 
 	pkg.scripts ??= {};
-	const wantScripts = expectedScripts(packs);
-	const gateFast = composedGateFast(packs);
-	if (gateFast) wantScripts["gate:fast"] = gateFast;
-
-	for (const [name, value] of Object.entries(wantScripts)) {
+	for (const [name, value] of Object.entries(want.scripts)) {
 		const existed = Object.hasOwn(pkg.scripts, name);
 		if (!existed || forceScripts) {
 			pkg.scripts[name] = value;
@@ -63,8 +50,7 @@ function mergePackageJson(
 	}
 
 	pkg.devDependencies ??= {};
-	const wantDeps = expectedDevDeps(packs);
-	for (const [name, version] of Object.entries(wantDeps)) {
+	for (const [name, version] of Object.entries(want.devDependencies)) {
 		if (!(name in pkg.devDependencies)) {
 			pkg.devDependencies[name] = version;
 			console.log(`  dep add     ${name}@${version}`);
@@ -74,7 +60,7 @@ function mergePackageJson(
 	}
 
 	if (!pkg["lint-staged"]) {
-		pkg["lint-staged"] = expectedLintStaged(packs);
+		pkg["lint-staged"] = want.lintStaged;
 		console.log("  lint-staged added");
 	} else {
 		console.log("  lint-staged skip (exists)");
@@ -82,11 +68,21 @@ function mergePackageJson(
 
 	pkg.engines ??= {};
 	if (!pkg.engines.node) {
-		pkg.engines.node = ">=24.0.0 <25";
-		console.log("  engines.node set >=24.0.0 <25");
+		pkg.engines.node = want.enginesNode;
+		console.log(`  engines.node set ${want.enginesNode}`);
 	}
 
 	writeFileSync(pkgPath, `${JSON.stringify(pkg, null, "\t")}\n`);
+}
+
+function packageRootLabel(targetRel: string): { root: string; file: string } {
+	const normalized = targetRel.replace(/\\/g, "/");
+	const idx = normalized.lastIndexOf("/");
+	if (idx === -1) return { root: ".", file: normalized };
+	return {
+		root: normalized.slice(0, idx),
+		file: normalized.slice(idx + 1),
+	};
 }
 
 function main(): void {
@@ -100,59 +96,70 @@ function main(): void {
 	}
 
 	const packs = resolvePacks(target, argv);
-	const entries = copyPathsForPacks(packs);
+	const state = desiredState(target, packs);
+	const placements = [...state.rootPlacements, ...state.packagePlacements];
 
 	console.log(`# quality-kit apply → ${target}`);
 	console.log(`Packs: ${packs.length ? packs.join(", ") : "(none)"}`);
 	console.log("");
 
-	if (entries.length === 0) {
+	if (placements.length === 0) {
 		console.log("## files");
 		console.log("  (no templates for selected packs — stub or empty)");
 		console.log("");
-		if (!packs.includes("js-ts")) {
-			console.log("Nothing to apply. Add a pack with templates (e.g. js-ts).");
+		if (!packs.includes("js-ts") && !packs.includes("dart")) {
+			console.log(
+				"Nothing to apply. Add a pack with templates (e.g. js-ts).",
+			);
 			return;
 		}
 	}
 
 	console.log("## files");
-	for (const { pack, rel } of entries) {
-		const src = join(packTemplatesRoot(pack), rel);
-		const dest = join(target, rel);
+	for (const p of state.rootPlacements) {
+		const src = join(packTemplatesRoot(p.pack), p.templateRel);
+		const dest = join(target, p.targetRel);
 		const result = copyIfMissing(src, dest);
-		console.log(`  ${result.padEnd(8)} [${pack}] ${rel}`);
-		if (result === "copied" && rel.endsWith(".sh")) {
+		console.log(`  ${result.padEnd(8)} [${p.pack}] ${p.targetRel}`);
+		if (result === "copied" && p.executable) {
 			chmodSync(dest, 0o755);
 		}
 	}
 
-	if (packs.includes("dart")) {
+	if (state.packagePlacements.length > 0) {
 		console.log("");
 		console.log("## dart package files");
-		const roots = resolveDartRoots(target);
-		if (roots.length === 0) {
-			console.log("  (no package roots found — set quality-kit.dart.json roots)");
-		}
-		for (const root of roots) {
-			for (const rel of DART_PACKAGE_COPY_PATHS) {
-				const src = join(packTemplatesRoot("dart"), "package", rel);
-				const dest = join(target, root === "." ? rel : join(root, rel));
-				const result = copyIfMissing(src, dest);
-				console.log(`  ${result.padEnd(8)} [${root}] ${rel}`);
+		for (const p of state.packagePlacements) {
+			const src = join(packTemplatesRoot(p.pack), p.templateRel);
+			const dest = join(target, p.targetRel);
+			const result = copyIfMissing(src, dest);
+			const { root, file } = packageRootLabel(p.targetRel);
+			console.log(`  ${result.padEnd(8)} [${root}] ${file}`);
+			if (result === "copied" && p.executable) {
+				chmodSync(dest, 0o755);
 			}
 		}
+	} else if (packs.includes("dart")) {
+		console.log("");
+		console.log("## dart package files");
+		console.log(
+			"  (no package roots found — set quality-kit.dart.json roots)",
+		);
 	}
 
-	if (packs.includes("js-ts")) {
+	if (state.packageJson) {
 		console.log("");
 		console.log("## package.json");
-		mergePackageJson(target, packs, forceScripts);
+		mergePackageJson(target, state, forceScripts);
 
 		console.log("");
 		console.log("Next (see languages/js-ts/MODULE.md):");
-		console.log("  1. Adjust rev-dep.config.json entry points / moduleBoundaries");
-		console.log("  2. If pnpm-workspace.yaml already existed, merge allowBuilds: esbuild");
+		console.log(
+			"  1. Adjust rev-dep.config.json entry points / moduleBoundaries",
+		);
+		console.log(
+			"  2. If pnpm-workspace.yaml already existed, merge allowBuilds: esbuild",
+		);
 		console.log("  3. pnpm install");
 		console.log("  4. Seed complexity: pnpm lint:complexity -- --update");
 		console.log(
@@ -169,10 +176,16 @@ function main(): void {
 	if (packs.includes("dart")) {
 		console.log("");
 		console.log("Next (see languages/dart/MODULE.md):");
-		console.log("  1. Set quality-kit.dart.json roots (e.g. [\"app\"]) and flutterEnv if needed");
-		console.log("  2. Install Betterleaks v1.9.0+ and lefthook on the host");
+		console.log(
+			'  1. Set quality-kit.dart.json roots (e.g. ["app"]) and flutterEnv if needed',
+		);
+		console.log(
+			"  2. Install Betterleaks v1.9.0+ and lefthook on the host",
+		);
 		console.log("  3. lefthook install");
-		console.log("  4. If Makefile already existed, wire gate / gate-fast to tools/quality/gate.sh");
+		console.log(
+			"  4. If Makefile already existed, wire gate / gate-fast to tools/quality/gate.sh",
+		);
 		console.log("  5. Merge AGENTS.quality.md into AGENTS.md");
 		console.log("  6. ./tools/quality/gate.sh full");
 	}
