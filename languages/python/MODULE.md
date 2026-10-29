@@ -1,8 +1,10 @@
 # Pack: python
 
-Detect: any `.py` within depth 4. Force with `--packs …,python` or `--python`. Templates: `languages/python/templates/`.
+Detect (product signal): root `pyproject.toml`, or any `.py` within depth 4 **outside** helper dirs (`tool`, `tools`, `scripts`, `script`, `bin`). Force with `--packs …,python` or `--python`. Templates: `languages/python/templates/`.
 
-Fragment Pack onto a `js-ts` Host: contributes `package.scripts.json` (`lint:py`, `gate:fast:py`) and appends `lint:py` onto Desired-state `gate:fast`.
+Incidental helper scripts (e.g. Flutter `tool/*.py`) do **not** auto-select this pack.
+
+Fragment Pack onto a `js-ts` Host: contributes `package.scripts.json` (`lint:py`, `gate:fast:py`) and appends `lint:py` onto Desired-state `gate:fast`. Without that Host, file templates can still apply but gate scripts are not wired (audit warns).
 
 ## Tools
 

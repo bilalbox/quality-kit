@@ -45,11 +45,14 @@ Pin **5.1.0** (`dart pub global activate dependency_validator 5.1.0`). Config pe
 
 ## Post-apply
 
-1. Set `quality-kit.dart.json` `roots` (and `flutterEnv` if the repo has one).
+1. Set `quality-kit.dart.json` `roots` (and `flutterEnv` if the repo has one). Root Flutter apps usually keep `["."]`.
 2. Install Betterleaks v1.9.0+ and lefthook on the host; run `lefthook install`.
 3. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.
 4. Merge `AGENTS.quality.md` into `AGENTS.md`.
-5. `./tools/quality/gate.sh full`.
+5. Resolve **drift** deliberately (see skill Drift playbook). Stock Flutter `analysis_options.yaml` often drifts from the kit template — prefer **merge** over blind replace.
+6. `./tools/quality/gate.sh full`.
+
+Helper `tool/*.py` scripts do not require the python pack; adopt with `--packs dart` unless the repo has a real Python product surface.
 
 ## Pins
 

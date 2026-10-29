@@ -19,7 +19,9 @@ export {
 	PACK_IDS,
 	PACKS,
 	resolveDartRoots,
+	type Pack,
 	type PackId,
+	type PackKind,
 } from "./packs";
 
 export {

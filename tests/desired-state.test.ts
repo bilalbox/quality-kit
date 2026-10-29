@@ -28,6 +28,29 @@ test("detectPacks: Flutter stub package.json is not js-ts", () => {
 	assert.ok(packs.includes("dart"));
 });
 
+test("detectPacks: Flutter tool/*.py does not select python", () => {
+	const target = tempTarget();
+	writeFileSync(join(target, "pubspec.yaml"), "name: app\n");
+	mkdirSync(join(target, "tool"));
+	writeFileSync(join(target, "tool", "generate.py"), "print(1)\n");
+	const packs = detectPacks(target);
+	assert.ok(packs.includes("dart"));
+	assert.ok(!packs.includes("python"));
+});
+
+test("detectPacks: root pyproject.toml selects python", () => {
+	const target = tempTarget();
+	writeFileSync(join(target, "pyproject.toml"), "[project]\nname = \"x\"\n");
+	assert.ok(detectPacks(target).includes("python"));
+});
+
+test("detectPacks: product .py outside helper dirs selects python", () => {
+	const target = tempTarget();
+	mkdirSync(join(target, "src"));
+	writeFileSync(join(target, "src", "main.py"), "print(1)\n");
+	assert.ok(detectPacks(target).includes("python"));
+});
+
 test("desiredState: js-ts + python composes gate:fast and fragment scripts", () => {
 	const target = tempTarget();
 	writeFileSync(

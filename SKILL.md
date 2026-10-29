@@ -8,23 +8,50 @@ disable-model-invocation: true
 
 Language packs live under `languages/`. Workflows: **audit**, **adopt**, **new**.
 
+Always run kit CLIs from **`~/mycode/quality-kit`** (this skill is a symlink to that repo).
+
+## Bare invoke
+
+When the user says `/quality-gates` with no workflow:
+
+1. Run **audit** (read-only) against the current workspace Target.
+2. Summarize Host vs Fragment packs, gaps, and warnings.
+3. Ask whether to **adopt** (and which packs) before mutating the Target.
+
+Do not apply or edit the Target until the user confirms adopt (or an explicit pack set).
+
 ## Quick start
 
 ```bash
-# From quality-kit:
+# From ~/mycode/quality-kit:
 pnpm run audit -- --target ~/mycode/<repo>
 pnpm apply -- --target ~/mycode/<repo>
 pnpm apply -- --target ~/mycode/<repo> --packs js-ts,python
 pnpm apply -- --target ~/mycode/<repo> --packs dart
-pnpm apply -- --target ~/mycode/<repo> --python   # alias: add python pack
+pnpm apply -- --target ~/mycode/<repo> --python   # force-add python Fragment
 ```
 
-Packs are detected from the target (`package.json` → `js-ts`, `.py` → `python`, `Cargo.toml` → `rust`, `pubspec.yaml` within depth 3 → `dart`), or overridden with `--packs`.
+### Pack selection
 
-- After apply (**js-ts**): tune entry points → `pnpm install` → seed baselines → merge `AGENTS.quality.md` into `AGENTS.md`.
-- After apply (**dart**): set `quality-kit.dart.json` roots → install Betterleaks + lefthook → `lefthook install` → merge `AGENTS.quality.md` → `./tools/quality/gate.sh full`.
+- **Detect** when `--packs` omitted: Host/Fragment signals in the Target.
+- **Override** with `--packs a,b` (recommended when detect is noisy).
+- `--python` force-adds the python Fragment.
 
-`js-ts` detection requires real `dependencies` / `devDependencies` (stub Flutter `package.json` files are ignored).
+| Pack | Kind | Detect |
+| --- | --- | --- |
+| `js-ts` | Host | Root `package.json` with real deps (Flutter stub JSON ignored) |
+| `dart` | Host | `pubspec.yaml` within depth 3 |
+| `python` | Fragment → **js-ts** Host | Root `pyproject.toml`, or `.py` outside helper dirs (`tool`, `tools`, `scripts`, `script`, `bin`) |
+| `rust` | (stub) | `Cargo.toml` — detect only; no templates yet |
+
+**Flutter / Dart with helper scripts:** prefer `--packs dart`. Incidental `tool/*.py` must not pull in python; force with `--python` only for a real Python product surface.
+
+**Fragment without Host:** audit warns. File templates can still apply, but python gate scripts only wire into a js-ts Host `package.json`. Do not treat orphan Fragment gaps as Host debt unless the user wants that pack.
+
+## Hosts vs after-apply
+
+- **js-ts Host:** tune entry points → `pnpm install` → seed baselines → merge `AGENTS.quality.md` into `AGENTS.md` → `pnpm gate`.
+- **dart Host:** set `quality-kit.dart.json` roots → install Betterleaks + lefthook → `lefthook install` → merge `AGENTS.quality.md` → `./tools/quality/gate.sh full`.
 
 ## Packs
 
@@ -35,30 +62,49 @@ Before pack-specific steps, **read** each selected pack's module:
 - [languages/dart/MODULE.md](languages/dart/MODULE.md)
 - [languages/rust/MODULE.md](languages/rust/MODULE.md) (stub)
 
-`rust` detects only; templates not shipped yet. Python composes onto a `js-ts` host. Dart is a standalone host (`./tools/quality/gate.sh`).
+## Drift playbook
+
+`apply` never overwrites existing files. Audit **drift** means Target content ≠ template.
+
+For each drifted path, pick one deliberately:
+
+1. **Keep** — Target policy wins; leave as-is (audit will keep reporting drift).
+2. **Merge** — fold useful template rules into the existing file by hand.
+3. **Replace** — back up, then copy the template over (human/agent deliberate; not `apply`).
+
+Common dart case: stock Flutter `analysis_options.yaml` vs kit defaults — usually **merge** (keep `flutter_lints` include; adopt kit `analyzer.exclude` / strict linter rules you want).
 
 ## Workflows
 
 ### Audit
 
 1. `pnpm run audit -- --target <repo>` (read-only).
-2. Report packs, missing/drifted template files, and package.json script gaps (js-ts).
-3. Done when the report lists every gap; do not modify the target.
+2. Report packs (with host/fragment roles), missing/drifted files, script gaps (js-ts), orphan-Fragment warnings.
+3. Done when the report lists every gap; do not modify the Target.
 
 ### Adopt (existing repo)
 
-1. Confirm working tree is clean; work on a branch.
+1. Prefer a clean working tree; work on a branch. If WIP must stay, isolate quality-gate files in the adopt commit.
 2. Resolve packs (detect or `--packs`). Read each pack `MODULE.md`.
 3. `pnpm apply -- --target <repo>`. Never overwrites existing files.
-4. Follow pack post-apply steps.
-5. Fix first-pass debt per the repo's spec issue.
-6. Merge `AGENTS.quality.md` into `AGENTS.md`. Gate must pass (`pnpm gate` or `./tools/quality/gate.sh full`).
-7. Done when the gate is green and the spec-issue checklist for this step is ticked.
+4. Follow pack post-apply steps (MODULE + apply “Next” output).
+5. Clear first-pass gate failures (format, analyze, secrets, deps, tests). If the repo has an adoption checklist issue, tick it; otherwise MODULE post-apply + green gate is enough.
+6. Merge `AGENTS.quality.md` into `AGENTS.md`.
+7. Done when the Host gate is green (`pnpm gate` or `./tools/quality/gate.sh full`).
+
+#### Dart / Flutter happy path
+
+```bash
+pnpm run audit -- --target ~/mycode/<repo> --packs dart
+# branch, then:
+pnpm apply -- --target ~/mycode/<repo> --packs dart
+# roots → Betterleaks/lefthook → lefthook install → merge AGENTS → gate.sh full
+```
 
 ### New (greenfield)
 
 1. Create the app (`pnpm create vite`, `flutter create`, or equivalent).
-2. Same as Adopt steps 2–6.
+2. Same as Adopt steps 2–7.
 3. js-ts: set `biome.complexity.json` `maxAllowedComplexity` to **15** (template default is 25 for legacy) — see js-ts module.
 4. Done when the pack gate is green.
 
@@ -66,4 +112,4 @@ Before pack-specific steps, **read** each selected pack's module:
 
 - Domain terms: [GLOSSARY.md](GLOSSARY.md)
 - Shared ratchet / Desired state / apply / CI: [REFERENCE.md](REFERENCE.md)
-- Adoption specs: [sim-iq#296](https://github.com/bilalbox/sim-iq/issues/296), [lenses#2](https://github.com/bilalbox/lenses/issues/2), [taseel#7](https://github.com/bilalbox/taseel/issues/7), [arcgym#23](https://github.com/bilalbox/arcgym/issues/23)
+- Adoption specs (examples): [sim-iq#296](https://github.com/bilalbox/sim-iq/issues/296), [lenses#2](https://github.com/bilalbox/lenses/issues/2), [taseel#7](https://github.com/bilalbox/taseel/issues/7), [arcgym#23](https://github.com/bilalbox/arcgym/issues/23)
