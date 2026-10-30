@@ -1,0 +1,113 @@
+# quality-kit detekt config — layered on detekt defaults (buildUponDefaultConfig).
+# Compose rules: https://mrmans0n.github.io/compose-rules/
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9]*'
+
+complexity:
+  LongParameterList:
+    ignoreDefaultParameters: true
+    ignoreAnnotated: ['Composable']
+  LongMethod:
+    ignoreAnnotated: ['Preview']
+
+style:
+  MagicNumber:
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotated: ['Preview']
+  UnusedPrivateFunction:
+    ignoreAnnotated: ['Preview']
+  ForbiddenComment:
+    active: true
+
+Compose:
+  ComposableAnnotationNaming:
+    active: true
+  ComposableNaming:
+    active: true
+  ComposableNestingDepth:
+    active: false
+  ComposableParamOrder:
+    active: true
+  CompositionLocalAllowlist:
+    active: true
+  CompositionLocalNaming:
+    active: true
+  ConditionHoist:
+    active: true
+  ContentEmitterReturningValues:
+    active: true
+  ContentTrailingLambda:
+    active: true
+  ContentSlotReused:
+    active: true
+  DefaultsVisibility:
+    active: true
+  InvalidReadOnlyComposable:
+    active: true
+  LambdaParameterEventTrailing:
+    active: true
+  LambdaParameterInRestartableEffect:
+    active: true
+  Material2:
+    active: true
+  MissingNonRestartableComposable:
+    active: true
+  MissingReadOnlyComposable:
+    active: true
+  ModifierClickableOrder:
+    active: true
+  ModifierComposed:
+    active: true
+  ModifierMissing:
+    active: true
+  ModifierNaming:
+    active: true
+  ModifierNotUsedAtRoot:
+    active: true
+  ModifierReused:
+    active: true
+  ModifierShouldBeForwardedToEveryBranch:
+    active: true
+  ModifierWithoutDefault:
+    active: true
+  MultipleEmitters:
+    active: true
+  MutableParams:
+    active: true
+  MutableStateAutoboxing:
+    active: true
+  MutableStateParam:
+    active: true
+  ParameterNaming:
+    active: true
+  PreviewAnnotationNaming:
+    active: true
+  PreviewNaming:
+    active: false
+  PreviewPublic:
+    active: true
+  RememberContentMissing:
+    active: true
+  RememberMissing:
+    active: true
+  StaleRememberUpdatedStateInRemember:
+    active: true
+  StateParam:
+    active: true
+  UnnecessaryComposable:
+    active: true
+  UnnecessaryLaunchedEffect:
+    active: true
+  UnstableCollections:
+    active: false
+  VarsWithoutStateBacking:
+    active: true
+  ViewModelForwarding:
+    active: true
+  ViewModelInjection:
+    active: true

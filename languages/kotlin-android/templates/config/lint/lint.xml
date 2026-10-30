@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- quality-kit Android Lint config. Warnings are errors (see quality-kit.android).
+     Checks that depend on newly published versions are ignored so the gate stays
+     deterministic; bump versions deliberately instead. -->
+<lint>
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <issue id="OldTargetApi" severity="ignore" />
+    <issue id="ObsoleteLintCustomCheck" severity="ignore" />
+</lint>

@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { test } from "node:test";
 import { desiredState, diffAgainst } from "../scripts/desired-state";
-import { detectPacks } from "../scripts/packs";
+import { packTemplatesRoot } from "../scripts/kit-fs";
+import { detectPacks, PACK_IDS } from "../scripts/packs";
 
 function tempTarget(): string {
 	return mkdtempSync(join(tmpdir(), "quality-kit-"));
@@ -49,6 +56,83 @@ test("detectPacks: product .py outside helper dirs selects python", () => {
 	mkdirSync(join(target, "src"));
 	writeFileSync(join(target, "src", "main.py"), "print(1)\n");
 	assert.ok(detectPacks(target).includes("python"));
+});
+
+test("detectPacks: root Gradle Android build selects kotlin-android", () => {
+	const target = tempTarget();
+	writeFileSync(join(target, "settings.gradle.kts"), 'include(":app")\n');
+	mkdirSync(join(target, "gradle"));
+	writeFileSync(
+		join(target, "gradle", "libs.versions.toml"),
+		'[plugins]\nandroid-application = { id = "com.android.application", version = "9.5.0" }\n',
+	);
+	assert.ok(detectPacks(target).includes("kotlin-android"));
+});
+
+test("detectPacks: Flutter android/ Gradle build is not kotlin-android", () => {
+	const target = tempTarget();
+	writeFileSync(join(target, "pubspec.yaml"), "name: app\n");
+	mkdirSync(join(target, "android"));
+	writeFileSync(join(target, "android", "settings.gradle.kts"), "\n");
+	writeFileSync(
+		join(target, "android", "build.gradle.kts"),
+		'plugins { id("com.android.application") }\n',
+	);
+	const packs = detectPacks(target);
+	assert.ok(packs.includes("dart"));
+	assert.ok(!packs.includes("kotlin-android"));
+});
+
+test("detectPacks: plain Kotlin/JVM Gradle build is not kotlin-android", () => {
+	const target = tempTarget();
+	writeFileSync(join(target, "settings.gradle.kts"), "\n");
+	writeFileSync(
+		join(target, "build.gradle.kts"),
+		'plugins { kotlin("jvm") version "2.4.21" }\n',
+	);
+	assert.ok(!detectPacks(target).includes("kotlin-android"));
+});
+
+test("desiredState: kotlin-android places build-logic and executable scripts", () => {
+	const target = tempTarget();
+	const state = desiredState(target, ["kotlin-android"]);
+	assert.equal(state.packageJson, null);
+	assert.equal(state.packagePlacements.length, 0);
+	assert.ok(
+		state.rootPlacements.some(
+			(p) => p.targetRel === "build-logic/quality/build.gradle.kts",
+		),
+	);
+	assert.ok(
+		state.rootPlacements.find((p) => p.targetRel === "tools/quality/gate.sh")
+			?.executable,
+	);
+});
+
+test("every Pack placement has a template file", () => {
+	for (const id of PACK_IDS) {
+		const state = desiredState(tempTarget(), [id]);
+		for (const p of state.rootPlacements) {
+			const src = join(packTemplatesRoot(p.pack), p.templateRel);
+			assert.ok(existsSync(src), `${id}: missing template ${p.templateRel}`);
+		}
+	}
+});
+
+test("kotlin-android: every template file is placed", () => {
+	const root = packTemplatesRoot("kotlin-android");
+	const files = readdirSync(root, { recursive: true, withFileTypes: true })
+		.filter((d) => d.isFile())
+		.map((d) => relative(root, join(d.parentPath, d.name)));
+	const placed = new Set(
+		desiredState(tempTarget(), ["kotlin-android"]).rootPlacements.map(
+			(p) => p.templateRel,
+		),
+	);
+	assert.deepEqual(
+		files.filter((f) => !placed.has(f)),
+		[],
+	);
 });
 
 test("desiredState: js-ts + python composes gate:fast and fragment scripts", () => {

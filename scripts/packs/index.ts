@@ -1,5 +1,6 @@
 import { dartPack } from "./dart";
 import { jsTsPack } from "./js-ts";
+import { kotlinAndroidPack } from "./kotlin-android";
 import { pythonPack } from "./python";
 import { rustPack } from "./rust";
 import { PACK_IDS, type Pack, type PackId } from "./types";
@@ -12,6 +13,7 @@ export const PACKS: Record<PackId, Pack> = {
 	python: pythonPack,
 	rust: rustPack,
 	dart: dartPack,
+	"kotlin-android": kotlinAndroidPack,
 };
 
 export function detectPacks(target: string): PackId[] {

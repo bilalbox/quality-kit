@@ -1,0 +1,37 @@
+name: Setup Android
+description: JDK 21, Android SDK licenses, Gradle (cached, wrapper-validated), Robolectric jars, Betterleaks v1
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: "21"
+
+    - uses: android-actions/setup-android@v4
+
+    - uses: gradle/actions/setup-gradle@v6
+
+    # Robolectric downloads android-all jars (~200 MB per SDK) into ~/.m2 on first run.
+    - uses: actions/cache@v6
+      with:
+        path: ~/.m2/repository/org/robolectric
+        key: robolectric-${{ hashFiles('build-logic/quality/gradle/libs.versions.toml') }}
+
+    - name: Install Betterleaks v1
+      shell: bash
+      run: |
+        set -euo pipefail
+        VERSION=1.9.0
+        ARCH=$(uname -m)
+        case "$ARCH" in
+          x86_64|amd64) ASSET="betterleaks_${VERSION}_linux_x64.tar.gz" ;;
+          aarch64|arm64) ASSET="betterleaks_${VERSION}_linux_arm64.tar.gz" ;;
+          *) echo "Unsupported arch: $ARCH"; exit 1 ;;
+        esac
+        mkdir -p "${HOME}/.local/bin"
+        curl -fsSL "https://github.com/betterleaks/betterleaks/releases/download/v${VERSION}/${ASSET}" \
+          | tar -xz -C "${RUNNER_TEMP}" betterleaks
+        install -m 0755 "${RUNNER_TEMP}/betterleaks" "${HOME}/.local/bin/betterleaks"
+        echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+        "${HOME}/.local/bin/betterleaks" version

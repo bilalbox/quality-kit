@@ -189,6 +189,28 @@ function main(): void {
 		console.log("  5. Merge AGENTS.quality.md into AGENTS.md");
 		console.log("  6. ./tools/quality/gate.sh full");
 	}
+
+	if (packs.includes("kotlin-android")) {
+		console.log("");
+		console.log("Next (see languages/kotlin-android/MODULE.md):");
+		console.log(
+			'  1. settings.gradle.kts: pluginManagement { includeBuild("build-logic/quality") }',
+		);
+		console.log('  2. root build.gradle.kts plugins: id("quality-kit.root")');
+		console.log(
+			'  3. each Android module plugins (after com.android.*): id("quality-kit.android")',
+		);
+		console.log(
+			"  4. Merge gradle.quality.properties into gradle.properties; merge AGENTS.quality.md into AGENTS.md",
+		);
+		console.log(
+			"  5. ./tools/quality/doctor.sh; install Betterleaks v1.9.0+ and lefthook; lefthook install",
+		);
+		console.log(
+			"  6. ./tools/quality/run-format.sh --fix; ./tools/quality/screenshots.sh record",
+		);
+		console.log("  7. ./tools/quality/gate.sh full");
+	}
 }
 
 main();

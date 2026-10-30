@@ -1,0 +1,20 @@
+name: Quality gate
+description: ktfmt, secrets, detekt, lint, unit + Roborazzi screenshot tests, Kover, buildHealth
+runs:
+  using: composite
+  steps:
+    - name: Gate
+      run: ./tools/quality/gate.sh full
+      shell: bash
+      env:
+        CI: "true"
+
+    - name: Upload screenshot diffs
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: roborazzi-diffs
+        path: |
+          **/build/outputs/roborazzi/
+          **/build/reports/tests/
+        if-no-files-found: ignore

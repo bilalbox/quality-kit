@@ -36,3 +36,4 @@ Principles:
 - pre-push / CI: full gate
 - **js-ts host:** husky + lint-staged; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
 - **dart host:** lefthook; `./tools/quality/gate.sh`; Flutter via `subosito/flutter-action` (stable); Betterleaks + dependency_validator installed in `setup-flutter`
+- **kotlin-android host:** lefthook; `./tools/quality/gate.sh` over Gradle `qualityFast` / `qualityFull` (from the copied-in `build-logic/quality` included build); JDK 21 + SDK licenses + `setup-gradle` + Robolectric jar cache + Betterleaks in `setup-android`; screenshot diffs uploaded as an artifact on failure

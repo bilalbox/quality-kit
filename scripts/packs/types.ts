@@ -1,4 +1,4 @@
-export const PACK_IDS = ["js-ts", "python", "rust", "dart"] as const;
+export const PACK_IDS = ["js-ts", "python", "rust", "dart", "kotlin-android"] as const;
 export type PackId = (typeof PACK_IDS)[number];
 
 export type PackKind = "host" | "fragment";

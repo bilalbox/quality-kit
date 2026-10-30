@@ -5,11 +5,11 @@ Copy-in quality gates organized by language pack. Apply moves a target repo towa
 ## Language
 
 **Pack**:
-A language-specific set of quality-gate templates and rules that can be selected for a Target (js-ts, python, rust, dart).
+A language-specific set of quality-gate templates and rules that can be selected for a Target (js-ts, python, rust, dart, kotlin-android).
 _Avoid_: language module, plugin, recipe
 
 **Host Pack**:
-A Pack that owns a standalone quality-gate story for a Target (CI, hooks, gate entrypoint, root templates). Today: js-ts, dart.
+A Pack that owns a standalone quality-gate story for a Target (CI, hooks, gate entrypoint, root templates). Today: js-ts, dart, kotlin-android.
 _Avoid_: primary pack, base pack
 
 **Fragment Pack**:

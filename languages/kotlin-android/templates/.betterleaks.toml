@@ -1,0 +1,26 @@
+# Quality-kit Betterleaks v1 config (pin binary to 1.x until v2 is stable).
+# Extends built-in rules. Pass -c explicitly — auto-load requires --unsafe-auto-load-config.
+
+title = "quality-kit kotlin-android secret detection"
+betterleaksMinVersion = "v1.9.0"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore tests, screenshot goldens, Gradle/Android build caches, and local secret files"
+paths = [
+  '''(?i)tests?\/.*''',
+  '''(?i)fixtures\/.*''',
+  '''(?i)(?:^|/)build/''',
+  '''(?i)(?:^|/)\.gradle/''',
+  '''(?i)(?:^|/)\.kotlin/''',
+  '''(?i)\.png$''',
+  '''(?:^|/)\.env$''',
+  '''(?:^|/)\.env\.''',
+  # Local SDK path / signing secrets (gitignored; still caught if staged/committed).
+  '''(?i)(?:^|/)local\.properties$''',
+  '''(?i)(?:^|/)key(store)?\.properties$''',
+  '''(?i)\.jks$''',
+  '''(?i)\.keystore$'''
+]

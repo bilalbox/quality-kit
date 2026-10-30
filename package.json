@@ -2,7 +2,7 @@
 	"name": "quality-kit",
 	"private": true,
 	"type": "module",
-	"description": "Copy-in quality gate templates by language pack (js-ts, python, dart; rust stub)",
+	"description": "Copy-in quality gate templates by language pack (js-ts, python, dart, kotlin-android; rust stub)",
 	"scripts": {
 		"audit": "tsx scripts/audit.ts",
 		"apply": "tsx scripts/apply.ts",

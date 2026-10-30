@@ -1,0 +1,15 @@
+# quality-kit kotlin-android hooks — install with: lefthook install
+
+pre-commit:
+  parallel: false
+  commands:
+    secrets:
+      run: ./tools/quality/run-secret-scan.sh --staged
+    format:
+      glob: "*.{kt,kts}"
+      run: ./tools/quality/run-format.sh --staged
+
+pre-push:
+  commands:
+    gate:
+      run: ./tools/quality/gate.sh full

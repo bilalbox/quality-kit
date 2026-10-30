@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Language packs live under `languages/`. Workflows: **audit**, **adopt**, **new**.
 
-Always run kit CLIs from **`~/mycode/quality-kit`** (this skill is a symlink to that repo).
+Always run kit CLIs from **`~/mycode/quality-kit`** (this skill is a symlink to that repo, installed for both Cursor at `~/.agents/skills/quality-gates` and Claude Code at `~/.claude/skills/quality-gates` — keep both links when changing the install).
 
 ## Bare invoke
 
@@ -28,6 +28,7 @@ pnpm run audit -- --target ~/mycode/<repo>
 pnpm apply -- --target ~/mycode/<repo>
 pnpm apply -- --target ~/mycode/<repo> --packs js-ts,python
 pnpm apply -- --target ~/mycode/<repo> --packs dart
+pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
 pnpm apply -- --target ~/mycode/<repo> --python   # force-add python Fragment
 ```
 
@@ -41,6 +42,7 @@ pnpm apply -- --target ~/mycode/<repo> --python   # force-add python Fragment
 | --- | --- | --- |
 | `js-ts` | Host | Root `package.json` with real deps (Flutter stub JSON ignored) |
 | `dart` | Host | `pubspec.yaml` within depth 3 |
+| `kotlin-android` | Host | Root `settings.gradle(.kts)` + AGP referenced in root build / settings / `gradle/libs.versions.toml` (Flutter `android/` ignored) |
 | `python` | Fragment → **js-ts** Host | Root `pyproject.toml`, or `.py` outside helper dirs (`tool`, `tools`, `scripts`, `script`, `bin`) |
 | `rust` | (stub) | `Cargo.toml` — detect only; no templates yet |
 
@@ -52,6 +54,7 @@ pnpm apply -- --target ~/mycode/<repo> --python   # force-add python Fragment
 
 - **js-ts Host:** tune entry points → `pnpm install` → seed baselines → merge `AGENTS.quality.md` into `AGENTS.md` → `pnpm gate`.
 - **dart Host:** set `quality-kit.dart.json` roots → install Betterleaks + lefthook → `lefthook install` → merge `AGENTS.quality.md` → `./tools/quality/gate.sh full`.
+- **kotlin-android Host:** wire `includeBuild("build-logic/quality")` + `quality-kit.root` + `quality-kit.android` per module → merge `gradle.quality.properties` and `AGENTS.quality.md` → `./tools/quality/doctor.sh` → `lefthook install` → `run-format.sh --fix` → `screenshots.sh record` → `./tools/quality/gate.sh full`.
 
 ## Packs
 
@@ -60,6 +63,7 @@ Before pack-specific steps, **read** each selected pack's module:
 - [languages/js-ts/MODULE.md](languages/js-ts/MODULE.md)
 - [languages/python/MODULE.md](languages/python/MODULE.md)
 - [languages/dart/MODULE.md](languages/dart/MODULE.md)
+- [languages/kotlin-android/MODULE.md](languages/kotlin-android/MODULE.md)
 - [languages/rust/MODULE.md](languages/rust/MODULE.md) (stub)
 
 ## Drift playbook
@@ -73,6 +77,8 @@ For each drifted path, pick one deliberately:
 3. **Replace** — back up, then copy the template over (human/agent deliberate; not `apply`).
 
 Common dart case: stock Flutter `analysis_options.yaml` vs kit defaults — usually **merge** (keep `flutter_lints` include; adopt kit `analyzer.exclude` / strict linter rules you want).
+
+Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge** the kit's Compose rules section and Composable/Preview exemptions into it.
 
 ## Workflows
 
@@ -92,6 +98,16 @@ Common dart case: stock Flutter `analysis_options.yaml` vs kit defaults — usua
 6. Merge `AGENTS.quality.md` into `AGENTS.md`.
 7. Done when the Host gate is green (`pnpm gate` or `./tools/quality/gate.sh full`).
 
+#### Kotlin / Android (Jetpack Compose) happy path
+
+```bash
+pnpm run audit -- --target ~/mycode/<repo> --packs kotlin-android
+# branch, then:
+pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
+# 3 Gradle lines → merge gradle.quality.properties + AGENTS → doctor.sh → lefthook install
+# → run-format.sh --fix → screenshots.sh record → gate.sh full
+```
+
 #### Dart / Flutter happy path
 
 ```bash
@@ -103,9 +119,9 @@ pnpm apply -- --target ~/mycode/<repo> --packs dart
 
 ### New (greenfield)
 
-1. Create the app (`pnpm create vite`, `flutter create`, or equivalent).
+1. Create the app (`pnpm create vite`, `flutter create`, an Android Studio / AGP Compose template, or equivalent).
 2. Same as Adopt steps 2–7.
-3. js-ts: set `biome.complexity.json` `maxAllowedComplexity` to **15** (template default is 25 for legacy) — see js-ts module.
+3. js-ts: set `biome.complexity.json` `maxAllowedComplexity` to **15** (template default is 25 for legacy) — see js-ts module. kotlin-android: set `qualityKit.minLineCoverage=80` (template default 0 for legacy).
 4. Done when the pack gate is green.
 
 ## Reference
