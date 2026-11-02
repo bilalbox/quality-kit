@@ -11,6 +11,7 @@ Standalone host (not composed onto js-ts): Makefile / `tools/quality/*.sh`, left
 | Format | **`dart format`** | `--output=none --set-exit-if-changed` per package root; `run-format.sh --fix [files…]` formats in place. |
 | Lint / types | **`flutter analyze --fatal-infos`** (or `dart analyze`) | Per-root `analysis_options.yaml`: `flutter_lints` (Flutter) or `lints` (pure Dart) + strict modes. See [Analysis](#analysis). |
 | Secrets | **Betterleaks v1** | From the Shared layer (bash wrapper, no Node). |
+| Dependency vulns | **osv-scanner** | From the Shared layer; `gate.sh full` / `make vulns`. |
 | Dependencies | **dependency_validator 5.1.0** | Missing / unused / over-/under-promoted deps. Activated via `dart pub global`. |
 | Hooks | **lefthook** | pre-commit: secrets + format check of staged content (see Pre-commit format); pre-push: full gate. |
 | Orchestration | **`tools/quality/gate.sh`** | `fast` = format + analyze + secrets + deps; `full` = fast + test. |
@@ -72,6 +73,10 @@ Config, wrapper (`tools/quality/run-secret-scan.sh`), install and CI step come f
 
 **Pack allowlist** (`.betterleaks.d/dart.toml`): `.dart_tool/`, `build/`, `android/.gradle/`, `android/app/build/`, `.dev.vars*`. Test sources, `.env`, and signing files (`key.properties`, `*.jks`, `*.keystore`) are scanned.
 
+## Dependency vulns (osv-scanner)
+
+Wrapper, install and CI step come from the Shared layer: see [languages/shared/MODULE.md](../shared/MODULE.md). `gate.sh full` and `make vulns` run `tools/quality/run-vuln-scan.sh`.
+
 ## dependency_validator
 
 Pin **5.1.0** (`dart pub global activate dependency_validator 5.1.0`). Config per package: `dart_dependency_validator.yaml`. `ignore` lists only packages that are never imported (codegen/launcher tooling, asset-only `cupertino_icons`). Never ignore runtime deps such as `freezed_annotation` or `json_annotation`: if one is reported unused, remove it from `pubspec.yaml`. Packages referenced from `analysis_options.yaml` (`lints`, `flutter_lints`) are detected as used.
@@ -100,7 +105,7 @@ audit checks (see REFERENCE.md "Wiring probes"):
 `apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.
 
 1. Set `quality-kit.dart.json` `roots` (and `flutterEnv` if the repo has one). Root Flutter apps usually keep `["."]`.
-2. Install Betterleaks v1.9.0+ (see languages/shared/MODULE.md) and lefthook on the host; run `lefthook install`.
+2. Install Betterleaks v1.9.0+ and osv-scanner (see languages/shared/MODULE.md) and lefthook on the host; run `lefthook install`.
 3. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.
 4. Merge `AGENTS.quality.md` into `AGENTS.md`.
 5. Resolve **drift** deliberately (see skill Drift playbook). A stock `analysis_options.yaml` often drifts from the kit template — prefer **merge** over blind replace, and follow "Adopting on legacy code" in `languages/dart/MODULE.md` for the strict modes.
@@ -115,6 +120,7 @@ Source: kit-root `pins.json` (see REFERENCE.md "Pins"). Literals below must matc
 | Tool | Pin |
 | --- | --- |
 | Betterleaks | Shared layer pin (languages/shared/MODULE.md) |
+| osv-scanner | Shared layer pin (languages/shared/MODULE.md) |
 | dependency_validator | 5.1.0 |
 | lefthook | latest stable release binary |
 | Flutter | 3.47.9 (Dart 3.13.7) — `flutter-version` in `.github/actions/setup-flutter/action.yml` |

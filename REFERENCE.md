@@ -113,7 +113,7 @@ Principles:
 
 - pre-commit: fast staged checks (Betterleaks `git --staged` + format). A hook never commits unstaged hunks: js-ts relies on lint-staged's stash; dart / kotlin-android check the staged blobs only and fail with the fix command (see their MODULE.md "Pre-commit format")
 - pre-push / CI: full gate
-- **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; CI checks out with `fetch-depth: 0` and installs Betterleaks with `./.github/actions/setup-betterleaks` (checksum-pinned) before the Host's own setup action; the wrapper scans `origin/$GITHUB_BASE_REF..HEAD` in CI
+- **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; dependency vulns via `tools/quality/run-vuln-scan.sh` on the **full** gate only; CI checks out with `fetch-depth: 0` and installs Betterleaks and osv-scanner with `./.github/actions/setup-betterleaks` and `./.github/actions/setup-osv-scanner` (checksum-pinned) before the Host's own setup action; the secret-scan wrapper scans `origin/$GITHUB_BASE_REF..HEAD` in CI. Ignore policy and offline/severity decisions: `languages/shared/MODULE.md`
 - **js-ts host:** husky + lint-staged; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
 - **dart host:** lefthook; `./tools/quality/gate.sh`; Flutter via `subosito/flutter-action` pinned to an exact `flutter-version` (dart MODULE.md Pins); dependency_validator installed in `setup-flutter`
 - **kotlin-android host:** lefthook; `./tools/quality/gate.sh` over Gradle `qualityFast` / `qualityFull` (from the copied-in `build-logic/quality` included build); JDK 21 + SDK licenses + `setup-gradle` + Robolectric jar cache in `setup-android`; screenshot diffs uploaded as an artifact on failure
@@ -126,7 +126,7 @@ Principles:
 
 ## Kit CI
 
-The kit's own `.github/workflows/ci.yml` runs on every PR (and on pushes to `main`) as one job, `kit`: `pnpm test`, `pnpm exec tsc --noEmit`, `pnpm lint:templates`. It installs Betterleaks with the Shared layer's `install-betterleaks.sh`, so `tests/secret-scan.test.ts` (skipped locally without Betterleaks, never under `CI`) runs the real scanner. All three steps run and report even when an earlier one fails. Branch protection on `main` must require the `kit` check for failures to block merge (a GitHub setting, not in the repo).
+The kit's own `.github/workflows/ci.yml` runs on every PR (and on pushes to `main`) as one job, `kit`: `pnpm test`, `pnpm exec tsc --noEmit`, `pnpm lint:templates`. It installs Betterleaks and osv-scanner with the Shared layer's install scripts, so `tests/secret-scan.test.ts` and `tests/vuln-scan.test.ts` (skipped locally without the binary / network, never under `CI`) run the real tools. All three steps run and report even when an earlier one fails. Branch protection on `main` must require the `kit` check for failures to block merge (a GitHub setting, not in the repo).
 
 ### Adoption smoke
 

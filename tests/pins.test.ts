@@ -14,6 +14,7 @@ test("pins: pins.json is the single pins source at the kit root", () => {
 	assert.equal(pins.biome, "2.6.3");
 	assert.equal(pins.flutter, "3.47.9");
 	assert.equal(pins.betterleaks.version, "1.9.0");
+	assert.equal(pins.osvScanner.version, "2.7.0");
 	assert.equal(pins.shellcheck.version, "0.11.0");
 	assert.equal(pins.actionlint.version, "1.7.12");
 });

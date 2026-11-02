@@ -19,18 +19,22 @@ function tempTarget(): string {
 
 const HOSTS = ["js-ts", "dart", "kotlin-android"] as const satisfies PackId[];
 
-const SECRETS_FILES = [
+const SHARED_FILES = [
 	".betterleaks.toml",
 	".betterleaksignore",
 	".github/actions/setup-betterleaks/action.yml",
+	".github/actions/setup-osv-scanner/action.yml",
+	"osv-scanner.toml",
 	"tools/quality/install-betterleaks.sh",
+	"tools/quality/install-osv-scanner.sh",
 	"tools/quality/run-secret-scan.sh",
+	"tools/quality/run-vuln-scan.sh",
 ];
 
 for (const host of HOSTS) {
-	test(`shared layer: ${host} places the secrets files from the shared layer`, () => {
+	test(`shared layer: ${host} places the shared-layer files from languages/shared`, () => {
 		const state = desiredState(tempTarget(), [host]);
-		for (const rel of SECRETS_FILES) {
+		for (const rel of SHARED_FILES) {
 			const placed = state.rootPlacements.filter((p) => p.targetRel === rel);
 			assert.equal(placed.length, 1, rel);
 			assert.equal(
@@ -48,7 +52,7 @@ for (const packs of [
 ] as const) {
 	test(`shared layer: ${packs.join(" + ")} places the shared files once, without collisions`, () => {
 		const state = desiredState(tempTarget(), packs);
-		for (const rel of SECRETS_FILES) {
+		for (const rel of SHARED_FILES) {
 			assert.equal(
 				state.rootPlacements.filter((p) => p.targetRel === rel).length,
 				1,
@@ -57,7 +61,7 @@ for (const packs of [
 		}
 		const collided = state.collisions.map((c) => c.targetRel);
 		assert.deepEqual(
-			collided.filter((rel) => SECRETS_FILES.includes(rel)),
+			collided.filter((rel) => SHARED_FILES.includes(rel)),
 			[],
 		);
 	});
