@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, mkdtempSync } from "node:fs";
+import { appendFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -90,6 +90,23 @@ test("apply + audit: shared files are labelled with the shared layer, not a Host
 	appendFileSync(join(target, ".betterleaks.toml"), "# local edit\n");
 	const audited = runKit("audit", target, "kotlin-android");
 	assert.match(audited.output, /drift +\[shared\] \.betterleaks\.toml/);
+});
+
+test("shared layer: Pack allowlists hold only array tables, so appending them is safe", () => {
+	const state = desiredState(tempTarget(), ["js-ts", "dart", "kotlin-android"]);
+	for (const p of state.rootPlacements) {
+		if (!p.targetRel.startsWith(".betterleaks.d/")) continue;
+		const lines = readFileSync(templatePath(p), "utf8")
+			.split("\n")
+			.map((l) => l.trim())
+			.filter((l) => l !== "" && !l.startsWith("#"));
+		assert.match(lines[0] ?? "", /^\[\[(allowlists|rules)\]\]$/, p.targetRel);
+		assert.deepEqual(
+			lines.filter((l) => /^\[[^[]/.test(l)),
+			[],
+			`${p.targetRel}: single [table] headers would clash with the shared config`,
+		);
+	}
 });
 
 test("shared layer: a Fragment Pack alone does not compose it", () => {

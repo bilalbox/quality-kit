@@ -97,8 +97,18 @@ if ((is_verbose)); then
 	args+=(--verbose)
 fi
 
+# Betterleaks takes one config, so the shared config and every
+# .betterleaks.d/*.toml (Pack and Target allowlists) are concatenated into it.
 if [[ -f "${REPO_ROOT}/.betterleaks.toml" ]]; then
-	args+=(-c "${REPO_ROOT}/.betterleaks.toml")
+	config="$(mktemp)"
+	trap 'rm -f "${config}"' EXIT
+	for part in "${REPO_ROOT}/.betterleaks.toml" "${REPO_ROOT}"/.betterleaks.d/*.toml; do
+		if [[ -f "${part}" ]]; then
+			cat "${part}"
+			echo
+		fi
+	done >"${config}"
+	args+=(-c "${config}")
 fi
 if [[ -f "${REPO_ROOT}/.betterleaksignore" ]]; then
 	args+=(-i "${REPO_ROOT}/.betterleaksignore")
@@ -106,4 +116,4 @@ fi
 
 args+=("${extra_args[@]+"${extra_args[@]}"}")
 
-exec "${bin}" "${args[@]}"
+"${bin}" "${args[@]}"
