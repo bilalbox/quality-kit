@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -90,6 +98,54 @@ test("dart: pure Dart analysis config does not depend on flutter_lints", () => {
 		join(packTemplatesRoot("dart"), "package", "dart", "analysis_options.yaml"),
 	);
 	assert.doesNotMatch(yaml, /flutter_lints/);
+});
+
+/** PATH dir with only the binaries lib.sh needs — notably no python3. */
+function pathWithoutPython(): string {
+	const bin = mkdtempSync(join(tmpdir(), "quality-kit-bin-"));
+	for (const tool of ["bash", "dirname", "basename", "sort", "grep"]) {
+		const found = spawnSync("bash", ["-c", `command -v ${tool}`], {
+			encoding: "utf8",
+		}).stdout.trim();
+		assert.ok(found, `${tool} not found on host`);
+		symlinkSync(found, join(bin, tool));
+	}
+	return bin;
+}
+
+function runLib(target: string, fn: string): string {
+	const libDir = join(target, "tools", "quality");
+	mkdirSync(libDir, { recursive: true });
+	copyFileSync(
+		join(packTemplatesRoot("dart"), "tools", "quality", "lib.sh"),
+		join(libDir, "lib.sh"),
+	);
+	const bin = pathWithoutPython();
+	const result = spawnSync(
+		join(bin, "bash"),
+		["-c", `command -v python3 && exit 99; source tools/quality/lib.sh && ${fn}`],
+		{ cwd: target, encoding: "utf8", env: { PATH: bin, HOME: target } },
+	);
+	assert.equal(result.status, 0, result.stderr + result.stdout);
+	return result.stdout;
+}
+
+test("dart lib.sh: configured roots are honoured without python3", () => {
+	const target = flutterAppAndDartPackage();
+	writeFileSync(
+		join(target, "quality-kit.dart.json"),
+		'{\n\t"roots": [\n\t\t"packages/core",\n\t\t"app"\n\t],\n\t"flutterEnv": "tools/flutter-env.sh"\n}\n',
+	);
+	assert.equal(runLib(target, "quality_dart_roots"), "packages/core\napp\n");
+});
+
+test("dart lib.sh: flutterEnv is honoured without python3", () => {
+	const target = flutterAppAndDartPackage();
+	writeFileSync(
+		join(target, "quality-kit.dart.json"),
+		'{ "roots": ["app"], "flutterEnv": "tools/flutter-env.sh" }\n',
+	);
+	assert.equal(runLib(target, "quality_flutter_env"), "tools/flutter-env.sh\n");
 });
 
 test("dart: every package placement has a template file", () => {
