@@ -4,14 +4,14 @@ Shared across language packs. Pack-specific tools and gotchas live in `languages
 
 ## Ratchet contract
 
-Shrink-only baseline comparison (js-ts complexity uses `scripts/ratchets/compare.ts`):
+Shrink-only baseline comparison (js-ts complexity and Biome diagnostics use `scripts/ratchets/compare.ts`):
 
 - **Novelty** — finding ID absent from baseline → fail
 - **Stale prune** — baseline row no longer reproduces → fail
 - **Score regression** — same ID, higher score → fail
 - **`--update`** — rewrite baseline; **refused when `CI=true`**
 
-Finding ID shape is pack-specific (see js-ts module for complexity IDs). Dart pack v1 has no complexity ratchet yet.
+Finding ID shape is pack-specific (see js-ts module for complexity and Biome diagnostic IDs). Baselines absorb legacy debt at adoption only; disabling a rule to get a pass is not a ratchet strategy. Dart pack v1 has no complexity ratchet yet.
 
 ## Desired state
 
