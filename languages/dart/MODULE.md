@@ -61,4 +61,6 @@ Helper `tool/*.py` scripts do not require the python pack; adopt with `--packs d
 | Betterleaks | 1.9.0 (1.x line) |
 | dependency_validator | 5.1.0 |
 | lefthook | latest stable release binary |
-| Flutter | `subosito/flutter-action` `channel: stable` (override per repo if needed) |
+| Flutter | 3.47.9 (Dart 3.13.7) — `flutter-version` in `.github/actions/setup-flutter/action.yml` |
+
+Bump Flutter deliberately: change `flutter-version`, run `./tools/quality/gate.sh full` locally on the same version, commit. A Target whose `pubspec.yaml` `environment.sdk` needs a newer Dart must raise the pin in its copy of the action (`audit` then reports drift on purpose).
