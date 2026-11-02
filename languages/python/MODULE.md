@@ -17,6 +17,8 @@ Fragment Pack onto a `js-ts` Host: contributes `package.scripts.json` (`lint:py`
 
 ## Pins
 
+Source: kit-root `pins.json` (see REFERENCE.md "Pins"). Literals below and in `package.scripts.json` must match.
+
 `ruff@0.17.2`, `basedpyright@1.40.2`, `tach@0.35.3`, `vulture@2.16`.
 
 - `tach.toml`: run `uvx tach@0.35.3 init` then refine `[[modules]]`. Keep `forbid_circular_dependencies = true`.

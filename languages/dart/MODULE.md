@@ -70,7 +70,7 @@ Strict modes usually surface many findings in an existing codebase, and `--fatal
 
 Config, wrapper (`tools/quality/run-secret-scan.sh`), install and CI step come from the Shared layer: see [languages/shared/MODULE.md](../shared/MODULE.md). lefthook pre-commit runs it with `--staged`; `gate.sh fast` and `make secrets` scan the working tree.
 
-**Pack allowlist** (`.betterleaks.d/dart.toml`): `*_test.dart`, `.dart_tool/`, `build/`, `android/.gradle/`, `android/app/build/`, `.dev.vars*`, `key.properties`, `*.jks`, `*.keystore`.
+**Pack allowlist** (`.betterleaks.d/dart.toml`): `.dart_tool/`, `build/`, `android/.gradle/`, `android/app/build/`, `.dev.vars*`. Test sources, `.env`, and signing files (`key.properties`, `*.jks`, `*.keystore`) are scanned.
 
 ## dependency_validator
 
@@ -110,6 +110,8 @@ Helper `tool/*.py` scripts do not require the python pack; adopt with `--packs d
 
 ## Pins
 
+Source: kit-root `pins.json` (see REFERENCE.md "Pins"). Literals below must match.
+
 | Tool | Pin |
 | --- | --- |
 | Betterleaks | Shared layer pin (languages/shared/MODULE.md) |
@@ -117,4 +119,4 @@ Helper `tool/*.py` scripts do not require the python pack; adopt with `--packs d
 | lefthook | latest stable release binary |
 | Flutter | 3.47.9 (Dart 3.13.7) — `flutter-version` in `.github/actions/setup-flutter/action.yml` |
 
-Bump Flutter deliberately: change `flutter-version`, run `./tools/quality/gate.sh full` locally on the same version, commit. A Target whose `pubspec.yaml` `environment.sdk` needs a newer Dart must raise the pin in its copy of the action (`audit` then reports it customized on purpose).
+Bump Flutter deliberately: change `flutter` / `dartSdk` in `pins.json` and `flutter-version`, run `./tools/quality/gate.sh full` locally on the same version, commit. A Target whose `pubspec.yaml` `environment.sdk` needs a newer Dart must raise the pin in its copy of the action (`audit` then reports it customized on purpose).

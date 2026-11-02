@@ -113,10 +113,16 @@ Principles:
 
 - pre-commit: fast staged checks (Betterleaks `git --staged` + format). A hook never commits unstaged hunks: js-ts relies on lint-staged's stash; dart / kotlin-android check the staged blobs only and fail with the fix command (see their MODULE.md "Pre-commit format")
 - pre-push / CI: full gate
-- **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; CI installs Betterleaks with `./.github/actions/setup-betterleaks` (checksum-pinned) before the Host's own setup action
+- **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; CI checks out with `fetch-depth: 0` and installs Betterleaks with `./.github/actions/setup-betterleaks` (checksum-pinned) before the Host's own setup action; the wrapper scans `origin/$GITHUB_BASE_REF..HEAD` in CI
 - **js-ts host:** husky + lint-staged; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
 - **dart host:** lefthook; `./tools/quality/gate.sh`; Flutter via `subosito/flutter-action` pinned to an exact `flutter-version` (dart MODULE.md Pins); dependency_validator installed in `setup-flutter`
 - **kotlin-android host:** lefthook; `./tools/quality/gate.sh` over Gradle `qualityFast` / `qualityFull` (from the copied-in `build-logic/quality` included build); JDK 21 + SDK licenses + `setup-gradle` + Robolectric jar cache in `setup-android`; screenshot diffs uploaded as an artifact on failure
+
+## Pins
+
+`pins.json` at the kit root is the single source for every pinned tool version across Packs (and kit CI linters). Templates, MODULE.md Pins tables, and REFERENCE keep version literals so concurrent Pack work stays merge-friendly; `tests/pins.test.ts` fails when any scanned literal drifts from `pins.json` (`scripts/pins.ts` `pinDrift()`). Bump: edit `pins.json`, update every matching literal (the test lists the miss), commit together.
+
+**js-ts `package.devDependencies.json`:** `@biomejs/biome` is an **exact** pin (a caret pulled 2.6.4 and broke the gate via schema mismatch / JSON reporter churn). Other Target devDependencies (`husky`, `lint-staged`, `rev-dep`, `tsx`, `typescript`) keep **caret** ranges; `pins.json` records the floor and the range policy. Checksums (Betterleaks per-arch, shellcheck, actionlint) live next to their versions in `pins.json` and in the install/CI scripts.
 
 ## Kit CI
 
@@ -127,6 +133,6 @@ The kit's own `.github/workflows/ci.yml` runs on every PR (and on pushes to `mai
 - **shellcheck** at default severity (style and info included) with `-x -P SCRIPTDIR` on every `*.sh` under `languages/*/templates` (Packs and the Shared layer). Husky hooks (`.husky/*`, no shebang) are linted with `-s sh`.
 - **actionlint** on the kit's own workflows, on each Pack's template workflows inside a throwaway `git init` copy of the Shared layer's and that Pack's `.github`, and on every multi-Host **composed** workflow (pairs and all three) with each selected Host's actions present, so `uses: ./.github/actions/…` resolves to the composite actions a Target gets (input names checked). actionlint silently skips a local action it cannot find. actionlint also shellchecks workflow `run:` steps.
 - Not covered: shell in composite action `run:` steps (neither tool lints it). Extract to a script under the Pack's templates to get coverage.
-- Pins: shellcheck 0.11.0 and actionlint 1.7.12, downloaded in CI and checked against sha256 pinned in the workflow (ubuntu's preinstalled shellcheck is older). Bump version and hash together.
+- Pins: shellcheck 0.11.0 and actionlint 1.7.12 (see `pins.json`), downloaded in CI and checked against sha256 pinned in the workflow (ubuntu's preinstalled shellcheck is older). Bump version and hash in `pins.json` and the workflow together.
 - Findings are fixed, not suppressed. If a suppression is unavoidable, use an inline `# shellcheck disable=SCxxxx # <reason>` on the line, never a file- or CLI-wide exclusion.
 - Linter-backed tests in `tests/lint-templates.test.ts` skip locally when shellcheck/actionlint are not on PATH, but never when `CI` is set.

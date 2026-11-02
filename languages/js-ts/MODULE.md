@@ -17,7 +17,7 @@ Detect: `package.json` at target root. Templates: `languages/js-ts/templates/`.
 Config, wrapper, install and CI step come from the Shared layer: see [languages/shared/MODULE.md](../shared/MODULE.md). Betterleaks is a Go binary on PATH, not an npm dep.
 
 - **Wiring**: `pnpm lint:secrets` = `bash tools/quality/run-secret-scan.sh`. `.husky/pre-commit` runs `pnpm lint:secrets -- --staged` before `lint-staged`; `pnpm gate:fast` runs it over the working tree.
-- **Pack allowlist** (`.betterleaks.d/js-ts.toml`): `*.test.(ts|js|py)`, `baselines/`, `.rev-dep.*.json`, `.dev.vars*`, `.wrangler/`, plus the `retell-key-prefix` rule for bare `key_[a-f0-9]{28}` literals (built-in Retell rule still needs a nearby `retell` keyword).
+- **Pack allowlist** (`.betterleaks.d/js-ts.toml`): `baselines/`, `.rev-dep.*.json`, `.dev.vars*`, `.wrangler/`, plus the `retell-key-prefix` rule for bare `key_[a-f0-9]{28}` literals (built-in Retell rule still needs a nearby `retell` keyword). Test sources are scanned.
 - **v2 later:** CLI/config differ (stdin patch hooks, explicit `--config`, ignore-file model). Revisit when v2.0.0 is stable; keep this pack on 1.x until then.
 
 ## Biome diagnostics
@@ -27,7 +27,7 @@ Config, wrapper, install and CI step come from the Shared layer: see [languages/
 - **Baseline:** `baselines/biome-diagnostics.json`, shared ratchet contract (REFERENCE.md). Finding ID `file|rule` (e.g. `src/a.ts|lint/suspicious/noExplicitAny`), score = occurrences of that rule in that file. No line numbers, so unrelated edits don't churn IDs; more occurrences = score regression. Greenfield keeps it empty. The file must not be named `biome.json`: Biome loads any nested `biome.json` as config.
 - **Never baselinable:** format, assist (organize imports) and parse diagnostics. They fail outright and block `--update`; `pnpm fix` clears the fixable ones.
 - **Pre-commit:** lint-staged keeps `biome check --write` on staged files (safe fixes; exits 0 on warnings). The gate is the enforcement.
-- **Pin:** `@biomejs/biome` is pinned **exactly** (`2.6.3`, matching `$schema` in `biome.json` / `biome.complexity.json`). A caret range installed 2.6.4, whose schema-mismatch diagnostic then fails the gate; the JSON reporter is also unstable across patches. Bump the dependency and both `$schema` URLs together.
+- **Pin:** `@biomejs/biome` is pinned **exactly** (`2.6.3`, matching `$schema` in `biome.json` / `biome.complexity.json`). A caret range installed 2.6.4, whose schema-mismatch diagnostic then fails the gate; the JSON reporter is also unstable across patches. Bump `biome` in `pins.json`, the dependency, and both `$schema` URLs together.
 - **Generated files:** `pnpm-lock.yaml` is excluded in `biome.json` (Biome 2.6 formats YAML and would rewrite it).
 
 ### Unsafe-fix policy
@@ -128,6 +128,18 @@ madge + dependency-cruiser need patches under TS7 (`ts.sys` removed). **rev-dep 
 
 - Gate action: `.github/actions/js-ts-quality-gate/` (namespaced so multi-Host Targets can place every Host's gate).
 - Workflow template `templates/.github/workflows/ci.yml` is a composition input; Desired state places a generated `.github/workflows/ci.yml` (see REFERENCE.md "CI composition"). Single-Host Targets get this template verbatim.
+
+## Pins
+
+Source: kit-root `pins.json` (see REFERENCE.md "Pins").
+
+| Tool | Pin |
+| --- | --- |
+| `@biomejs/biome` | **exact** `2.6.3` (also `$schema` in `biome.json` / `biome.complexity.json`) |
+| `husky`, `lint-staged`, `rev-dep`, `tsx`, `typescript` | **caret** floors in `pins.json` / `package.devDependencies.json` |
+| Betterleaks | Shared layer pin (languages/shared/MODULE.md) |
+
+**Caret vs exact:** only Biome is exact — a caret installed 2.6.4 and broke the gate (schema mismatch + JSON reporter). Other Target devDependencies stay caret ranges so routine patch/minor bumps do not require a kit commit; floors still live in `pins.json` and the sync test checks the declared range string.
 
 ## Placement kinds
 

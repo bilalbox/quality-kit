@@ -2,15 +2,12 @@
 # tools/quality/run-secret-scan.sh). Tables only: no top-level keys.
 
 [[allowlists]]
-description = "kotlin-android: screenshot goldens, Gradle/Android build caches, local secret files"
+description = "kotlin-android: screenshot goldens, Gradle/Android build caches"
 paths = [
   '''(?i)(?:^|/)build/''',
   '''(?i)(?:^|/)\.gradle/''',
   '''(?i)(?:^|/)\.kotlin/''',
   '''(?i)\.png$''',
-  # Local SDK path / signing secrets (gitignored; still caught if staged/committed).
-  '''(?i)(?:^|/)local\.properties$''',
-  '''(?i)(?:^|/)key(store)?\.properties$''',
-  '''(?i)\.jks$''',
-  '''(?i)\.keystore$'''
+  # SDK path is machine-local and not a credential; still scan signing files.
+  '''(?i)(?:^|/)local\.properties$'''
 ]

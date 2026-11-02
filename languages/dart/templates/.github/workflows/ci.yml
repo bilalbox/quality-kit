@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup-betterleaks
       - uses: ./.github/actions/setup-flutter
       - uses: ./.github/actions/dart-quality-gate

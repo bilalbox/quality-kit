@@ -11,7 +11,7 @@ Standalone Host for Jetpack Compose apps and libraries: `tools/quality/*.sh`, le
 | Format | **ktfmt** `--kotlinlang-style` (native binary, auto-downloaded + sha256-checked; jar fallback); `run-format.sh --fix [files…]` formats in place | fast, pre-commit (staged content, no JVM) |
 | Static analysis | **detekt 2.0** + **compose-rules** (`config/detekt/detekt.yml`) | fast |
 | Compiler | Kotlin `allWarningsAsErrors` (main + unit-test sources) | fast |
-| Secrets | **Betterleaks v1** (Shared layer; see languages/shared/MODULE.md) | fast, pre-commit. Pack allowlist `.betterleaks.d/kotlin-android.toml`: `build/`, `.gradle/`, `.kotlin/`, `*.png`, `local.properties`, `key(store).properties`, `*.jks`, `*.keystore` |
+| Secrets | **Betterleaks v1** (Shared layer; see languages/shared/MODULE.md) | fast, pre-commit. Pack allowlist `.betterleaks.d/kotlin-android.toml`: `build/`, `.gradle/`, `.kotlin/`, `*.png`, `local.properties`. Signing files and test sources are scanned. |
 | Lint | **Android Lint**, warnings as errors (`config/lint/lint.xml`) | full |
 | Tests | JUnit + **Robolectric** (`testDebugUnitTest`) | full |
 | Screenshots | **Roborazzi** verify; every `@Preview` auto-generated into a test (ComposablePreviewScanner) | full |
@@ -126,6 +126,8 @@ audit checks the Wiring section was done (see REFERENCE.md "Wiring probes"):
 6. `./tools/quality/gate.sh full`; fix findings, or baseline legacy detekt / Lint findings deliberately.
 
 ## Pins
+
+Source: kit-root `pins.json` (see REFERENCE.md "Pins"). Literals below and in `build-logic/quality/gradle/libs.versions.toml` must match.
 
 | Tool | Pin |
 | --- | --- |
