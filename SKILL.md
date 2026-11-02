@@ -76,7 +76,7 @@ For each drifted path, pick one deliberately:
 2. **Merge** — fold useful template rules into the existing file by hand.
 3. **Replace** — back up, then copy the template over (human/agent deliberate; not `apply`).
 
-Common dart case: stock Flutter `analysis_options.yaml` vs kit defaults — usually **merge** (keep `flutter_lints` include; adopt kit `analyzer.exclude` / strict linter rules you want).
+Common dart case: stock `analysis_options.yaml` (`flutter_lints` for Flutter apps, `lints` for pure Dart packages) vs kit defaults — usually **merge** (keep the include; adopt kit strict modes, `analyzer.exclude` and linter rules — see dart MODULE.md "Analysis" for legacy adoption).
 
 Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge** the kit's Compose rules section and Composable/Preview exemptions into it.
 
