@@ -81,9 +81,18 @@ test("dart: Flutter app root gets the Flutter analysis config", () => {
 test("dart: every analysis config turns on the analyzer strict modes", () => {
 	for (const variant of ["flutter", "dart"]) {
 		const yaml = readText(
-			join(packTemplatesRoot("dart"), "package", variant, "analysis_options.yaml"),
+			join(
+				packTemplatesRoot("dart"),
+				"package",
+				variant,
+				"analysis_options.yaml",
+			),
 		);
-		for (const mode of ["strict-casts", "strict-inference", "strict-raw-types"]) {
+		for (const mode of [
+			"strict-casts",
+			"strict-inference",
+			"strict-raw-types",
+		]) {
 			assert.match(
 				yaml,
 				new RegExp(`^\\s+${mode}: true$`, "m"),
@@ -123,7 +132,10 @@ function runLib(target: string, fn: string): string {
 	const bin = pathWithoutPython();
 	const result = spawnSync(
 		join(bin, "bash"),
-		["-c", `command -v python3 && exit 99; source tools/quality/lib.sh && ${fn}`],
+		[
+			"-c",
+			`command -v python3 && exit 99; source tools/quality/lib.sh && ${fn}`,
+		],
 		{ cwd: target, encoding: "utf8", env: { PATH: bin, HOME: target } },
 	);
 	assert.equal(result.status, 0, result.stderr + result.stdout);
@@ -160,13 +172,22 @@ test("dart: CI pins an exact Flutter version that MODULE.md documents", () => {
 	);
 	const pin = action.match(/^\s+flutter-version: (\d+\.\d+\.\d+)$/m)?.[1];
 	assert.ok(pin, "setup-flutter does not pin flutter-version");
-	const moduleDoc = readText(join(packTemplatesRoot("dart"), "..", "MODULE.md"));
-	assert.match(moduleDoc, new RegExp(`^\\| Flutter \\| ${pin.replaceAll(".", "\\.")}\\b`, "m"));
+	const moduleDoc = readText(
+		join(packTemplatesRoot("dart"), "..", "MODULE.md"),
+	);
+	assert.match(
+		moduleDoc,
+		new RegExp(`^\\| Flutter \\| ${pin.replaceAll(".", "\\.")}\\b`, "m"),
+	);
 });
 
 test("dart: dependency_validator ignores tooling, never runtime deps", () => {
 	const yaml = readText(
-		join(packTemplatesRoot("dart"), "package", "dart_dependency_validator.yaml"),
+		join(
+			packTemplatesRoot("dart"),
+			"package",
+			"dart_dependency_validator.yaml",
+		),
 	);
 	const ignored = [...yaml.matchAll(/^\s+- (\S+)$/gm)].map((m) => m[1]);
 	assert.ok(ignored.includes("cupertino_icons"), "flutter create default");
