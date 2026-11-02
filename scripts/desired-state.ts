@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { normalize, packTemplatesRoot, readText } from "./kit-fs";
+import { normalize, readText, templatePath } from "./kit-fs";
 import {
 	PACKS,
 	resolveDartRoots,
@@ -53,6 +53,8 @@ export type FileStatus =
 export type FileFinding = {
 	path: string;
 	pack: PackId;
+	/** From the shared layer rather than `pack`'s own templates. */
+	shared?: true;
 	kind: PlacementKind;
 	status: FileStatus;
 	/** merge-into: the Target file the content must land in. */
@@ -96,7 +98,7 @@ export type DiffReport = {
 };
 
 function templateText(p: Placement): string | null {
-	const path = join(packTemplatesRoot(p.pack), p.templateRel);
+	const path = templatePath(p);
 	return existsSync(path) ? normalize(readText(path)) : null;
 }
 
@@ -249,6 +251,7 @@ function comparePlacement(
 	const base = {
 		path: placement.targetRel,
 		pack: placement.pack,
+		shared: placement.shared,
 		kind: placement.kind,
 	};
 
@@ -277,11 +280,10 @@ function comparePlacement(
 			: { ...base, status: "present" };
 	}
 
-	const templatePath = join(
-		packTemplatesRoot(placement.pack),
-		placement.templateRel,
-	);
-	return { ...base, status: compareOwned(targetPath, templatePath) };
+	return {
+		...base,
+		status: compareOwned(targetPath, templatePath(placement)),
+	};
 }
 
 /** Diff Target against Desired state, judging each Placement by its kind (ignores file mode). */

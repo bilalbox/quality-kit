@@ -3,13 +3,13 @@ import { join } from "node:path";
 import { readText } from "../kit-fs";
 import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
+import { sharedPlacements } from "./shared";
 import type { Contribution, Pack } from "./types";
 
 const ROOT_FILES: Record<string, FileKind> = {
 	"lefthook.yml": "owned",
 	".editorconfig": "owned",
-	".betterleaks.toml": "owned",
-	".betterleaksignore": "seed",
+	".betterleaks.d/kotlin-android.toml": "owned",
 	Makefile: { dest: "Makefile", markers: ["gate-fast:", "gate:"] },
 	"AGENTS.quality.md": AGENTS_MD,
 	"gradle.quality.properties": {
@@ -34,7 +34,6 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"tools/quality/lib.sh": "owned",
 	"tools/quality/gate.sh": "owned",
 	"tools/quality/run-format.sh": "owned",
-	"tools/quality/run-secret-scan.sh": "owned",
 	"tools/quality/screenshots.sh": "owned",
 	"tools/quality/doctor.sh": "owned",
 };
@@ -72,7 +71,10 @@ export const kotlinAndroidPack: Pack = {
 	detect: detectKotlinAndroid,
 	contribute(_target: string, _selected: readonly string[]): Contribution {
 		return {
-			rootPlacements: placeFiles("kotlin-android", ROOT_FILES),
+			rootPlacements: [
+				...placeFiles("kotlin-android", ROOT_FILES),
+				...sharedPlacements("kotlin-android"),
+			],
 			packagePlacements: [],
 			nextSteps: postApplySteps("kotlin-android"),
 		};

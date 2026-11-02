@@ -13,6 +13,7 @@ import {
 	refuseCollisions,
 	resolvePacks,
 	resolveTarget,
+	sourceLabel,
 	type FileFinding,
 	type PackId,
 	type PlacementKind,
@@ -78,7 +79,7 @@ function printKindGroup(
 	for (const f of findings.filter(isFileGap)) {
 		const path = f.dest && f.dest !== f.path ? `${f.path} → ${f.dest}` : f.path;
 		const detail = f.detail ? ` (${f.detail})` : "";
-		console.log(`  ${f.status.padEnd(8)} [${f.pack}] ${path}${detail}`);
+		console.log(`  ${f.status.padEnd(8)} [${sourceLabel(f)}] ${path}${detail}`);
 	}
 }
 
