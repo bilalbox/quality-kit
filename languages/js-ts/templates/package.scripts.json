@@ -3,10 +3,11 @@
 	"lint": "tsx scripts/ratchets/run-biome.ts",
 	"fix": "biome check --write .",
 	"lint:secrets": "bash tools/quality/run-secret-scan.sh",
+	"lint:vulns": "bash tools/quality/run-vuln-scan.sh",
 	"lint:graph": "tsx scripts/run-rev-dep.ts",
 	"lint:complexity": "tsx scripts/ratchets/run-complexity.ts",
 	"gate:fast": "pnpm lint && pnpm lint:secrets && pnpm lint:graph && pnpm lint:complexity && pnpm typecheck",
-	"gate": "pnpm gate:fast && pnpm test",
+	"gate": "pnpm gate:fast && pnpm lint:vulns && pnpm test",
 	"test:ratchets": "bash tests/ratchets/ratchet-contract.test.sh",
 	"prepare": "husky"
 }

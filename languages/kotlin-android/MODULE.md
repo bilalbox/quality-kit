@@ -12,6 +12,7 @@ Standalone Host for Jetpack Compose apps and libraries: `tools/quality/kotlin-an
 | Static analysis | **detekt 2.0** + **compose-rules** (`config/detekt/detekt.yml`) | fast |
 | Compiler | Kotlin `allWarningsAsErrors` (main + unit-test sources) | fast |
 | Secrets | **Betterleaks v1** (Shared layer; see languages/shared/MODULE.md) | fast, pre-commit. Pack allowlist `.betterleaks.d/kotlin-android.toml`: `build/`, `.gradle/`, `.kotlin/`, `*.png`, `local.properties`. Signing files and test sources are scanned. |
+| Dependency vulns | **osv-scanner** (Shared layer; see languages/shared/MODULE.md) | full (`gate.sh` / `make vulns`) |
 | Lint | **Android Lint**, warnings as errors (`config/lint/lint.xml`) | full |
 | Tests | JUnit + **Robolectric** (`testDebugUnitTest`) | full |
 | Screenshots | **Roborazzi** verify; every `@Preview` auto-generated into a test (ComposablePreviewScanner) | full |
@@ -120,7 +121,7 @@ audit checks the Wiring section was done (see REFERENCE.md "Wiring probes"):
 
 1. Wire the build (see Wiring): `settings.gradle.kts` `pluginManagement { includeBuild("build-logic/quality") }`; root `build.gradle.kts` `plugins { id("quality-kit.root") }`; each Android module `plugins { id("quality-kit.android") }` after `com.android.*`.
 2. Merge `gradle.quality.properties` → `gradle.properties`; merge `AGENTS.quality.md` → `AGENTS.md`.
-3. `./tools/quality/kotlin-android/doctor.sh`; install Betterleaks v1.9.0+ (see languages/shared/MODULE.md) and lefthook; `lefthook install`.
+3. `./tools/quality/kotlin-android/doctor.sh`; install Betterleaks v1.9.0+ and osv-scanner (see languages/shared/MODULE.md) and lefthook; `lefthook install`.
 4. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh` (composed top-level dispatcher).
 5. `./tools/quality/kotlin-android/run-format.sh --fix` (one formatting commit), then `./tools/quality/kotlin-android/screenshots.sh record` and inspect the goldens.
 6. `./tools/quality/gate.sh full` (runs `./tools/quality/kotlin-android/gate.sh full`); fix findings, or baseline legacy detekt / Lint findings deliberately.
@@ -138,4 +139,5 @@ Source: kit-root `pins.json` (see REFERENCE.md "Pins"). Literals below and in `b
 | dependency-analysis | 3.20.0 |
 | ktfmt | 0.65 (`KTFMT_VERSION`) |
 | Betterleaks | Shared layer pin (languages/shared/MODULE.md) |
+| osv-scanner | Shared layer pin (languages/shared/MODULE.md) |
 | CI | `setup-java@v6` (Temurin 21), `setup-android@v4`, `gradle/actions/setup-gradle@v6` |

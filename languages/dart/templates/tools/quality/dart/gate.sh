@@ -24,6 +24,7 @@ echo "# gate:${mode}"
 "${SCRIPT_DIR}/run-deps.sh"
 
 if [[ "${mode}" == "full" ]]; then
+	"${SCRIPT_DIR}/../run-vuln-scan.sh"
 	"${SCRIPT_DIR}/run-test.sh"
 fi
 

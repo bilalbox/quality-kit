@@ -206,11 +206,14 @@ test("apply: dart,kotlin-android writes both Host gates and composed entrypoints
 	assert.deepEqual(
 		readdirSync(join(target, "tools/quality")).sort(),
 		[
+			"check-baseline-growth.sh",
 			"dart",
 			"gate.sh",
 			"install-betterleaks.sh",
+			"install-osv-scanner.sh",
 			"kotlin-android",
 			"run-secret-scan.sh",
+			"run-vuln-scan.sh",
 		].sort(),
 	);
 });

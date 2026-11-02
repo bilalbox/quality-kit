@@ -284,7 +284,7 @@ export function composeMakefile(
 		"ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))",
 		"QUALITY := $(ROOT)/tools/quality",
 		"",
-		".PHONY: gate gate-fast format secrets help",
+		".PHONY: gate gate-fast format secrets vulns help",
 		"",
 		"help:",
 		'\t@echo "Targets:"',
@@ -292,6 +292,7 @@ export function composeMakefile(
 		'\t@echo "  make gate       ./tools/quality/gate.sh full (every selected Host)"',
 		'\t@echo "  make format     each Host\'s format check"',
 		'\t@echo "  make secrets    Betterleaks scan"',
+		'\t@echo "  make vulns      osv-scanner lockfile scan"',
 		"",
 		"gate-fast:",
 		"\t@$(QUALITY)/gate.sh fast",
@@ -304,7 +305,15 @@ export function composeMakefile(
 	for (const id of makefileHosts) {
 		lines.push(`\t@$(QUALITY)/${id}/run-format.sh`);
 	}
-	lines.push("", "secrets:", "\t@$(QUALITY)/run-secret-scan.sh", "");
+	lines.push(
+		"",
+		"secrets:",
+		"\t@$(QUALITY)/run-secret-scan.sh",
+		"",
+		"vulns:",
+		"\t@$(QUALITY)/run-vuln-scan.sh",
+		"",
+	);
 
 	// Host-only targets (analyze/test/doctor/…) keep Pack-prefixed names when they collide.
 	for (const id of makefileHosts) {
@@ -315,6 +324,7 @@ export function composeMakefile(
 			"format",
 			"format-fix",
 			"secrets",
+			"vulns",
 			"help",
 		]);
 		for (const match of raw.matchAll(

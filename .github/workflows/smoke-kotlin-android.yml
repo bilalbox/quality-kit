@@ -1,0 +1,73 @@
+name: Smoke kotlin-android
+
+on:
+  pull_request:
+    paths:
+      - "languages/kotlin-android/**"
+      - "languages/shared/**"
+      - "scripts/smoke/**"
+      - "scripts/smoke.ts"
+      - "scripts/apply.ts"
+      - "scripts/audit.ts"
+      - "scripts/desired-state.ts"
+      - "scripts/packs/**"
+      - "package.json"
+      - ".github/workflows/smoke-kotlin-android.yml"
+  schedule:
+    # Weekly: catch AGP / Compose / Roborazzi / Betterleaks upstream breakage.
+    - cron: "37 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: smoke-kotlin-android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: smoke-kotlin-android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install kit dependencies
+        run: pnpm install --frozen-lockfile
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Install Gradle (wrapper bootstrap)
+        run: |
+          set -euo pipefail
+          GRADLE_VERSION=9.8.2
+          curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d "${HOME}"
+          echo "QUALITY_KIT_GRADLE_BIN=${HOME}/gradle-${GRADLE_VERSION}/bin/gradle" >> "${GITHUB_ENV}"
+      - name: Install Betterleaks and osv-scanner
+        run: |
+          bash languages/shared/templates/tools/quality/install-betterleaks.sh "${HOME}/.local/bin"
+          bash languages/shared/templates/tools/quality/install-osv-scanner.sh "${HOME}/.local/bin"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+      - name: Install lefthook
+        run: |
+          set -euo pipefail
+          LEFTHOOK_VERSION=2.2.2
+          ASSET="lefthook_${LEFTHOOK_VERSION}_Linux_x86_64.gz"
+          mkdir -p "${HOME}/.local/bin"
+          curl -fsSL "https://github.com/evilmartians/lefthook/releases/download/v${LEFTHOOK_VERSION}/${ASSET}" \
+            | gunzip > "${HOME}/.local/bin/lefthook"
+          chmod 0755 "${HOME}/.local/bin/lefthook"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+      - name: Adoption smoke
+        run: pnpm smoke -- --pack kotlin-android
