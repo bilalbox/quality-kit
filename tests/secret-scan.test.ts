@@ -5,13 +5,15 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	readdirSync,
+	readFileSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { kitRoot } from "../scripts/kit-fs";
+import { kitRoot, languagesRoot } from "../scripts/kit-fs";
+import { git } from "./wired-target";
 
 /** Betterleaks is optional locally but must be present in CI. */
 function needsBetterleaks(): { skip: string | false } {
@@ -32,20 +34,35 @@ function appliedTarget(packs: string): string {
 	return target;
 }
 
-/** A GitHub token the default rules flag; generated so the kit holds no secret literal. */
-function plantLeak(target: string, rel: string): void {
-	const token = `ghp_${randomBytes(27).toString("base64url").replace(/[-_]/g, "a").slice(0, 36)}`;
-	mkdirSync(dirname(join(target, rel)), { recursive: true });
-	writeFileSync(join(target, rel), `const token = "${token}";\n`);
+function fakeToken(): string {
+	return `ghp_${randomBytes(27).toString("base64url").replace(/[-_]/g, "a").slice(0, 36)}`;
 }
 
-function scan(target: string) {
-	const res = spawnSync(
-		"bash",
-		[join(target, "tools/quality/run-secret-scan.sh")],
-		{ cwd: target, encoding: "utf8", env: { ...process.env, CI: "" } },
-	);
+/** A GitHub token the default rules flag; generated so the kit holds no secret literal. */
+function plantLeak(target: string, rel: string, body?: string): void {
+	mkdirSync(dirname(join(target, rel)), { recursive: true });
+	writeFileSync(join(target, rel), body ?? `const token = "${fakeToken()}";\n`);
+}
+
+function scan(
+	target: string,
+	opts: { staged?: boolean; env?: NodeJS.ProcessEnv } = {},
+) {
+	const args = [join(target, "tools/quality/run-secret-scan.sh")];
+	if (opts.staged) args.push("--staged");
+	const res = spawnSync("bash", args, {
+		cwd: target,
+		encoding: "utf8",
+		env: { ...process.env, CI: "", ...opts.env },
+	});
 	return { status: res.status, output: res.stdout + res.stderr };
+}
+
+function initGit(target: string): void {
+	git(target, "init", "-q");
+	git(target, "config", "user.email", "kit@example.com");
+	git(target, "config", "user.name", "kit");
+	git(target, "config", "commit.gpgsign", "false");
 }
 
 for (const packs of ["js-ts", "dart", "kotlin-android"]) {
@@ -112,4 +129,39 @@ test("secret scan: a Pack allowlist adds to the shared config", needsBetterleaks
 
 	rmSync(join(target, ".betterleaks.d/dart.toml"));
 	assert.equal(scan(target).status, 1);
+});
+
+test("secret scan: a fake secret in a test source file fails", needsBetterleaks(), () => {
+	const target = appliedTarget("js-ts");
+	plantLeak(target, "src/foo.test.ts");
+	assert.equal(scan(target).status, 1);
+
+	const android = appliedTarget("kotlin-android");
+	plantLeak(android, "app/src/test/java/Token.kt");
+	assert.equal(scan(android).status, 1);
+});
+
+test("secret scan: staging a .env or .jks with a leak fails the gate", needsBetterleaks(), () => {
+	const target = appliedTarget("dart");
+	initGit(target);
+	git(target, "add", "-A");
+	git(target, "commit", "-q", "-m", "init");
+
+	plantLeak(target, ".env", `TOKEN=${fakeToken()}\n`);
+	git(target, "add", "--", ".env");
+	assert.equal(scan(target, { staged: true }).status, 1);
+
+	git(target, "reset", "-q", "HEAD");
+	plantLeak(target, "upload.jks", `api_key=${fakeToken()}\n`);
+	git(target, "add", "--", "upload.jks");
+	assert.equal(scan(target, { staged: true }).status, 1);
+});
+
+test("shared Betterleaks config has no project-specific rules", () => {
+	const toml = readFileSync(
+		join(languagesRoot, "shared/templates/.betterleaks.toml"),
+		"utf8",
+	);
+	assert.doesNotMatch(toml, /\[\[rules\]\]/);
+	assert.doesNotMatch(toml, /retell/i);
 });

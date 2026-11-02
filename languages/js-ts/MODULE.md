@@ -17,7 +17,7 @@ Detect: `package.json` at target root. Templates: `languages/js-ts/templates/`.
 Config, wrapper, install and CI step come from the Shared layer: see [languages/shared/MODULE.md](../shared/MODULE.md). Betterleaks is a Go binary on PATH, not an npm dep.
 
 - **Wiring**: `pnpm lint:secrets` = `bash tools/quality/run-secret-scan.sh`. `.husky/pre-commit` runs `pnpm lint:secrets -- --staged` before `lint-staged`; `pnpm gate:fast` runs it over the working tree.
-- **Pack allowlist** (`.betterleaks.d/js-ts.toml`): `*.test.(ts|js|py)`, `baselines/`, `.rev-dep.*.json`, `.dev.vars*`, `.wrangler/`, plus the `retell-key-prefix` rule for bare `key_[a-f0-9]{28}` literals (built-in Retell rule still needs a nearby `retell` keyword).
+- **Pack allowlist** (`.betterleaks.d/js-ts.toml`): `baselines/`, `.rev-dep.*.json`, `.dev.vars*`, `.wrangler/`, plus the `retell-key-prefix` rule for bare `key_[a-f0-9]{28}` literals (built-in Retell rule still needs a nearby `retell` keyword). Test sources are scanned.
 - **v2 later:** CLI/config differ (stdin patch hooks, explicit `--config`, ignore-file model). Revisit when v2.0.0 is stable; keep this pack on 1.x until then.
 
 ## Biome diagnostics
