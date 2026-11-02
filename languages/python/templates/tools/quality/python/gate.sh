@@ -39,7 +39,9 @@ step secrets "${SCRIPT_DIR}/../run-secret-scan.sh"
 
 if [[ "${mode}" == "full" ]]; then
 	step vulns "${SCRIPT_DIR}/../run-vuln-scan.sh"
-	# Coverage ratchet (#21): plug a collector here once the shared layer lands.
+	# Coverage ratchet (#21): add collect-coverage.sh + 
+	#   step coverage "${SCRIPT_DIR}/../run-coverage-ratchet.sh"
+	# (pytest-cov) when wiring coverage; until then keep pytest as `test`.
 	step test "${SCRIPT_DIR}/run-test.sh"
 fi
 
