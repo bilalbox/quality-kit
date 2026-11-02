@@ -10,6 +10,13 @@ export type DesiredPackageJson = {
 	enginesNode: string;
 };
 
+/** Target path that two or more selected Packs place with different content. */
+export type PlacementCollision = {
+	targetRel: string;
+	/** Selection order; the first Pack's placement is the one kept. */
+	packs: PackId[];
+};
+
 /** Complete inventory selected Packs imply for a Target. */
 export type DesiredState = {
 	packs: readonly PackId[];
@@ -17,6 +24,8 @@ export type DesiredState = {
 	packagePlacements: readonly Placement[];
 	/** Present when a Host that owns package.json (js-ts) is selected. */
 	packageJson: DesiredPackageJson | null;
+	/** Non-empty means apply/audit must refuse the selection. */
+	collisions: readonly PlacementCollision[];
 };
 
 export type DriftKind = "missing" | "match" | "drift" | "present-custom";
@@ -49,23 +58,58 @@ export type DiffReport = {
 	dartRoots: string[] | null;
 };
 
-function firstWinsPlacements(
+function templateText(p: Placement): string | null {
+	const path = join(packTemplatesRoot(p.pack), p.templateRel);
+	return existsSync(path) ? normalize(readText(path)) : null;
+}
+
+function sameContent(a: Placement, b: Placement): boolean {
+	const textA = templateText(a);
+	return textA !== null && textA === templateText(b);
+}
+
+/**
+ * First-wins on targetRel across root and package placements (`claimed` is
+ * shared); a different Pack placing different content is recorded as a collision.
+ */
+function mergePlacements(
+	claimed: Map<string, Placement>,
+	collisions: Map<string, PlacementCollision>,
 	acc: Placement[],
 	incoming: readonly Placement[],
 ): void {
 	for (const p of incoming) {
-		if (acc.some((x) => x.targetRel === p.targetRel)) continue;
-		acc.push(p);
+		const kept = claimed.get(p.targetRel);
+		if (!kept) {
+			claimed.set(p.targetRel, p);
+			acc.push(p);
+			continue;
+		}
+		if (kept.pack === p.pack || sameContent(kept, p)) continue;
+		const collision = collisions.get(p.targetRel);
+		if (!collision) {
+			collisions.set(p.targetRel, {
+				targetRel: p.targetRel,
+				packs: [kept.pack, p.pack],
+			});
+		} else if (!collision.packs.includes(p.pack)) {
+			collision.packs.push(p.pack);
+		}
 	}
 }
 
-/** Build Desired state by merging Pack Contributions (first-wins on targetRel). */
+/**
+ * Build Desired state by merging Pack Contributions (first-wins on targetRel).
+ * Overlaps between Packs with differing content are reported in `collisions`.
+ */
 export function desiredState(
 	target: string,
 	packs: readonly PackId[],
 ): DesiredState {
 	const rootPlacements: Placement[] = [];
 	const packagePlacements: Placement[] = [];
+	const claimed = new Map<string, Placement>();
+	const collisions = new Map<string, PlacementCollision>();
 
 	let scripts: Record<string, string> = {};
 	let devDependencies: Record<string, string> = {};
@@ -76,8 +120,18 @@ export function desiredState(
 
 	for (const id of packs) {
 		const contrib = PACKS[id].contribute(target, packs);
-		firstWinsPlacements(rootPlacements, contrib.rootPlacements);
-		firstWinsPlacements(packagePlacements, contrib.packagePlacements);
+		mergePlacements(
+			claimed,
+			collisions,
+			rootPlacements,
+			contrib.rootPlacements,
+		);
+		mergePlacements(
+			claimed,
+			collisions,
+			packagePlacements,
+			contrib.packagePlacements,
+		);
 
 		const pj = contrib.packageJson;
 		if (!pj) continue;
@@ -115,6 +169,7 @@ export function desiredState(
 		rootPlacements,
 		packagePlacements,
 		packageJson,
+		collisions: [...collisions.values()],
 	};
 }
 
