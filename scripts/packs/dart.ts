@@ -85,13 +85,25 @@ function rootPlacements(): Placement[] {
 	}));
 }
 
+/** Same check as `quality_has_flutter` in templates/tools/quality/lib.sh. */
+function rootHasFlutter(target: string, root: string): boolean {
+	const pubspec = join(target, root, "pubspec.yaml");
+	if (!existsSync(pubspec)) return false;
+	return /^[ \t]*flutter:/m.test(readText(pubspec));
+}
+
 function packagePlacements(target: string): Placement[] {
 	const out: Placement[] = [];
 	for (const root of resolveDartRoots(target)) {
+		const variant = rootHasFlutter(target, root) ? "flutter" : "dart";
 		for (const rel of PACKAGE_COPY_PATHS) {
+			const templateRel =
+				rel === "analysis_options.yaml"
+					? join("package", variant, rel)
+					: join("package", rel);
 			out.push({
 				pack: "dart",
-				templateRel: join("package", rel),
+				templateRel,
 				targetRel: root === "." ? rel : join(root, rel),
 			});
 		}

@@ -1,10 +1,13 @@
 # quality-kit defaults for dependency_validator 5.x
+# Only list packages that are legitimately never imported from lib/ or test/.
+# Runtime deps (freezed_annotation, json_annotation, …) must stay validated.
 allow_pins: true
 ignore:
-  # Analyzer config / codegen tooling — not imported from lib/
+  # Analyzer config / codegen tooling
   - flutter_lints
   - flutter_launcher_icons
   - build_runner
   - json_serializable
   - freezed
-  - freezed_annotation
+  # Asset-only (fonts), added by `flutter create`
+  - cupertino_icons
