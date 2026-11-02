@@ -10,6 +10,7 @@ export {
 	languagesRoot,
 	normalize,
 	packTemplatesRoot,
+	placementContent,
 	readText,
 	relToKit,
 	sharedTemplatesRoot,

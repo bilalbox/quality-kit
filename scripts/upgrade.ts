@@ -4,12 +4,13 @@
  * Usage: pnpm run upgrade -- --target /path/to/repo [--packs a,b] [--python]
  */
 
-import { chmodSync, existsSync } from "node:fs";
+import { chmodSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	copyIfMissing,
 	desiredState,
 	diffAgainst,
+	ensureDir,
 	refuseCollisions,
 	resolvePacks,
 	resolveTarget,
@@ -54,7 +55,12 @@ function main(): void {
 	for (const p of stale) {
 		if (!dryRun) {
 			const dest = join(target, p.targetRel);
-			copyIfMissing(templatePath(p), dest, true);
+			if (p.content !== undefined) {
+				ensureDir(dest);
+				writeFileSync(dest, p.content);
+			} else {
+				copyIfMissing(templatePath(p), dest, true);
+			}
 			if (p.executable) chmodSync(dest, 0o755);
 		}
 		console.log(

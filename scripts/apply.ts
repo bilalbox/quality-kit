@@ -10,6 +10,7 @@ import { join } from "node:path";
 import {
 	copyIfMissing,
 	desiredState,
+	ensureDir,
 	missingMarkers,
 	refuseCollisions,
 	resolvePacks,
@@ -100,6 +101,13 @@ function place(target: string, p: Placement): "copied" | "skipped" | "merged" {
 		return "merged";
 	}
 	const dest = join(target, p.targetRel);
+	if (p.content !== undefined) {
+		if (existsSync(dest)) return "skipped";
+		ensureDir(dest);
+		writeFileSync(dest, p.content);
+		if (p.executable) chmodSync(dest, 0o755);
+		return "copied";
+	}
 	const result = copyIfMissing(templatePath(p), dest);
 	if (result === "copied" && p.executable) chmodSync(dest, 0o755);
 	return result === "copied" ? "copied" : "skipped";

@@ -17,10 +17,17 @@ export function packTemplatesRoot(id: PackId): string {
 	return join(languagesRoot, id, "templates");
 }
 
-/** Kit file a Placement copies from. */
+/** Kit file a Placement copies from (not used when `p.content` is set). */
 export function templatePath(p: Placement): string {
 	const root = p.shared ? sharedTemplatesRoot : packTemplatesRoot(p.pack);
 	return join(root, p.templateRel);
+}
+
+/** Desired file text for a Placement: generated `content`, else the template file. */
+export function placementContent(p: Placement): string | null {
+	if (p.content !== undefined) return normalize(p.content);
+	const path = templatePath(p);
+	return existsSync(path) ? normalize(readText(path)) : null;
 }
 
 export function readText(path: string): string {

@@ -1,7 +1,7 @@
 /**
  * Lint the kit's templates: shellcheck on template shell scripts and husky
- * hooks, actionlint on the kit's own workflows and each Pack's template
- * workflows.
+ * hooks, actionlint on the kit's own workflows, each Pack's template
+ * workflows, and every multi-Host composed CI workflow.
  *
  * Usage: pnpm lint:templates [-- --root /path/to/kit]
  */
@@ -10,13 +10,20 @@ import { spawnSync } from "node:child_process";
 import {
 	cpSync,
 	existsSync,
+	mkdirSync,
 	mkdtempSync,
 	readdirSync,
 	statSync,
+	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { kitRoot } from "./kit-fs";
+import {
+	CI_HOST_IDS,
+	composeCiWorkflow,
+	type CiHostId,
+} from "./packs/ci";
 
 const SHARED_TEMPLATES = join("languages", "shared", "templates");
 
@@ -75,6 +82,11 @@ function run(
 	return result.status === 0;
 }
 
+function copyGithubTree(src: string, destGithub: string): void {
+	if (!existsSync(src)) return;
+	cpSync(src, destGithub, { recursive: true });
+}
+
 /**
  * actionlint resolves `uses: ./.github/actions/…` from the git root (and
  * skips actions it cannot find), so each Pack's `.github` is linted inside its
@@ -84,13 +96,61 @@ function run(
 function lintPackWorkflows(root: string, dir: string): boolean {
 	const scratch = mkdtempSync(join(tmpdir(), "quality-kit-actionlint-"));
 	for (const src of [SHARED_TEMPLATES, dir]) {
-		const github = join(root, src, ".github");
-		if (existsSync(github)) {
-			cpSync(github, join(scratch, ".github"), { recursive: true });
-		}
+		copyGithubTree(join(root, src, ".github"), join(scratch, ".github"));
 	}
 	spawnSync("git", ["init", "-q"], { cwd: scratch });
 	return run("actionlint", [], scratch, `${dir}/`);
+}
+
+/** Host Packs under `root` that still ship a composition-input ci.yml. */
+function presentCiHosts(root: string): CiHostId[] {
+	return CI_HOST_IDS.filter((id) =>
+		existsSync(
+			join(root, "languages", id, "templates", ".github", "workflows", "ci.yml"),
+		),
+	);
+}
+
+/** Every multi-Host combination in selection order (pairs, then all). */
+function multiHostCombos(hosts: readonly CiHostId[]): CiHostId[][] {
+	const combos: CiHostId[][] = [];
+	for (let i = 0; i < hosts.length; i++) {
+		for (let j = i + 1; j < hosts.length; j++) {
+			combos.push([hosts[i]!, hosts[j]!]);
+		}
+	}
+	if (hosts.length > 2) combos.push([...hosts]);
+	return combos;
+}
+
+/**
+ * Materialize a composed workflow with every selected Host's actions (and the
+ * shared layer) so actionlint resolves namespaced quality-gate uses.
+ */
+function lintComposedWorkflow(
+	root: string,
+	hosts: readonly CiHostId[],
+): boolean {
+	const scratch = mkdtempSync(join(tmpdir(), "quality-kit-composed-ci-"));
+	copyGithubTree(
+		join(root, SHARED_TEMPLATES, ".github"),
+		join(scratch, ".github"),
+	);
+	for (const id of hosts) {
+		copyGithubTree(
+			join(root, "languages", id, "templates", ".github", "actions"),
+			join(scratch, ".github", "actions"),
+		);
+	}
+	const yml = composeCiWorkflow(hosts, {
+		languagesRoot: join(root, "languages"),
+	});
+	const workflow = join(scratch, ".github", "workflows", "ci.yml");
+	mkdirSync(dirname(workflow), { recursive: true });
+	writeFileSync(workflow, yml);
+	spawnSync("git", ["init", "-q"], { cwd: scratch });
+	const label = `composed:${hosts.join("+")}/`;
+	return run("actionlint", [], scratch, label);
 }
 
 function main(): void {
@@ -113,6 +173,9 @@ function main(): void {
 		if (existsSync(join(root, dir, ".github/workflows"))) {
 			ok = lintPackWorkflows(root, dir) && ok;
 		}
+	}
+	for (const hosts of multiHostCombos(presentCiHosts(root))) {
+		ok = lintComposedWorkflow(root, hosts) && ok;
 	}
 	process.exit(ok ? 0 : 1);
 }
