@@ -18,7 +18,7 @@ Finding ID shape is pack-specific (js-ts complexity / Biome IDs; coverage uses p
 
 ### Coverage ratchet
 
-Every Host's **full** gate runs `tools/quality/run-coverage-ratchet.sh`, which calls Host `tools/quality/collect-coverage.sh` then the shared compare against seed `baselines/coverage.json`:
+Every Host's **full** gate runs `tools/quality/run-coverage-ratchet.sh`, which calls Host `tools/quality/<pack>/collect-coverage.sh` then the shared compare against seed `baselines/coverage.json`:
 
 ```json
 { "version": 1, "worseWhen": "lower", "floor": 80, "findings": [] }
@@ -195,7 +195,7 @@ The kit's own `.github/workflows/ci.yml` runs on every PR (and on pushes to `mai
 
 ### Adoption smoke
 
-One workflow per Host Pack (`smoke-js-ts`, `smoke-dart`, `smoke-kotlin-android`) proves scaffold → apply → Post-apply wiring → green `audit` (including wiring probes) → green `gate full`. Logic lives in `scripts/smoke.ts` / `scripts/smoke/`; CI jobs are thin wrappers (`pnpm smoke -- --pack <id>`). `pnpm test` stays fast: it only covers the smoke registry and orchestrator seams (`tests/smoke.test.ts`), never a real Pack smoke.
+One workflow per Host Pack (`smoke-js-ts`, `smoke-python`, `smoke-dart`, `smoke-kotlin-android`) proves scaffold → apply → Post-apply wiring → green `audit` (including wiring probes) → green `gate full`. Logic lives in `scripts/smoke.ts` / `scripts/smoke/` (`HOST_SMOKES`); CI jobs are thin wrappers (`pnpm smoke -- --pack <id>`). `pnpm test` stays fast: it only covers the Host smoke registry and orchestrator seams (`tests/smoke.test.ts`), never a real Pack smoke.
 
 **Path filters (PR):** each smoke runs when that Pack's templates change, or when Shared-layer templates / smoke scripts / apply·audit·desired-state·packs / `package.json` / that workflow file change. Unrelated Pack PRs do not pay the smoke cost. **Schedule:** weekly Monday (staggered crons) to catch upstream Vite / Flutter / AGP breakage even when no Pack PR lands. **python:** `scripts/smoke/python.ts` (`uv init`) + `.github/workflows/smoke-python.yml`. **kotlin scaffold:** Empty Activity–shaped Compose app at `compileSdk` 36 + Compose BOM 2026.06.01 (2026.09+ needs platform 37); bootstraps the Gradle wrapper via `QUALITY_KIT_GRADLE_BIN` or the cached 9.8.2 dist.
 
