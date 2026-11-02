@@ -24,8 +24,23 @@ Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Con
 ## apply / audit semantics
 
 - **apply** builds Desired state, copies missing placement files only (never overwrites), sets executable bit when the placement asks for it, and merges missing `package.json` scripts/devDeps/`lint-staged`/`engines` from Desired state. Policy flags like `--force-scripts` stay in the apply adapter.
-- **audit** builds the same Desired state, diffs the Target via `diffAgainst` (content/presence; mode ignored), labels packs as host/fragment, warns on orphan Fragments, and exits non-zero on gaps.
-- Template updates: audit shows drift; humans re-copy deliberately (no auto-overwrite). Drift playbook (keep / merge / replace) lives in `SKILL.md`.
+- **audit** builds the same Desired state, diffs the Target via `diffAgainst` (mode ignored), labels packs as host/fragment, warns on orphan Fragments, groups file findings by Placement kind, and exits non-zero on gaps.
+- Template updates: audit shows drift on **owned** files only; humans re-copy deliberately (no auto-overwrite). Drift playbook (keep / merge / replace) lives in `SKILL.md`.
+
+### Placement kinds
+
+Each Pack adapter declares a kind per template path (`scripts/packs/placements.ts` `placeFiles`; a test fails if any Placement lacks one). Per-pack lists live in each `languages/*/MODULE.md`.
+
+| Kind | audit statuses (gap in bold) | apply |
+| --- | --- | --- |
+| owned | match, **drift**, **missing** | copy if missing |
+| seed | present, **missing**, **invalid** | copy if missing |
+| merge-into | merged, **unmerged** | copy the fragment if missing, unless its destination is already merged |
+
+- **Seeds parse** only when they are JSON (`*.json`). YAML/TOML/Python seeds are checked for presence only: the kit has no parser dependencies.
+- **Merge-into markers**: a destination counts as merged when, for every marker, some line (leading whitespace ignored) starts with it. A missing destination is unmerged. Markers are headings or keys, never values, so Targets can tune merged values (e.g. `qualityKit.minLineCoverage=80`). A test asserts each fragment contains its own markers.
+- **The fragment file itself is not audited.** Delete it after merging; apply will not copy it back while the destination stays merged.
+- **Self-merge**: when a Target usually has its own copy of a file (`pyproject.toml`, `Makefile`, `pnpm-workspace.yaml`, `.npmrc`), the destination is the placed path. apply still copies it into a Target that lacks it; otherwise the kit lines must be merged in by hand.
 - Packs: detect from target, or `--packs a,b`. `--python` adds the `python` pack. Python detect ignores helper-script dirs (`tool`, `tools`, `scripts`, …).
 
 ## CI / hooks

@@ -22,6 +22,11 @@ Fragment Pack onto a `js-ts` Host: contributes `package.scripts.json` (`lint:py`
 - `tach.toml`: run `uvx tach@0.35.3 init` then refine `[[modules]]`. Keep `forbid_circular_dependencies = true`.
 - Vulture: commit `vulture_whitelist.py` from `--make-whitelist`; treat like a baseline.
 
+## Placement kinds
+
+- **seed:** `tach.toml`, `vulture_whitelist.py`
+- **merge-into:** `pyproject.toml` → itself (`[tool.ruff]`, `[tool.basedpyright]`, `[tool.vulture]` tables)
+
 ## Post-apply
 
 1. Refine `tach.toml` modules.

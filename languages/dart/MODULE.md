@@ -43,6 +43,13 @@ CI installs the binary in `setup-flutter`.
 
 Pin **5.1.0** (`dart pub global activate dependency_validator 5.1.0`). Config per package: `dart_dependency_validator.yaml`. Tune `ignore` for tooling packages (`flutter_lints`, `flutter_launcher_icons`, …).
 
+## Placement kinds
+
+Everything not listed is **owned** (audit reports drift), including each package's `analysis_options.yaml`.
+
+- **seed:** `quality-kit.dart.json`, `.betterleaksignore`, each package's `dart_dependency_validator.yaml`
+- **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `Makefile` → itself (`gate-fast:` and `gate:` targets)
+
 ## Post-apply
 
 1. Set `quality-kit.dart.json` `roots` (and `flutterEnv` if the repo has one). Root Flutter apps usually keep `["."]`.

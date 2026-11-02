@@ -46,6 +46,13 @@ Detect: `package.json` at target root. Templates: `languages/js-ts/templates/`.
 
 madge + dependency-cruiser need patches under TS7 (`ts.sys` removed). **rev-dep avoids that.** Do not reintroduce madge/depcruise.
 
+## Placement kinds
+
+Everything not listed is **owned** (audit reports drift).
+
+- **seed:** `biome.complexity.json`, `rev-dep.config.json`, `baselines/complexity.json`, `.betterleaksignore`, `.gitignore`
+- **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `pnpm-workspace.yaml` → itself (`esbuild: true`); `.npmrc` → itself (`engine-strict=true`)
+
 ## Post-apply
 
 1. Adjust `rev-dep.config.json` entry points / `moduleBoundaries`.
