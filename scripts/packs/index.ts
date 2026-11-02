@@ -7,6 +7,7 @@ import { PACK_IDS, type Pack, type PackId } from "./types";
 
 export { PACK_IDS, type Pack, type PackId, type PackKind, type Placement, type PlacementKind, type MergeInto, type Contribution, type PackageJsonContribution, type WiringGap, type WiringProbe } from "./types";
 export { resolveDartRoots } from "./dart";
+export { sourceLabel } from "./shared";
 
 export const PACKS: Record<PackId, Pack> = {
 	"js-ts": jsTsPack,

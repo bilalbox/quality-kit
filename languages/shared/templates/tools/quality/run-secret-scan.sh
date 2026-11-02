@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
-# Betterleaks v1 secret scan — kotlin-android pack (mirrors js-ts run-secret-scan.ts).
-# Usage: ./tools/quality/run-secret-scan.sh [--staged] [--verbose]
+# Betterleaks v1 secret scan — shared layer, used by every Host Pack.
+# Usage: ./tools/quality/run-secret-scan.sh [--staged] [--verbose] [-- betterleaks args…]
+#
+# Modes:
+#   --staged       pre-commit: `betterleaks git --staged`
+#   (default)      local gate: `betterleaks dir .` (working tree + untracked)
+#   CI=true        `betterleaks git --log-opts=origin/main..HEAD` (fallback: full `git`)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib.sh
-source "${SCRIPT_DIR}/lib.sh"
-
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 BETTERLEAKS_MAJOR=1
-REPO_ROOT="$(quality_repo_root)"
 cd "${REPO_ROOT}"
+
+is_ci() {
+	case "${CI:-}" in
+		"" | 0 | [Ff][Aa][Ll][Ss][Ee]) return 1 ;;
+		*) return 0 ;;
+	esac
+}
 
 is_staged=0
 is_verbose=0
@@ -23,7 +32,7 @@ for arg in "$@"; do
 	esac
 done
 
-if ! quality_is_ci; then
+if ! is_ci; then
 	is_verbose=1
 fi
 
@@ -59,12 +68,12 @@ resolve_bin() {
 			return 0
 		fi
 		echo "error: found betterleaks ${out}, but quality-kit pins 1.x until v2 is stable." >&2
-		echo "Install v1.9.0+ — see languages/kotlin-android/MODULE.md" >&2
+		echo "Install v1.9.0+ — see quality-kit languages/shared/MODULE.md" >&2
 		exit 2
 	fi
 	echo "error: betterleaks 1.x not found on PATH." >&2
 	echo "  macOS: brew install --cask betterleaks/tap/betterleaks@1" >&2
-	echo "  Linux: https://github.com/betterleaks/betterleaks/releases/tag/v1.9.0" >&2
+	echo "  Linux: ./tools/quality/install-betterleaks.sh (pinned, checksum-verified)" >&2
 	exit 2
 }
 
@@ -73,7 +82,7 @@ args=()
 
 if ((is_staged)); then
 	args+=(git --staged)
-elif quality_is_ci; then
+elif is_ci; then
 	if git rev-parse --verify origin/main >/dev/null 2>&1; then
 		args+=(git --log-opts=origin/main..HEAD)
 	else
@@ -88,8 +97,18 @@ if ((is_verbose)); then
 	args+=(--verbose)
 fi
 
+# Betterleaks takes one config, so the shared config and every
+# .betterleaks.d/*.toml (Pack and Target allowlists) are concatenated into it.
 if [[ -f "${REPO_ROOT}/.betterleaks.toml" ]]; then
-	args+=(-c "${REPO_ROOT}/.betterleaks.toml")
+	config="$(mktemp)"
+	trap 'rm -f "${config}"' EXIT
+	for part in "${REPO_ROOT}/.betterleaks.toml" "${REPO_ROOT}"/.betterleaks.d/*.toml; do
+		if [[ -f "${part}" ]]; then
+			cat "${part}"
+			echo
+		fi
+	done >"${config}"
+	args+=(-c "${config}")
 fi
 if [[ -f "${REPO_ROOT}/.betterleaksignore" ]]; then
 	args+=(-i "${REPO_ROOT}/.betterleaksignore")
@@ -97,4 +116,4 @@ fi
 
 args+=("${extra_args[@]+"${extra_args[@]}"}")
 
-exec "${bin}" "${args[@]}"
+"${bin}" "${args[@]}"

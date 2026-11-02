@@ -3,9 +3,9 @@ import { join } from "node:path";
 import {
 	contentHash,
 	normalize,
-	packTemplatesRoot,
 	readText,
 	relToKit,
+	templatePath,
 } from "./kit-fs";
 import { readLock, type LockRead } from "./lock-file";
 import {
@@ -78,6 +78,8 @@ export type FileStatus =
 export type FileFinding = {
 	path: string;
 	pack: PackId;
+	/** From the shared layer rather than `pack`'s own templates. */
+	shared?: true;
 	kind: PlacementKind;
 	status: FileStatus;
 	/** merge-into: the Target file the content must land in. */
@@ -128,7 +130,7 @@ export type DiffReport = {
 };
 
 function templateText(p: Placement): string | null {
-	const path = join(packTemplatesRoot(p.pack), p.templateRel);
+	const path = templatePath(p);
 	return existsSync(path) ? normalize(readText(path)) : null;
 }
 
@@ -291,13 +293,11 @@ function comparePlacement(
 	const base = {
 		path: placement.targetRel,
 		pack: placement.pack,
+		shared: placement.shared,
 		kind: placement.kind,
 	};
 
-	const templatePath = join(
-		packTemplatesRoot(placement.pack),
-		placement.templateRel,
-	);
+	const template = templatePath(placement);
 
 	if (placement.kind === "merge-into") {
 		const { dest } = placement.mergeInto;
@@ -305,7 +305,7 @@ function comparePlacement(
 			...base,
 			status: "unmerged" as const,
 			dest,
-			fix: `merge ${relToKit(templatePath)} into ${dest}`,
+			fix: `merge ${relToKit(template)} into ${dest}`,
 		};
 		if (!existsSync(join(targetRoot, dest))) {
 			return { ...unmerged, detail: `${dest} missing` };
@@ -327,7 +327,7 @@ function comparePlacement(
 
 	const status = compareOwned(
 		targetPath,
-		templatePath,
+		template,
 		recorded[placement.targetRel],
 	);
 	return OWNED_DETAIL[status]

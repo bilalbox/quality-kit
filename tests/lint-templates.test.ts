@@ -122,6 +122,17 @@ test("lint-templates: template workflows are checked against the Pack's own loca
 	assert.match(output, /input "flavour" is not defined/);
 });
 
+test("lint-templates: template workflows are checked against shared-layer actions", needs("actionlint"), () => {
+	const root = kitFixture({
+		"languages/demo/templates/.github/workflows/ci.yml":
+			workflowUsingLocalAction("flavour"),
+		"languages/shared/templates/.github/actions/setup/action.yml": LOCAL_ACTION,
+	});
+	const { status, output } = lintTemplates(root);
+	assert.equal(status, 1, output);
+	assert.match(output, /input "flavour" is not defined/);
+});
+
 test("lint-templates: the kit's own workflows are checked", needs("actionlint"), () => {
 	const root = kitFixture({
 		".github/workflows/ci.yml": `name: CI

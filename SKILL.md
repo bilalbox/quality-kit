@@ -64,6 +64,7 @@ Before pack-specific steps, **read** each selected pack's module:
 - [languages/dart/MODULE.md](languages/dart/MODULE.md)
 - [languages/kotlin-android/MODULE.md](languages/kotlin-android/MODULE.md)
 - [languages/rust/MODULE.md](languages/rust/MODULE.md) (stub)
+- [languages/shared/MODULE.md](languages/shared/MODULE.md) (Shared layer every Host composes: secrets)
 
 ## Drift playbook
 

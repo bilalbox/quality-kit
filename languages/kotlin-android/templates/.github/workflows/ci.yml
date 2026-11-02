@@ -20,5 +20,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/setup-betterleaks
       - uses: ./.github/actions/setup-android
       - uses: ./.github/actions/quality-gate

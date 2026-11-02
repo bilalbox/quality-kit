@@ -16,6 +16,10 @@ _Avoid_: primary pack, base pack
 A Pack that only contributes pieces into a Host Pack’s Desired state (extra templates, gate fragments). Today: python onto js-ts.
 _Avoid_: addon, plugin, extension pack
 
+**Shared layer**:
+Templates every Host Pack composes into its Contribution (today: Betterleaks secret scanning), placed once however many Hosts are selected. Not a Pack: it is never selected or detected on its own. Lives in `languages/shared/`.
+_Avoid_: common pack, base layer, shared pack
+
 **Desired state**:
 The complete inventory of files, placements, and package.json expectations that selected Packs imply for a Target.
 _Avoid_: plan, projection, conformance checklist, expected layout

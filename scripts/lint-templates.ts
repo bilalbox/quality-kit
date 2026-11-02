@@ -18,6 +18,8 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { kitRoot } from "./kit-fs";
 
+const SHARED_TEMPLATES = join("languages", "shared", "templates");
+
 function resolveRoot(argv: readonly string[]): string {
 	const idx = argv.indexOf("--root");
 	return idx === -1 ? kitRoot : resolve(argv[idx + 1]!);
@@ -74,14 +76,19 @@ function run(
 }
 
 /**
- * actionlint resolves `uses: ./.github/actions/…` from the git root, so each
- * Pack's `.github` is linted inside its own throwaway repo.
+ * actionlint resolves `uses: ./.github/actions/…` from the git root (and
+ * skips actions it cannot find), so each Pack's `.github` is linted inside its
+ * own throwaway repo together with the shared layer's `.github` every Host
+ * composes.
  */
 function lintPackWorkflows(root: string, dir: string): boolean {
 	const scratch = mkdtempSync(join(tmpdir(), "quality-kit-actionlint-"));
-	cpSync(join(root, dir, ".github"), join(scratch, ".github"), {
-		recursive: true,
-	});
+	for (const src of [SHARED_TEMPLATES, dir]) {
+		const github = join(root, src, ".github");
+		if (existsSync(github)) {
+			cpSync(github, join(scratch, ".github"), { recursive: true });
+		}
+	}
 	spawnSync("git", ["init", "-q"], { cwd: scratch });
 	return run("actionlint", [], scratch, `${dir}/`);
 }

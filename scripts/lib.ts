@@ -12,6 +12,8 @@ export {
 	packTemplatesRoot,
 	readText,
 	relToKit,
+	sharedTemplatesRoot,
+	templatePath,
 } from "./kit-fs";
 
 export {
@@ -19,6 +21,7 @@ export {
 	PACK_IDS,
 	PACKS,
 	resolveDartRoots,
+	sourceLabel,
 	type Pack,
 	type PackId,
 	type PackKind,

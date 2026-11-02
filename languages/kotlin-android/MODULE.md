@@ -11,7 +11,7 @@ Standalone Host for Jetpack Compose apps and libraries: `tools/quality/*.sh`, le
 | Format | **ktfmt** `--kotlinlang-style` (native binary, auto-downloaded + sha256-checked; jar fallback); `run-format.sh --fix [files…]` formats in place | fast, pre-commit (staged content, no JVM) |
 | Static analysis | **detekt 2.0** + **compose-rules** (`config/detekt/detekt.yml`) | fast |
 | Compiler | Kotlin `allWarningsAsErrors` (main + unit-test sources) | fast |
-| Secrets | **Betterleaks v1** (same contract as js-ts / dart) | fast, pre-commit |
+| Secrets | **Betterleaks v1** (Shared layer; see languages/shared/MODULE.md) | fast, pre-commit. Pack allowlist `.betterleaks.d/kotlin-android.toml`: `build/`, `.gradle/`, `.kotlin/`, `*.png`, `local.properties`, `key(store).properties`, `*.jks`, `*.keystore` |
 | Lint | **Android Lint**, warnings as errors (`config/lint/lint.xml`) | full |
 | Tests | JUnit + **Robolectric** (`testDebugUnitTest`) | full |
 | Screenshots | **Roborazzi** verify; every `@Preview` auto-generated into a test (ComposablePreviewScanner) | full |
@@ -95,9 +95,8 @@ Baselines (legacy only; never for new code): `<module>/detekt-baseline.xml` (`./
 
 ## Placement kinds
 
-Everything not listed is **owned** (audit reports drift), including `config/detekt/detekt.yml` and `config/lint/lint.xml`.
+Everything not listed is **owned** (audit reports drift), including `config/detekt/detekt.yml` and `config/lint/lint.xml`. Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
-- **seed:** `.betterleaksignore`
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `gradle.quality.properties` → `gradle.properties` (all four `qualityKit.*` keys; values may be tuned); `Makefile` → itself (`gate-fast:` and `gate:` targets)
 
 ## Wiring probes
@@ -115,7 +114,7 @@ audit checks the Wiring section was done (see REFERENCE.md "Wiring probes"):
 
 1. Wire the build (see Wiring): `settings.gradle.kts` `pluginManagement { includeBuild("build-logic/quality") }`; root `build.gradle.kts` `plugins { id("quality-kit.root") }`; each Android module `plugins { id("quality-kit.android") }` after `com.android.*`.
 2. Merge `gradle.quality.properties` → `gradle.properties`; merge `AGENTS.quality.md` → `AGENTS.md`.
-3. `./tools/quality/doctor.sh`; install Betterleaks v1.9.0+ and lefthook; `lefthook install`.
+3. `./tools/quality/doctor.sh`; install Betterleaks v1.9.0+ (see languages/shared/MODULE.md) and lefthook; `lefthook install`.
 4. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.
 5. `./tools/quality/run-format.sh --fix` (one formatting commit), then `./tools/quality/screenshots.sh record` and inspect the goldens.
 6. `./tools/quality/gate.sh full`; fix findings, or baseline legacy detekt / Lint findings deliberately.
@@ -130,5 +129,5 @@ audit checks the Wiring section was done (see REFERENCE.md "Wiring probes"):
 | Roborazzi / Robolectric (SDK) / ComposablePreviewScanner | 1.77.0 / 4.17 (36) / 0.9.3 |
 | dependency-analysis | 3.20.0 |
 | ktfmt | 0.65 (`KTFMT_VERSION`) |
-| Betterleaks | 1.9.0 (1.x line) |
+| Betterleaks | Shared layer pin (languages/shared/MODULE.md) |
 | CI | `setup-java@v6` (Temurin 21), `setup-android@v4`, `gradle/actions/setup-gradle@v6` |

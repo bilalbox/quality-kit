@@ -16,8 +16,10 @@ export type MergeInto = {
 
 type PlacementBase = {
 	pack: PackId;
-	/** Relpath under languages/<pack>/templates/. */
+	/** Relpath under languages/<pack>/templates/, or languages/shared/templates/ when `shared`. */
 	templateRel: string;
+	/** From the shared layer every Host composes; placed once however many Hosts are selected. */
+	shared?: true;
 	/** Relpath under the Target root. */
 	targetRel: string;
 	executable?: boolean;

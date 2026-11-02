@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { desiredState, diffAgainst } from "../scripts/desired-state";
-import { kitRoot, packTemplatesRoot } from "../scripts/kit-fs";
+import { kitRoot, packTemplatesRoot, sharedTemplatesRoot } from "../scripts/kit-fs";
 
 const LOCK = ".quality-kit.lock.json";
 const PACKS = "kotlin-android";
@@ -71,6 +71,24 @@ test("upgrade replaces a stale owned file with the current template and records 
 	assert.equal(lockFiles(target)[DETEKT], sha256(template(DETEKT)));
 	assert.equal(statusOf(target, DETEKT), "current");
 	assert.match(stdout, /updated +\[kotlin-android\] config\/detekt\/detekt\.yml/);
+});
+
+test("upgrade replaces a stale shared-layer file from the shared templates", () => {
+	const target = appliedFromOlderKit();
+	const config = ".betterleaks.toml";
+	const oldConfig = "[extend]\nuseDefault = true\n";
+	writeFileSync(join(target, config), oldConfig);
+	const lock = JSON.parse(read(target, LOCK)) as { files: Record<string, string> };
+	lock.files[config] = sha256(oldConfig);
+	writeFileSync(join(target, LOCK), JSON.stringify(lock));
+
+	const { status, stdout } = runKit("upgrade", target);
+	assert.equal(status, 0, stdout);
+	assert.equal(
+		read(target, config),
+		readFileSync(join(sharedTemplatesRoot, config), "utf8"),
+	);
+	assert.match(stdout, /updated +\[shared\] \.betterleaks\.toml/);
 });
 
 test("upgrade leaves an updated shell script executable", () => {

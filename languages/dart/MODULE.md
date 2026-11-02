@@ -10,7 +10,7 @@ Standalone host (not composed onto js-ts): Makefile / `tools/quality/*.sh`, left
 | --- | --- | --- |
 | Format | **`dart format`** | `--output=none --set-exit-if-changed` per package root; `run-format.sh --fix [files…]` formats in place. |
 | Lint / types | **`flutter analyze --fatal-infos`** (or `dart analyze`) | Per-root `analysis_options.yaml`: `flutter_lints` (Flutter) or `lints` (pure Dart) + strict modes. See [Analysis](#analysis). |
-| Secrets | **Betterleaks v1** | Same pin/contract as js-ts; bash wrapper (no Node). |
+| Secrets | **Betterleaks v1** | From the Shared layer (bash wrapper, no Node). |
 | Dependencies | **dependency_validator 5.1.0** | Missing / unused / over-/under-promoted deps. Activated via `dart pub global`. |
 | Hooks | **lefthook** | pre-commit: secrets + format check of staged content (see Pre-commit format); pre-push: full gate. |
 | Orchestration | **`tools/quality/gate.sh`** | `fast` = format + analyze + secrets + deps; `full` = fast + test. |
@@ -68,13 +68,9 @@ Strict modes usually surface many findings in an existing codebase, and `--fatal
 
 ## Secrets (Betterleaks)
 
-Same as js-ts (pin **1.9.0+**, offline only). Wrapper: `tools/quality/run-secret-scan.sh`.
+Config, wrapper (`tools/quality/run-secret-scan.sh`), install and CI step come from the Shared layer: see [languages/shared/MODULE.md](../shared/MODULE.md). lefthook pre-commit runs it with `--staged`; `gate.sh fast` and `make secrets` scan the working tree.
 
-- Pre-commit: `--staged`
-- Local gate: `dir .`
-- CI (`CI=true`): `git --log-opts=origin/main..HEAD` (fallback: full `git`)
-
-CI installs the binary in `setup-flutter`.
+**Pack allowlist** (`.betterleaks.d/dart.toml`): `*_test.dart`, `.dart_tool/`, `build/`, `android/.gradle/`, `android/app/build/`, `.dev.vars*`, `key.properties`, `*.jks`, `*.keystore`.
 
 ## dependency_validator
 
@@ -82,9 +78,9 @@ Pin **5.1.0** (`dart pub global activate dependency_validator 5.1.0`). Config pe
 
 ## Placement kinds
 
-Everything not listed is **owned** (audit reports drift), including each package's `analysis_options.yaml`.
+Everything not listed is **owned** (audit reports drift), including each package's `analysis_options.yaml`. Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
-- **seed:** `quality-kit.dart.json`, `.betterleaksignore`, each package's `dart_dependency_validator.yaml`
+- **seed:** `quality-kit.dart.json`, each package's `dart_dependency_validator.yaml`
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `Makefile` → itself (`gate-fast:` and `gate:` targets)
 
 ## Wiring probes
@@ -98,7 +94,7 @@ audit checks (see REFERENCE.md "Wiring probes"):
 `apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.
 
 1. Set `quality-kit.dart.json` `roots` (and `flutterEnv` if the repo has one). Root Flutter apps usually keep `["."]`.
-2. Install Betterleaks v1.9.0+ and lefthook on the host; run `lefthook install`.
+2. Install Betterleaks v1.9.0+ (see languages/shared/MODULE.md) and lefthook on the host; run `lefthook install`.
 3. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.
 4. Merge `AGENTS.quality.md` into `AGENTS.md`.
 5. Resolve **drift** deliberately (see skill Drift playbook). A stock `analysis_options.yaml` often drifts from the kit template — prefer **merge** over blind replace, and follow "Adopting on legacy code" in `languages/dart/MODULE.md` for the strict modes.
@@ -110,7 +106,7 @@ Helper `tool/*.py` scripts do not require the python pack; adopt with `--packs d
 
 | Tool | Pin |
 | --- | --- |
-| Betterleaks | 1.9.0 (1.x line) |
+| Betterleaks | Shared layer pin (languages/shared/MODULE.md) |
 | dependency_validator | 5.1.0 |
 | lefthook | latest stable release binary |
 | Flutter | 3.47.9 (Dart 3.13.7) — `flutter-version` in `.github/actions/setup-flutter/action.yml` |

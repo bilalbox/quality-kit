@@ -35,6 +35,7 @@ When adding or renaming the skill, or moving the repo, update both links. Shared
 
 - `languages/<pack>/templates/` — files `apply` copies into a target repo
 - `languages/<pack>/MODULE.md` — pack tools, pins, post-apply steps
+- `languages/shared/` — Shared layer every Host Pack composes (Betterleaks config, wrapper, checksum-pinned installer); not a Pack
 - `languages/kotlin-android/templates/build-logic/quality/` — Gradle convention plugins (`quality-kit.root`, `quality-kit.android`) copied into the Target
 - `scripts/packs/` — Pack adapters (detect + Contribution)
 - `scripts/desired-state.ts` — Desired state build + diff

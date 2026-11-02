@@ -10,10 +10,11 @@ import {
 	copyIfMissing,
 	desiredState,
 	diffAgainst,
-	packTemplatesRoot,
 	refuseCollisions,
 	resolvePacks,
 	resolveTarget,
+	sourceLabel,
+	templatePath,
 	type FileStatus,
 } from "./lib";
 import { LOCK_FILE, recordOwned } from "./lock-file";
@@ -53,11 +54,11 @@ function main(): void {
 	for (const p of stale) {
 		if (!dryRun) {
 			const dest = join(target, p.targetRel);
-			copyIfMissing(join(packTemplatesRoot(p.pack), p.templateRel), dest, true);
+			copyIfMissing(templatePath(p), dest, true);
 			if (p.executable) chmodSync(dest, 0o755);
 		}
 		console.log(
-			`  ${dryRun ? "would update" : "updated   "} [${p.pack}] ${p.targetRel}`,
+			`  ${dryRun ? "would update" : "updated   "} [${sourceLabel(p)}] ${p.targetRel}`,
 		);
 	}
 
@@ -68,7 +69,7 @@ function main(): void {
 		console.log('## Merge by hand (see SKILL.md "Drift playbook")');
 		for (const p of byHand) {
 			const status = report.files[placements.indexOf(p)]!.status;
-			console.log(`  ${status.padEnd(10)} [${p.pack}] ${p.targetRel}`);
+			console.log(`  ${status.padEnd(10)} [${sourceLabel(p)}] ${p.targetRel}`);
 		}
 	}
 
@@ -77,7 +78,7 @@ function main(): void {
 		console.log("");
 		console.log("## Missing (upgrade never creates files; run apply)");
 		for (const p of missing) {
-			console.log(`  missing    [${p.pack}] ${p.targetRel}`);
+			console.log(`  missing    [${sourceLabel(p)}] ${p.targetRel}`);
 		}
 	}
 }
