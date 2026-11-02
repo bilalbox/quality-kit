@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, mkdtempSync, readFileSync } from "node:fs";
+import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -17,7 +17,7 @@ function tempTarget(): string {
 	return mkdtempSync(join(tmpdir(), "quality-kit-"));
 }
 
-const HOSTS = ["js-ts", "dart", "kotlin-android"] as const satisfies PackId[];
+const HOSTS = ["js-ts", "python", "dart", "kotlin-android"] as const satisfies PackId[];
 
 const SHARED_FILES = [
 	".betterleaks.toml",
@@ -68,13 +68,25 @@ for (const packs of [
 }
 
 test("shared layer: every Host keeps its own allowlist file alongside the others", () => {
-	const state = desiredState(tempTarget(), ["js-ts", "dart", "kotlin-android"]);
+	const withJs = desiredState(tempTarget(), ["js-ts", "dart", "kotlin-android"]);
 	assert.deepEqual(
-		state.rootPlacements
+		withJs.rootPlacements
 			.filter((p) => p.targetRel.startsWith(".betterleaks.d/"))
 			.map((p) => p.targetRel),
 		[
 			".betterleaks.d/js-ts.toml",
+			".betterleaks.d/dart.toml",
+			".betterleaks.d/kotlin-android.toml",
+		],
+	);
+	// python is Host only without js-ts; Fragment mode skips its allowlist.
+	const withPy = desiredState(tempTarget(), ["python", "dart", "kotlin-android"]);
+	assert.deepEqual(
+		withPy.rootPlacements
+			.filter((p) => p.targetRel.startsWith(".betterleaks.d/"))
+			.map((p) => p.targetRel),
+		[
+			".betterleaks.d/python.toml",
 			".betterleaks.d/dart.toml",
 			".betterleaks.d/kotlin-android.toml",
 		],
@@ -151,7 +163,16 @@ for (const host of HOSTS) {
 	});
 }
 
-test("shared layer: a Fragment Pack alone does not compose it", () => {
-	const state = desiredState(tempTarget(), ["python"]);
-	assert.ok(!state.rootPlacements.some((p) => p.shared));
+test("shared layer: python Host composes it; Fragment onto js-ts does not (from python)", () => {
+	const host = desiredState(tempTarget(), ["python"]);
+	assert.ok(host.rootPlacements.some((p) => p.shared && p.pack === "python"));
+
+	const target = tempTarget();
+	writeFileSync(
+		join(target, "package.json"),
+		JSON.stringify({ name: "x", dependencies: { lodash: "4" } }),
+	);
+	const frag = desiredState(target, ["js-ts", "python"]);
+	assert.ok(frag.rootPlacements.some((p) => p.shared));
+	assert.ok(!frag.rootPlacements.some((p) => p.shared && p.pack === "python"));
 });

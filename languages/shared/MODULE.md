@@ -1,6 +1,6 @@
 # Shared layer
 
-Not a Pack: templates every Host Pack (js-ts, dart, kotlin-android) composes into its Contribution. Templates: `languages/shared/templates/`. Adapter: `scripts/packs/shared.ts`.
+Not a Pack: templates every Host Pack (js-ts, python, dart, kotlin-android) composes into its Contribution. Templates: `languages/shared/templates/`. Adapter: `scripts/packs/shared.ts`.
 
 Shared Placements carry `shared: true`, resolve their template here (`templatePath` in `scripts/kit-fs.ts`), and are placed once however many Hosts are selected: every Host contributes the same template, so the overlap guard treats it as an identical overlap, not a collision. apply and audit label them `[shared]`.
 
@@ -34,7 +34,7 @@ Betterleaks **v1** (pin 1.x until v2 is stable), offline detection only (no `--v
 | default (local gate) | `betterleaks dir .` (working tree + untracked) |
 | `CI=true` | `betterleaks git --log-opts=origin/$GITHUB_BASE_REF..HEAD` (fallback: full `git` when the base ref is unset or missing) |
 
-Hosts call it from: js-ts `pnpm lint:secrets` (`.husky/pre-commit` passes `--staged`, `gate:fast` runs it); dart and kotlin-android `lefthook.yml` (`--staged`), `gate.sh`, `make secrets`.
+Hosts call it from: js-ts `pnpm lint:secrets` (`.husky/pre-commit` passes `--staged`, `gate:fast` runs it); python / dart / kotlin-android `lefthook.yml` (`--staged`), `gate.sh`, `make secrets`.
 
 **CI range decision:** the wrapper reads GitHub Actions' `GITHUB_BASE_REF` (the PR base branch name) and scans `origin/$GITHUB_BASE_REF..HEAD`. Every Host `ci.yml` sets `actions/checkout` `fetch-depth: 0` so that remote-tracking base ref exists. No hard-coded `main`. `workflow_dispatch` (no base ref) falls back to a full `git` scan. Allowlist path patterns apply in **both** `dir` and `git`/`--staged` modes on Betterleaks 1.9.0 (verified), so files that must fail when committed (`.env`, keystores, signing props, test sources) must not be allowlisted at all.
 
@@ -68,7 +68,7 @@ osv-scanner **v2.7.0**, covers pnpm / npm, Pub, Gradle, and uv lockfiles (and ot
 
 `tools/quality/run-vuln-scan.sh [-- extra osv-scanner args]`. Plain bash, no Node and no Host `lib.sh`. Runs `osv-scanner scan source -r . --allow-no-lockfiles` so a Target with no lockfiles yet is green; a known-vulnerable pin fails the gate (osv-scanner exit 1).
 
-Hosts call it from: js-ts `pnpm lint:vulns` (on `pnpm gate`); dart and kotlin-android `gate.sh full` (and `make vulns`).
+Hosts call it from: js-ts `pnpm lint:vulns` (on `pnpm gate`); python / dart / kotlin-android `gate.sh full` (and `make vulns`).
 
 ### Decisions
 

@@ -19,7 +19,7 @@ const SCRIPT = join(
 	"shared/templates/tools/quality/check-baseline-growth.sh",
 );
 
-const HOSTS = ["js-ts", "dart", "kotlin-android"] as const satisfies PackId[];
+const HOSTS = ["js-ts", "python", "dart", "kotlin-android"] as const satisfies PackId[];
 
 function tempRepo(): string {
 	const dir = mkdtempSync(join(tmpdir(), "quality-kit-bg-"));

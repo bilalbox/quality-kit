@@ -37,19 +37,19 @@ pnpm run upgrade -- --target ~/mycode/<repo> --dry-run   # `pnpm run`: bare `pnp
 
 - **Detect** when `--packs` omitted: Host/Fragment signals in the Target.
 - **Override** with `--packs a,b` (recommended when detect is noisy).
-- `--python` force-adds the python Fragment.
+- `--python` force-adds the python Pack (Host alone, or Fragment onto js-ts).
 
 | Pack | Kind | Detect |
 | --- | --- | --- |
 | `js-ts` | Host | Root `package.json` with real deps (Flutter stub JSON ignored) |
 | `dart` | Host | `pubspec.yaml` within depth 3 |
 | `kotlin-android` | Host | Root `settings.gradle(.kts)` + AGP referenced in root build / settings / `gradle/libs.versions.toml` (Flutter `android/` ignored) |
-| `python` | Fragment → **js-ts** Host | Root `pyproject.toml`, or `.py` outside helper dirs (`tool`, `tools`, `scripts`, `script`, `bin`) |
+| `python` | Host alone; Fragment → **js-ts** when co-selected | Root `pyproject.toml`, or `.py` outside helper dirs (`tool`, `tools`, `scripts`, `script`, `bin`) |
 | `rust` | (stub) | `Cargo.toml` — detect only; no templates yet |
 
 **Flutter / Dart with helper scripts:** prefer `--packs dart`. Incidental `tool/*.py` must not pull in python; force with `--python` only for a real Python product surface.
 
-**Fragment without Host:** audit warns. File templates can still apply, but python gate scripts only wire into a js-ts Host `package.json`. Do not treat orphan Fragment gaps as Host debt unless the user wants that pack.
+**python Host vs Fragment:** without `js-ts`, python is a Host (uv gate, lefthook, CI, Shared layer). With `js-ts`, it is a Fragment (`lint:py` on `gate:fast` once).
 
 ## Hosts vs after-apply
 

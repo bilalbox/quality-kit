@@ -29,13 +29,14 @@ const HOST_PAIRS: [PackId, PackId][] = [
 	["js-ts", "dart"],
 	["js-ts", "kotlin-android"],
 	["dart", "kotlin-android"],
+	["python", "dart"],
 ];
 
 const GATE = (pack: PackId) =>
 	`.github/actions/${pack}-quality-gate/action.yml`;
 
 test("compose: single Host workflow matches that Host's template", () => {
-	for (const pack of ["js-ts", "dart", "kotlin-android"] as const) {
+	for (const pack of ["js-ts", "python", "dart", "kotlin-android"] as const) {
 		assert.equal(composeCiWorkflow([pack]), hostCi(pack));
 	}
 });
@@ -83,7 +84,7 @@ for (const packs of [
 		assert.ok(ci, "ci.yml placement");
 		assert.equal(ci.kind, "owned");
 		assert.equal(ci.content, composeCiWorkflow(packs.filter((id) =>
-			["js-ts", "dart", "kotlin-android"].includes(id),
+			["js-ts", "python", "dart", "kotlin-android"].includes(id),
 		) as PackId[]));
 		assert.equal(
 			state.rootPlacements.filter((p) => p.targetRel === ".github/workflows/ci.yml")
@@ -91,7 +92,7 @@ for (const packs of [
 			1,
 		);
 		for (const pack of packs) {
-			if (!["js-ts", "dart", "kotlin-android"].includes(pack)) continue;
+			if (!["js-ts", "python", "dart", "kotlin-android"].includes(pack)) continue;
 			assert.ok(
 				state.rootPlacements.some((p) => p.targetRel === GATE(pack)),
 				GATE(pack),

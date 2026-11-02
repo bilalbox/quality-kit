@@ -15,7 +15,7 @@ import { desiredState } from "../scripts/desired-state";
 import { kitRoot, languagesRoot, templatePath } from "../scripts/kit-fs";
 import type { PackId } from "../scripts/packs";
 
-const HOSTS = ["js-ts", "dart", "kotlin-android"] as const satisfies PackId[];
+const HOSTS = ["js-ts", "python", "dart", "kotlin-android"] as const satisfies PackId[];
 
 const VULN_FILES = [
 	"osv-scanner.toml",
@@ -181,7 +181,7 @@ test("vuln scan: js-ts full gate invokes the shared vuln wrapper", () => {
 	assert.doesNotMatch(scripts["gate:fast"] ?? "", /lint:vulns/);
 });
 
-for (const host of ["dart", "kotlin-android"] as const) {
+for (const host of ["python", "dart", "kotlin-android"] as const) {
 	test(`vuln scan: ${host} full gate invokes the shared vuln wrapper`, () => {
 		const gate = readFileSync(
 			join(languagesRoot, `${host}/templates/tools/quality/${host}/gate.sh`),

@@ -16,7 +16,7 @@ pnpm run upgrade -- --target ~/mycode/<repo> [--dry-run]
 
 `upgrade` replaces owned files left untouched since apply with the current templates and lists customized ones to merge by hand. Run it (and `audit`) via `pnpm run`: `pnpm upgrade` and `pnpm audit` are pnpm builtins that shadow the scripts.
 
-Packs are detected from the target, or set with `--packs`. `--python` force-adds the python Fragment.
+Packs are detected from the target, or set with `--packs`. `--python` force-adds the python Pack (Host alone, or Fragment onto js-ts).
 
 `js-ts` detection ignores stub `package.json` files with no dependencies (common in Flutter repos). Python detection ignores helper-script dirs (`tool/`, `scripts/`, …) so Flutter `tool/*.py` does not pull the Fragment; use `--packs dart` for Dart hosts. Override with `--packs` when needed.
 
