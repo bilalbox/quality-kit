@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # js-ts coverage collector → findings JSON on stdout.
-# Runs `pnpm test` under c8 and emits one finding per package (or "." for a
-# single-package repo) with score = line coverage percent.
+# Runs the Target's tests under coverage and emits one finding per package (or
+# "." for a single-package repo) with score = line coverage percent.
+#   Vitest Targets (`test` script calls vitest): `vitest run` with Vitest's own
+#     V8 coverage (needs @vitest/coverage-v8). c8 sees nothing from Vitest's
+#     workers. Other commands chained in `test` are not run by this step.
+#   Otherwise: c8 wraps `pnpm test`.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 cd "${REPO_ROOT}"
 
 if ! command -v pnpm >/dev/null 2>&1; then
@@ -17,21 +21,39 @@ tmpdir="$(mktemp -d)"
 trap 'rm -rf "${tmpdir}"' EXIT
 report_dir="${tmpdir}/coverage"
 
-# c8 wraps the Target's test script. JSON summary is per-file; we aggregate.
-pnpm exec c8 \
-	--reporter=json-summary \
-	--reports-dir="${report_dir}" \
-	--exclude='**/node_modules/**' \
-	--exclude='**/dist/**' \
-	--exclude='**/coverage/**' \
-	--exclude='**/tests/**' \
-	--exclude='**/*.test.*' \
-	--exclude='**/*.spec.*' \
-	pnpm test >/dev/null
+test_script="$(node -p 'require("./package.json").scripts?.test ?? ""')"
+if [[ "${test_script}" =~ (^|[^[:alnum:]_-])vitest([^[:alnum:]_-]|$) ]]; then
+	if ! node -e 'require.resolve("@vitest/coverage-v8/package.json")' >/dev/null 2>&1; then
+		vitest_version="$(pnpm exec vitest --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+		echo "error: Vitest coverage needs @vitest/coverage-v8 (same version as vitest)" >&2
+		echo "fix: pnpm add -D @vitest/coverage-v8@${vitest_version:-<vitest version>}" >&2
+		exit 2
+	fi
+	# Test files are excluded by Vitest's defaults; tests/** helpers are not.
+	pnpm exec vitest run \
+		--coverage.enabled \
+		--coverage.provider=v8 \
+		--coverage.reporter=json-summary \
+		--coverage.reportsDirectory="${report_dir}" \
+		--coverage.exclude='**/tests/**' \
+		>/dev/null
+else
+	# c8 wraps the Target's test script. JSON summary is per-file; we aggregate.
+	pnpm exec c8 \
+		--reporter=json-summary \
+		--reports-dir="${report_dir}" \
+		--exclude='**/node_modules/**' \
+		--exclude='**/dist/**' \
+		--exclude='**/coverage/**' \
+		--exclude='**/tests/**' \
+		--exclude='**/*.test.*' \
+		--exclude='**/*.spec.*' \
+		pnpm test >/dev/null
+fi
 
 summary="${report_dir}/coverage-summary.json"
 if [[ ! -f "${summary}" ]]; then
-	echo "error: c8 did not write ${summary}" >&2
+	echo "error: no coverage summary at ${summary}" >&2
 	exit 1
 fi
 
