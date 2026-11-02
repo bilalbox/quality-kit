@@ -23,38 +23,17 @@ import {
 } from "./lib";
 import { LOCK_FILE } from "./lock-file";
 
-/** Host that currently absorbs python Fragment package.json / gate pieces. */
-const PYTHON_HOST: PackId = "js-ts";
+import { packRole } from "./packs/python";
 
 function formatPackRoles(packs: readonly PackId[]): string {
 	if (packs.length === 0) return "(none)";
 	return packs
 		.map((id) => {
-			const kind = PACKS[id].kind;
+			const kind =
+				id === "python" ? packRole(packs) : PACKS[id].kind;
 			return `${id} (${kind})`;
 		})
 		.join(", ");
-}
-
-function warnOrphanFragments(packs: readonly PackId[]): void {
-	const hasPython = packs.includes("python");
-	const hasJsTs = packs.includes(PYTHON_HOST);
-	const hasDart = packs.includes("dart");
-	if (!hasPython || hasJsTs) return;
-
-	console.log("## Warnings");
-	console.log(
-		`  python is a Fragment Pack for the ${PYTHON_HOST} Host; without ${PYTHON_HOST}, templates still apply but gate scripts are not wired.`,
-	);
-	if (hasDart) {
-		console.log(
-			"  Flutter/Dart Targets with incidental tool/*.py: prefer --packs dart (python detect ignores helper dirs).",
-		);
-	}
-	console.log(
-		"  Force product Python with --packs …,python or --python when needed.",
-	);
-	console.log("");
 }
 
 const PLACEMENT_KINDS: readonly PlacementKind[] = [
@@ -131,7 +110,6 @@ function main(): void {
 	console.log(`Packs: ${formatPackRoles(packs)}`);
 	console.log("");
 
-	warnOrphanFragments(packs);
 	hintLock(report);
 
 	console.log(`## Files (${report.files.length})`);

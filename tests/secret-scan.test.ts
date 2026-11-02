@@ -66,7 +66,7 @@ function initGit(target: string): void {
 	git(target, "config", "commit.gpgsign", "false");
 }
 
-for (const packs of ["js-ts", "dart", "kotlin-android"]) {
+for (const packs of ["js-ts", "python", "dart", "kotlin-android"]) {
 	test(`secret scan: a clean ${packs} Target passes with its composed config`, needsBetterleaks(), () => {
 		const { status, output } = scan(appliedTarget(packs));
 		assert.equal(status, 0, output);

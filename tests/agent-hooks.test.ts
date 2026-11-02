@@ -83,11 +83,21 @@ test("compose: post-edit routes changed files to each selected Host only", () =>
 		multi,
 		/tools\/quality\/kotlin-android\/run-format\.sh"?\s+--fix/,
 	);
+	// python + js-ts is Fragment mode — no Host .py branch on that selection.
+	assert.doesNotMatch(multi, /tools\/quality\/python\/run-format/);
 
 	const dartOnly = composeAgentHooksSh(["dart"]);
 	assert.doesNotMatch(dartOnly, /biome check/);
 	assert.doesNotMatch(dartOnly, /kotlin-android/);
 	assert.match(dartOnly, /tools\/quality\/dart\/run-format\.sh"?\s+--fix/);
+
+	const pythonHost = composeAgentHooksSh(["python", "dart"]);
+	assert.match(pythonHost, /\.py\)/);
+	assert.match(
+		pythonHost,
+		/tools\/quality\/python\/run-format\.sh"?\s+--fix/,
+	);
+	assert.match(pythonHost, /tools\/quality\/dart\/run-format\.sh"?\s+--fix/);
 });
 
 test("desiredState: agent hooks Placements absent by default, present when opted in", () => {

@@ -12,11 +12,11 @@ import { runSmoke, StepFailed } from "../scripts/smoke/adopt";
 import { SMOKE_RECIPES } from "../scripts/smoke/index";
 import type { SmokeRecipe } from "../scripts/smoke/types";
 
-test("smoke registry: every Host Pack except python has a recipe", () => {
+test("smoke registry: every Host Pack has a recipe", () => {
 	assert.ok(SMOKE_RECIPES["js-ts"]);
+	assert.ok(SMOKE_RECIPES.python);
 	assert.ok(SMOKE_RECIPES.dart);
 	assert.ok(SMOKE_RECIPES["kotlin-android"]);
-	assert.equal(SMOKE_RECIPES.python, undefined);
 });
 
 test("runSmoke: refuses when a required tool is missing", () => {

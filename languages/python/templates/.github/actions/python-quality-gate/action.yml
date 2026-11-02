@@ -1,0 +1,10 @@
+name: Quality gate
+description: Format, lint, types, boundaries, deadcode, secrets, vulns, and pytest
+runs:
+  using: composite
+  steps:
+    - name: Gate
+      run: ./tools/quality/python/gate.sh full
+      shell: bash
+      env:
+        CI: "true"

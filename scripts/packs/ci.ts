@@ -7,10 +7,11 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { languagesRoot, normalize, readText } from "../kit-fs";
+import { packRole } from "./python";
 import type { PackId, Placement } from "./types";
 
 /** Host Packs that ship a CI workflow template. */
-export const CI_HOST_IDS = ["js-ts", "dart", "kotlin-android"] as const;
+export const CI_HOST_IDS = ["js-ts", "python", "dart", "kotlin-android"] as const;
 export type CiHostId = (typeof CI_HOST_IDS)[number];
 
 export function isCiHost(id: PackId): id is CiHostId {
@@ -19,7 +20,11 @@ export function isCiHost(id: PackId): id is CiHostId {
 
 /** Selected Packs that contribute a CI job, in selection order. */
 export function ciHostsOf(packs: readonly PackId[]): CiHostId[] {
-	return packs.filter(isCiHost);
+	return packs.filter((id): id is CiHostId => {
+		if (!isCiHost(id)) return false;
+		if (id === "python" && packRole(packs) === "fragment") return false;
+		return true;
+	});
 }
 
 export type ComposeCiOpts = {

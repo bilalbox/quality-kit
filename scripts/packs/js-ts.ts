@@ -4,7 +4,7 @@ import { packTemplatesRoot, readText } from "../kit-fs";
 import { type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
-import { isLefthookHost } from "./local";
+import { lefthookHostsOf } from "./local";
 import type { Contribution, Pack, PackId, WiringProbe } from "./types";
 import { HUSKY, LEFTHOOK, hooksInstalledProbe } from "./wiring";
 
@@ -39,7 +39,7 @@ const HUSKY_FILES: Record<string, FileKind> = {
 };
 
 function withLefthookHost(selected: readonly PackId[]): boolean {
-	return selected.some(isLefthookHost);
+	return lefthookHostsOf(selected).length > 0;
 }
 
 function hasTestScript(target: string): boolean {

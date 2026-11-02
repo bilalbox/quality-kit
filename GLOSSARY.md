@@ -9,15 +9,15 @@ A language-specific set of quality-gate templates and rules that can be selected
 _Avoid_: language module, plugin, recipe
 
 **Host Pack**:
-A Pack that owns a standalone quality-gate story for a Target (CI, hooks, gate entrypoint, root templates). Today: js-ts, dart, kotlin-android.
+A Pack that owns a standalone quality-gate story for a Target (CI, hooks, gate entrypoint, root templates). Today: js-ts, python, dart, kotlin-android. python is Host when `js-ts` is not selected; see Fragment Pack.
 _Avoid_: primary pack, base pack
 
 **Fragment Pack**:
-A Pack that only contributes pieces into a Host Pack’s Desired state (extra templates, gate fragments). Today: python onto js-ts.
+A Pack that only contributes pieces into a Host Pack’s Desired state (extra templates, gate fragments). Today: python onto js-ts (same Pack id; `contribute` switches on selection — Host alone, Fragment when js-ts is co-selected).
 _Avoid_: addon, plugin, extension pack
 
 **Shared layer**:
-Templates every Host Pack composes into its Contribution (today: Betterleaks secret scanning), placed once however many Hosts are selected. Not a Pack: it is never selected or detected on its own. Lives in `languages/shared/`.
+Templates every Host Pack composes into its Contribution (today: Betterleaks secret scanning), placed once however many Hosts are selected. Not a Pack: it is never selected or detected on its own. Lives in `languages/shared/`. python composes it only in Host mode.
 _Avoid_: common pack, base layer, shared pack
 
 **Desired state**:
@@ -44,7 +44,7 @@ An owned Placement whose Desired content is computed at Desired-state time (`con
 _Avoid_: virtual placement, synthetic template
 
 **Namespaced Host scripts**:
-Each Host Pack's bash gate helpers live under `tools/quality/<pack>/` so multiple Hosts coexist. Shared-layer scripts stay at `tools/quality/` (`run-secret-scan.sh`, `install-betterleaks.sh`). The composed top-level `tools/quality/gate.sh` dispatches to every selected Host.
+Each Host Pack's bash gate helpers live under `tools/quality/<pack>/` so multiple Hosts coexist (python, dart, kotlin-android). Shared-layer scripts stay at `tools/quality/` (`run-secret-scan.sh`, `install-betterleaks.sh`). The composed top-level `tools/quality/gate.sh` dispatches to every selected Host.
 _Avoid_: pack scripts dir, quality subfolder
 
 **Agent hooks**:

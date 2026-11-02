@@ -53,12 +53,12 @@ const COMPOSED_PATHS = [
 	"tools/quality/gate.sh",
 ] as const;
 
-test("compose: single dart/kotlin gate.sh dispatches to that Host only", () => {
-	for (const pack of ["dart", "kotlin-android"] as const) {
+test("compose: single bash-gate Host gate.sh dispatches to that Host only", () => {
+	for (const pack of ["python", "dart", "kotlin-android"] as const) {
 		const sh = composeGateSh([pack]);
 		assert.match(sh, new RegExp(`tools/quality/${pack}/gate\\.sh`));
 		assert.doesNotMatch(sh, /pnpm gate/);
-		for (const other of ["dart", "kotlin-android"] as const) {
+		for (const other of ["python", "dart", "kotlin-android"] as const) {
 			if (other === pack) continue;
 			assert.doesNotMatch(sh, new RegExp(`tools/quality/${other}/`));
 		}
@@ -79,7 +79,7 @@ test("compose: js-ts + dart gate.sh runs pnpm and dart", () => {
 });
 
 test("compose: single Host lefthook / editorconfig / Makefile / AGENTS match templates", () => {
-	for (const pack of ["dart", "kotlin-android"] as const) {
+	for (const pack of ["python", "dart", "kotlin-android"] as const) {
 		assert.equal(
 			composeLefthook([pack]),
 			readFileSync(

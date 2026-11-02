@@ -61,6 +61,7 @@
 		"flutter-action": "v2",
 		"pnpm-action-setup": "v6",
 		"setup-node": "v7",
+		"setup-uv": "v7",
 		"cache": "v6",
 		"checkout": "v7"
 	},

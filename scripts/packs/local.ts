@@ -8,18 +8,19 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { languagesRoot, normalize, readText } from "../kit-fs";
 import { AGENTS_MD } from "./placements";
+import { packRole } from "./python";
 import type { PackId, Placement } from "./types";
 
 /** Host Packs that participate in local-gate composition. */
-export const LOCAL_HOST_IDS = ["js-ts", "dart", "kotlin-android"] as const;
+export const LOCAL_HOST_IDS = ["js-ts", "python", "dart", "kotlin-android"] as const;
 export type LocalHostId = (typeof LOCAL_HOST_IDS)[number];
 
 /** Hosts whose gate is a bash script under tools/quality/<pack>/. */
-export const BASH_GATE_HOST_IDS = ["dart", "kotlin-android"] as const;
+export const BASH_GATE_HOST_IDS = ["python", "dart", "kotlin-android"] as const;
 export type BashGateHostId = (typeof BASH_GATE_HOST_IDS)[number];
 
 /** Hosts that ship lefthook.yml / Makefile composition inputs. */
-export const LEFTHOOK_HOST_IDS = ["dart", "kotlin-android"] as const;
+export const LEFTHOOK_HOST_IDS = ["python", "dart", "kotlin-android"] as const;
 export type LefthookHostId = (typeof LEFTHOOK_HOST_IDS)[number];
 
 export function isLocalHost(id: PackId): id is LocalHostId {
@@ -34,16 +35,28 @@ export function isLefthookHost(id: PackId): id is LefthookHostId {
 	return (LEFTHOOK_HOST_IDS as readonly string[]).includes(id);
 }
 
+/** python is a Local Host only when not Fragment onto js-ts. */
+function actsAsLocalHost(id: PackId, packs: readonly PackId[]): boolean {
+	if (id === "python" && packRole(packs) === "fragment") return false;
+	return isLocalHost(id);
+}
+
 export function localHostsOf(packs: readonly PackId[]): LocalHostId[] {
-	return packs.filter(isLocalHost);
+	return packs.filter((id): id is LocalHostId => actsAsLocalHost(id, packs));
 }
 
 export function bashGateHostsOf(packs: readonly PackId[]): BashGateHostId[] {
-	return packs.filter(isBashGateHost);
+	return packs.filter(
+		(id): id is BashGateHostId =>
+			actsAsLocalHost(id, packs) && isBashGateHost(id),
+	);
 }
 
 export function lefthookHostsOf(packs: readonly PackId[]): LefthookHostId[] {
-	return packs.filter(isLefthookHost);
+	return packs.filter(
+		(id): id is LefthookHostId =>
+			actsAsLocalHost(id, packs) && isLefthookHost(id),
+	);
 }
 
 export type ComposeLocalOpts = {
@@ -430,6 +443,7 @@ export function composeAgentHooksSh(hosts: readonly PackId[]): string {
 	}
 	const gateCmd = agentHooksGateFastCmd(local);
 	const hasJsTs = local.includes("js-ts");
+	const hasPython = local.includes("python");
 	const hasDart = local.includes("dart");
 	const hasKotlin = local.includes("kotlin-android");
 
@@ -439,6 +453,14 @@ export function composeAgentHooksSh(hosts: readonly PackId[]): string {
 			"\t.js|.cjs|.mjs|.jsx|.ts|.cts|.mts|.tsx|.json|.jsonc)",
 			'\t\trel="${file_path#"${ROOT}"/}"',
 			'\t\tpnpm exec biome check --write --no-errors-on-unmatched "${rel}"',
+			"\t\t;;",
+		);
+	}
+	if (hasPython) {
+		postEditBranches.push(
+			"\t.py)",
+			'\t\trel="${file_path#"${ROOT}"/}"',
+			'\t\t"./tools/quality/python/run-format.sh" --fix "${rel}"',
 			"\t\t;;",
 		);
 	}

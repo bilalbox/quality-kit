@@ -147,10 +147,14 @@ test("desiredState: js-ts + python composes gate:fast and fragment scripts", () 
 	const state = desiredState(target, ["js-ts", "python"]);
 	assert.ok(state.packageJson);
 	assert.ok(state.packageJson!.scripts["lint:py"]);
-	assert.ok(state.packageJson!.scripts["gate:fast:py"]);
+	assert.equal(state.packageJson!.scripts["gate:fast:py"], "pnpm lint:py");
 	assert.match(
 		state.packageJson!.scripts["gate:fast"]!,
 		/tools\/quality\/js-ts\/gate\.sh fast lint:py$/,
+	);
+	assert.equal(
+		(state.packageJson!.scripts["gate:fast"]!.match(/lint:py/g) ?? []).length,
+		1,
 	);
 	assert.ok(
 		state.rootPlacements.some((p) => p.targetRel === "pyproject.toml"),
@@ -158,12 +162,15 @@ test("desiredState: js-ts + python composes gate:fast and fragment scripts", () 
 	assert.ok(state.rootPlacements.some((p) => p.targetRel === "biome.json"));
 });
 
-test("desiredState: python alone has files but no packageJson", () => {
+test("desiredState: python alone is Host (files + gate, no packageJson)", () => {
 	const target = tempTarget();
 	const state = desiredState(target, ["python"]);
 	assert.equal(state.packageJson, null);
 	assert.ok(
 		state.rootPlacements.some((p) => p.targetRel === "pyproject.toml"),
+	);
+	assert.ok(
+		state.rootPlacements.some((p) => p.targetRel === "tools/quality/python/gate.sh"),
 	);
 });
 

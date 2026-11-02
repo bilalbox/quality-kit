@@ -1,0 +1,16 @@
+# quality-kit python hooks — install with: lefthook install
+
+pre-commit:
+  parallel: false
+  commands:
+    secrets:
+      run: ./tools/quality/run-secret-scan.sh --staged
+    # Checks staged content only; must never rewrite or re-stage files.
+    format:
+      glob: "*.py"
+      run: ./tools/quality/python/run-format.sh --staged
+
+pre-push:
+  commands:
+    gate:
+      run: ./tools/quality/gate.sh full
