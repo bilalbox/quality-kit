@@ -29,6 +29,7 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"scripts/ratchets/run-complexity.ts": "owned",
 	"scripts/ratchets/run-biome.ts": "owned",
 	"scripts/run-rev-dep.ts": "owned",
+	"tools/quality/js-ts/gate.sh": "owned",
 	"baselines/complexity.json": "seed",
 	"baselines/biome-diagnostics.json": "seed",
 	"tests/ratchets/ratchet-contract.test.sh": "owned",

@@ -20,7 +20,12 @@ import {
 	type WiringProbe,
 } from "./packs";
 import { composedCiPlacement } from "./packs/ci";
-import { composedLocalPlacements } from "./packs/local";
+import {
+	composedLocalPlacements,
+	type ComposeLocalPlacementsOpts,
+} from "./packs/local";
+
+export type DesiredStateOpts = ComposeLocalPlacementsOpts;
 
 export type DesiredPackageJson = {
 	scripts: Record<string, string>;
@@ -174,6 +179,7 @@ function mergePlacements(
 export function desiredState(
 	target: string,
 	packs: readonly PackId[],
+	opts: DesiredStateOpts = {},
 ): DesiredState {
 	const rootPlacements: Placement[] = [];
 	const packagePlacements: Placement[] = [];
@@ -224,11 +230,10 @@ export function desiredState(
 	let packageJson: DesiredPackageJson | null = null;
 	if (hasJsTsHost) {
 		if (gateFragments.length > 0 && scripts["gate:fast"]) {
+			// Extra args become Host-gate steps (run-all-then-summarize; see REFERENCE).
 			scripts = {
 				...scripts,
-				"gate:fast": `${scripts["gate:fast"]} && ${gateFragments
-					.map((f) => `pnpm ${f}`)
-					.join(" && ")}`,
+				"gate:fast": `${scripts["gate:fast"]} ${gateFragments.join(" ")}`,
 			};
 		}
 		packageJson = {
@@ -247,7 +252,7 @@ export function desiredState(
 		claimed,
 		collisions,
 		rootPlacements,
-		composedLocalPlacements(packs),
+		composedLocalPlacements(packs, opts),
 	);
 
 	return {

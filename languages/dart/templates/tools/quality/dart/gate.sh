@@ -2,7 +2,8 @@
 # quality-kit dart gate.
 # Usage: ./tools/quality/dart/gate.sh [fast|full]
 #   fast — format + analyze + secrets + deps
-#   full — fast + test (default for CI / pre-push)
+#   full — fast + vulns + test (default for CI / pre-push)
+# Every step runs even after a failure so one invocation reports everything.
 # Local multi-Host Targets use the composed ./tools/quality/gate.sh instead.
 set -euo pipefail
 
@@ -17,15 +18,32 @@ case "${mode}" in
 		;;
 esac
 
+failed=()
+step() {
+	local name="$1"
+	shift
+	echo "==> ${name}"
+	if ! "$@"; then
+		failed+=("${name}")
+	fi
+}
+
 echo "# gate:${mode}"
-"${SCRIPT_DIR}/run-format.sh"
-"${SCRIPT_DIR}/run-analyze.sh"
-"${SCRIPT_DIR}/../run-secret-scan.sh"
-"${SCRIPT_DIR}/run-deps.sh"
+step format "${SCRIPT_DIR}/run-format.sh"
+step analyze "${SCRIPT_DIR}/run-analyze.sh"
+step secrets "${SCRIPT_DIR}/../run-secret-scan.sh"
+step deps "${SCRIPT_DIR}/run-deps.sh"
 
 if [[ "${mode}" == "full" ]]; then
-	"${SCRIPT_DIR}/../run-vuln-scan.sh"
-	"${SCRIPT_DIR}/run-test.sh"
+	step vulns "${SCRIPT_DIR}/../run-vuln-scan.sh"
+	step test "${SCRIPT_DIR}/run-test.sh"
 fi
 
-echo "# gate:${mode} ok"
+if ((${#failed[@]} == 0)); then
+	echo "# gate:${mode} ok"
+	exit 0
+fi
+
+echo
+echo "# gate:${mode} FAILED: ${failed[*]}"
+exit 1

@@ -150,7 +150,7 @@ test("desiredState: js-ts + python composes gate:fast and fragment scripts", () 
 	assert.equal(state.packageJson!.scripts["gate:fast:py"], "pnpm lint:py");
 	assert.match(
 		state.packageJson!.scripts["gate:fast"]!,
-		/&& pnpm lint:py$/,
+		/tools\/quality\/js-ts\/gate\.sh fast lint:py$/,
 	);
 	assert.equal(
 		(state.packageJson!.scripts["gate:fast"]!.match(/lint:py/g) ?? []).length,

@@ -47,6 +47,10 @@ _Avoid_: virtual placement, synthetic template
 Each Host Pack's bash gate helpers live under `tools/quality/<pack>/` so multiple Hosts coexist (python, dart, kotlin-android). Shared-layer scripts stay at `tools/quality/` (`run-secret-scan.sh`, `install-betterleaks.sh`). The composed top-level `tools/quality/gate.sh` dispatches to every selected Host.
 _Avoid_: pack scripts dir, quality subfolder
 
+**Agent hooks**:
+Opt-in owned Placements (apply `--agent-hooks`) that wire an agent tool to enforce the Definition of Done: today Claude Code project settings (`.claude/settings.json`) plus `tools/quality/agent-hooks.sh`. Post-edit checks the changed file only; Stop runs the top-level `gate fast` and blocks on failure.
+_Avoid_: AI hooks, IDE hooks (git hooks stay lefthook/husky)
+
 **Lock file**:
 `.quality-kit.lock.json` at the Target root, written by apply and upgrade: the kit revision of the most recent run and a hash of each **owned** Placement as the kit last wrote it. Audit uses it to tell an owned file that is **stale** (untouched since apply; the kit Desired content moved on, so it is safe to update) from one that is **customized** (edited in the Target since apply). An owned file equal to the Desired content is **current**.
 _Avoid_: lockfile (reserved for package-manager lockfiles), manifest, state file

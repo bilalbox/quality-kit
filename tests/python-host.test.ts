@@ -67,12 +67,16 @@ test("desiredState: js-ts + python stays Fragment; lint:py once", () => {
 	const scripts = state.packageJson!.scripts;
 	assert.ok(scripts["lint:py"]);
 	assert.equal(scripts["gate:fast:py"], "pnpm lint:py");
-	assert.match(scripts["gate:fast"]!, /&& pnpm lint:py$/);
+	assert.match(
+		scripts["gate:fast"]!,
+		/tools\/quality\/js-ts\/gate\.sh fast lint:py$/,
+	);
 	assert.equal(
 		(scripts["gate:fast"]!.match(/lint:py/g) ?? []).length,
 		1,
-		"gate:fast must append lint:py once",
+		"gate:fast must pass lint:py once as a Host-gate step arg",
 	);
+	assert.doesNotMatch(scripts["gate:fast"]!, /&&\s*pnpm\s+lint:py/);
 	assert.equal(
 		(scripts["gate:fast:py"]!.match(/lint:py/g) ?? []).length,
 		1,

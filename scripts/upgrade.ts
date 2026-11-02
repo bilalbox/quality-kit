@@ -1,7 +1,7 @@
 /**
  * Update stale owned files to the current templates; list the rest for a manual merge.
  *
- * Usage: pnpm run upgrade -- --target /path/to/repo [--packs a,b] [--python]
+ * Usage: pnpm run upgrade -- --target /path/to/repo [--packs a,b] [--python] [--agent-hooks]
  */
 
 import { chmodSync, existsSync, writeFileSync } from "node:fs";
@@ -12,6 +12,7 @@ import {
 	diffAgainst,
 	ensureDir,
 	refuseCollisions,
+	resolveAgentHooks,
 	resolvePacks,
 	resolveTarget,
 	sourceLabel,
@@ -30,7 +31,8 @@ function main(): void {
 	}
 
 	const packs = resolvePacks(target, argv);
-	const state = desiredState(target, packs);
+	const agentHooks = resolveAgentHooks(target, argv);
+	const state = desiredState(target, packs, { agentHooks });
 	refuseCollisions(state);
 	const placements = [...state.rootPlacements, ...state.packagePlacements];
 	const report = diffAgainst(target, state);

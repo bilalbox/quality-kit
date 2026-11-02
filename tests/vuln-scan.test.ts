@@ -177,7 +177,16 @@ test("vuln scan: js-ts full gate invokes the shared vuln wrapper", () => {
 		),
 	) as Record<string, string>;
 	assert.match(scripts["lint:vulns"] ?? "", /run-vuln-scan\.sh/);
-	assert.match(scripts.gate ?? "", /lint:vulns/);
+	assert.match(scripts.gate ?? "", /js-ts\/gate\.sh full/);
+	assert.match(scripts["gate:fast"] ?? "", /js-ts\/gate\.sh fast/);
+	const gate = readFileSync(
+		join(languagesRoot, "js-ts/templates/tools/quality/js-ts/gate.sh"),
+		"utf8",
+	);
+	assert.match(
+		gate,
+		/\[\[ "\$\{mode\}" == "full" \]\][\s\S]*step vulns pnpm lint:vulns/,
+	);
 	assert.doesNotMatch(scripts["gate:fast"] ?? "", /lint:vulns/);
 });
 
