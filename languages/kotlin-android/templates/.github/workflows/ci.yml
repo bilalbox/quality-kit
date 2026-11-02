@@ -20,6 +20,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/check-baseline-growth
+        if: github.event_name == 'pull_request' && !contains(join(github.event.pull_request.labels.*.name, ','), 'allow-baseline-growth')
       - uses: ./.github/actions/setup-betterleaks
       - uses: ./.github/actions/setup-osv-scanner
       - uses: ./.github/actions/setup-android

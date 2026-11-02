@@ -9,11 +9,13 @@ Shared Placements carry `shared: true`, resolve their template here (`templatePa
 | `.betterleaks.toml` | owned |
 | `.betterleaksignore` | seed |
 | `.github/actions/setup-betterleaks/action.yml` | owned |
+| `.github/actions/check-baseline-growth/action.yml` | owned |
 | `.github/actions/setup-osv-scanner/action.yml` | owned |
 | `osv-scanner.toml` | seed |
 | `tools/quality/install-betterleaks.sh` | owned |
 | `tools/quality/install-osv-scanner.sh` | owned |
 | `tools/quality/run-secret-scan.sh` | owned |
+| `tools/quality/check-baseline-growth.sh` | owned |
 | `tools/quality/run-vuln-scan.sh` | owned |
 
 Each Host adds its own **Pack allowlist**, `.betterleaks.d/<pack>.toml` (owned), from its own templates.
@@ -54,6 +56,10 @@ Betterleaks takes one config file. `[extend]` cannot combine `useDefault = true`
 
 `install-betterleaks.sh` downloads the Linux x64/arm64 release archive and refuses it (exit 1, nothing installed) unless its SHA-256 matches the hash pinned in the script. Decision: pin the hashes in the script instead of fetching the release's `checksums.txt` at install time, so a replaced release asset (and its checksum file) is still caught. Bump: change `betterleaks` in `pins.json` (version + both `linux_*` hashes from that release's `checksums.txt`) and the matching literals in `install-betterleaks.sh` / this table.
 
+## Baseline growth
+
+`tools/quality/check-baseline-growth.sh` (+ composite action) compares committed baselines on HEAD to the PR base ref and fails when rows are added. Every Host `ci.yml` invokes `./.github/actions/check-baseline-growth` after checkout on `pull_request`, unless the PR has label `allow-baseline-growth`. Inventory and row rules: REFERENCE.md "Baseline growth". `osv-scanner.toml` ignore `id`s are included so the vuln ignore file ratchets with the same guard.
+
 ## Dependency vulns (osv-scanner)
 
 osv-scanner **v2.7.0**, covers pnpm / npm, Pub, Gradle, and uv lockfiles (and other ecosystems the binary supports). Wired into every Host's **full** gate only (not `gate:fast` / pre-commit).
@@ -68,7 +74,7 @@ Hosts call it from: js-ts `pnpm lint:vulns` (on `pnpm gate`); dart and kotlin-an
 
 - **Offline**: online by default (needs the OSV DB). Do not pass `--offline` / `--offline-vulnerabilities`. A network failure fails the gate; cache an offline DB only if a Target deliberately opts in via extra args.
 - **Severity**: no kit-side threshold. Whatever osv-scanner reports as a finding fails the gate (its own filtering of unimportant / uncalled findings stands; pass `--all-vulns` only via extra args if a Target wants stricter).
-- **Ignores**: seed `osv-scanner.toml` (`[[IgnoredVulns]]`). Upstream allows a missing `reason`; the wrapper **requires** both `id` and a non-empty `reason` before scanning. Audit treats the file as seed (presence / parse, not content).
+- **Ignores**: seed `osv-scanner.toml` (`[[IgnoredVulns]]`). Upstream allows a missing `reason`; the wrapper **requires** both `id` and a non-empty `reason` before scanning. Audit treats the file as seed (presence / parse, not content). Added ignore ids also fail the baseline-growth CI check (see above).
 
 ### Install
 
