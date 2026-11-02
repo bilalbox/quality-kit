@@ -1,0 +1,64 @@
+name: Kit CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  kit:
+    name: kit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        id: deps
+        run: pnpm install --frozen-lockfile
+      - name: Install shellcheck and actionlint
+        id: linters
+        run: |
+          set -euo pipefail
+          SHELLCHECK_VERSION=0.11.0
+          SHELLCHECK_SHA256=8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
+          ACTIONLINT_VERSION=1.7.12
+          ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+          cd "${RUNNER_TEMP}"
+          SHELLCHECK_ASSET="shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
+          curl -fsSLO "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/${SHELLCHECK_ASSET}"
+          echo "${SHELLCHECK_SHA256}  ${SHELLCHECK_ASSET}" | sha256sum -c -
+          tar -xJf "${SHELLCHECK_ASSET}"
+          ACTIONLINT_ASSET="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSLO "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${ACTIONLINT_ASSET}"
+          echo "${ACTIONLINT_SHA256}  ${ACTIONLINT_ASSET}" | sha256sum -c -
+          tar -xzf "${ACTIONLINT_ASSET}" actionlint
+          mkdir -p "${HOME}/.local/bin"
+          install -m 0755 "shellcheck-v${SHELLCHECK_VERSION}/shellcheck" actionlint "${HOME}/.local/bin/"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+      - name: Test
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' && steps.linters.outcome == 'success' }}
+        run: pnpm test
+      - name: Typecheck
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: pnpm exec tsc --noEmit
+      - name: Lint templates (shellcheck + actionlint)
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' && steps.linters.outcome == 'success' }}
+        run: |
+          shellcheck --version
+          actionlint --version
+          pnpm lint:templates
