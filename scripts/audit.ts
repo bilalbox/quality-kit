@@ -1,49 +1,88 @@
 /**
  * Read-only conformance + drift report vs Desired state.
  *
- * Usage: pnpm audit -- --target /path/to/repo [--packs a,b] [--python]
+ * Usage: pnpm audit -- --target /path/to/repo [--packs a,b] [--python] [--agent-hooks]
  */
 
 import { existsSync } from "node:fs";
 import {
 	desiredState,
 	diffAgainst,
-	PACKS,
+	isFileGap,
+	refuseCollisions,
+	resolveAgentHooks,
 	resolvePacks,
 	resolveTarget,
+	sourceLabel,
+	type DiffReport,
+	type FileFinding,
 	type PackId,
+	type PlacementKind,
+	type WiringFinding,
 } from "./lib";
+import { LOCK_FILE } from "./lock-file";
 
-/** Host that currently absorbs python Fragment package.json / gate pieces. */
-const PYTHON_HOST: PackId = "js-ts";
+import { effectiveKind } from "./packs/effective-kind";
 
 function formatPackRoles(packs: readonly PackId[]): string {
 	if (packs.length === 0) return "(none)";
 	return packs
-		.map((id) => {
-			const kind = PACKS[id].kind;
-			return `${id} (${kind})`;
-		})
+		.map((id) => `${id} (${effectiveKind(id, packs)})`)
 		.join(", ");
 }
 
-function warnOrphanFragments(packs: readonly PackId[]): void {
-	const hasPython = packs.includes("python");
-	const hasJsTs = packs.includes(PYTHON_HOST);
-	const hasDart = packs.includes("dart");
-	if (!hasPython || hasJsTs) return;
+const PLACEMENT_KINDS: readonly PlacementKind[] = [
+	"owned",
+	"seed",
+	"merge-into",
+];
 
-	console.log("## Warnings");
+const KIND_NOTES: Record<PlacementKind, string> = {
+	owned: "kit-owned; content must match the template (current)",
+	seed: "copied once, then Target-owned; presence (and JSON parse) only",
+	"merge-into": "kit content must appear in the destination file",
+};
+
+function printKindGroup(
+	kind: PlacementKind,
+	findings: readonly FileFinding[],
+): void {
+	const counts = new Map<string, number>();
+	for (const f of findings) counts.set(f.status, (counts.get(f.status) ?? 0) + 1);
+	console.log("");
+	console.log(`### ${kind} (${findings.length}) — ${KIND_NOTES[kind]}`);
 	console.log(
-		`  python is a Fragment Pack for the ${PYTHON_HOST} Host; without ${PYTHON_HOST}, templates still apply but gate scripts are not wired.`,
+		`- ${[...counts].map(([status, n]) => `${status}: ${n}`).join(", ")}`,
 	);
-	if (hasDart) {
-		console.log(
-			"  Flutter/Dart Targets with incidental tool/*.py: prefer --packs dart (python detect ignores helper dirs).",
-		);
+	for (const f of findings.filter(isFileGap)) {
+		const path = f.dest && f.dest !== f.path ? `${f.path} → ${f.dest}` : f.path;
+		const detail = f.detail ? ` (${f.detail})` : "";
+		console.log(`  ${f.status.padEnd(10)} [${sourceLabel(f)}] ${path}${detail}`);
+		if (f.fix) console.log(`             fix: ${f.fix}`);
 	}
+}
+
+function printWiring(wiring: readonly WiringFinding[]): void {
+	console.log("");
+	console.log(`## Wiring (${wiring.length})`);
+	for (const w of wiring) {
+		const status = w.gaps.length > 0 ? "unwired" : "wired";
+		console.log(`  ${status.padEnd(10)} [${w.pack}] ${w.label}`);
+		for (const g of w.gaps) {
+			if (g.detail) console.log(`             ${g.detail}`);
+			console.log(`             fix: ${g.fix}`);
+		}
+	}
+}
+
+/** Without a readable lock file, owned files that differ are plain drift: say how to fix that. */
+function hintLock(report: DiffReport): void {
+	if (report.lock === "present") return;
+	if (!report.files.some((f) => f.kind === "owned")) return;
+	const problem = report.lock === "missing" ? "missing" : "unreadable";
+	console.log("## Lock file");
 	console.log(
-		"  Force product Python with --packs …,python or --python when needed.",
+		`  ${LOCK_FILE} ${problem}: owned drift cannot be split into stale (kit moved on) vs customized; re-run apply to record what the kit wrote.`,
 	);
 	console.log("");
 }
@@ -57,32 +96,27 @@ function main(): void {
 	}
 
 	const packs = resolvePacks(target, argv);
-	const state = desiredState(target, packs);
+	const agentHooks = resolveAgentHooks(target, argv);
+	const state = desiredState(target, packs, { agentHooks });
+	refuseCollisions(state);
 	const report = diffAgainst(target, state);
 
 	console.log(`# quality-kit audit: ${target}`);
 	console.log(`Packs: ${formatPackRoles(packs)}`);
 	console.log("");
 
-	warnOrphanFragments(packs);
-
-	const byKind = {
-		missing: report.files.filter((r) => r.kind === "missing"),
-		match: report.files.filter((r) => r.kind === "match"),
-		drift: report.files.filter((r) => r.kind === "drift"),
-	};
+	hintLock(report);
 
 	console.log(`## Files (${report.files.length})`);
-	console.log(`- match: ${byKind.match.length}`);
-	console.log(`- missing: ${byKind.missing.length}`);
-	console.log(`- drift: ${byKind.drift.length}`);
-	for (const r of byKind.missing)
-		console.log(`  missing  [${r.pack}] ${r.path}`);
-	for (const r of byKind.drift)
-		console.log(`  drift    [${r.pack}] ${r.path}`);
 	if (report.files.length === 0) {
 		console.log("  (no templates for selected packs — stub or empty)");
 	}
+	for (const kind of PLACEMENT_KINDS) {
+		const findings = report.files.filter((f) => f.kind === kind);
+		if (findings.length > 0) printKindGroup(kind, findings);
+	}
+
+	if (report.wiring.length > 0) printWiring(report.wiring);
 
 	if (state.packageJson) {
 		console.log("");
@@ -135,9 +169,10 @@ function main(): void {
 		);
 	}
 
-	const gaps = byKind.missing.length + byKind.drift.length;
+	const gaps = report.files.filter(isFileGap).length;
 	const scriptGaps = report.scripts.filter((s) => s.kind !== "match").length;
-	process.exit(gaps + scriptGaps > 0 ? 1 : 0);
+	const wiringGaps = report.wiring.filter((w) => w.gaps.length > 0).length;
+	process.exit(gaps + scriptGaps + wiringGaps > 0 ? 1 : 0);
 }
 
 main();

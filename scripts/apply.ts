@@ -2,7 +2,7 @@
  * Idempotent copy-in of quality-kit templates by language pack.
  * Builds Desired state, then writes missing files / merges package.json.
  *
- * Usage: pnpm apply -- --target /path/to/repo [--packs a,b] [--python] [--force-scripts]
+ * Usage: pnpm apply -- --target /path/to/repo [--packs a,b] [--python] [--force-scripts] [--agent-hooks]
  */
 
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -10,11 +10,18 @@ import { join } from "node:path";
 import {
 	copyIfMissing,
 	desiredState,
-	packTemplatesRoot,
+	ensureDir,
+	missingMarkers,
+	refuseCollisions,
+	resolveAgentHooks,
 	resolvePacks,
 	resolveTarget,
+	sourceLabel,
+	templatePath,
 	type DesiredState,
+	type Placement,
 } from "./lib";
+import { LOCK_FILE, recordOwned } from "./lock-file";
 
 function mergePackageJson(
 	target: string,
@@ -85,6 +92,34 @@ function packageRootLabel(targetRel: string): { root: string; file: string } {
 	};
 }
 
+/** Copy a Placement if missing; a merge-into fragment is skipped once its dest is merged. */
+function place(target: string, p: Placement): "copied" | "skipped" | "merged" {
+	if (
+		p.kind === "merge-into" &&
+		p.mergeInto.dest !== p.targetRel &&
+		missingMarkers(target, p.mergeInto).length === 0
+	) {
+		return "merged";
+	}
+	const dest = join(target, p.targetRel);
+	if (p.content !== undefined) {
+		if (existsSync(dest)) return "skipped";
+		ensureDir(dest);
+		writeFileSync(dest, p.content);
+		if (p.executable) chmodSync(dest, 0o755);
+		return "copied";
+	}
+	const result = copyIfMissing(templatePath(p), dest);
+	if (result === "copied" && p.executable) chmodSync(dest, 0o755);
+	return result === "copied" ? "copied" : "skipped";
+}
+
+function placementLabel(p: Placement): string {
+	return p.kind === "merge-into" && p.mergeInto.dest !== p.targetRel
+		? `${p.targetRel} → ${p.mergeInto.dest}`
+		: p.targetRel;
+}
+
 function main(): void {
 	const argv = process.argv.slice(2);
 	const target = resolveTarget(argv);
@@ -96,7 +131,9 @@ function main(): void {
 	}
 
 	const packs = resolvePacks(target, argv);
-	const state = desiredState(target, packs);
+	const agentHooks = resolveAgentHooks(target, argv);
+	const state = desiredState(target, packs, { agentHooks });
+	refuseCollisions(state);
 	const placements = [...state.rootPlacements, ...state.packagePlacements];
 
 	console.log(`# quality-kit apply → ${target}`);
@@ -117,27 +154,17 @@ function main(): void {
 
 	console.log("## files");
 	for (const p of state.rootPlacements) {
-		const src = join(packTemplatesRoot(p.pack), p.templateRel);
-		const dest = join(target, p.targetRel);
-		const result = copyIfMissing(src, dest);
-		console.log(`  ${result.padEnd(8)} [${p.pack}] ${p.targetRel}`);
-		if (result === "copied" && p.executable) {
-			chmodSync(dest, 0o755);
-		}
+		const result = place(target, p);
+		console.log(`  ${result.padEnd(8)} [${sourceLabel(p)}] ${placementLabel(p)}`);
 	}
 
 	if (state.packagePlacements.length > 0) {
 		console.log("");
 		console.log("## dart package files");
 		for (const p of state.packagePlacements) {
-			const src = join(packTemplatesRoot(p.pack), p.templateRel);
-			const dest = join(target, p.targetRel);
-			const result = copyIfMissing(src, dest);
+			const result = place(target, p);
 			const { root, file } = packageRootLabel(p.targetRel);
 			console.log(`  ${result.padEnd(8)} [${root}] ${file}`);
-			if (result === "copied" && p.executable) {
-				chmodSync(dest, 0o755);
-			}
 		}
 	} else if (packs.includes("dart")) {
 		console.log("");
@@ -147,69 +174,23 @@ function main(): void {
 		);
 	}
 
+	const lock = recordOwned(target, placements);
+	console.log("");
+	console.log("## lock file");
+	console.log(
+		`  wrote    ${LOCK_FILE} (kit ${lock.kitRevision?.slice(0, 12) ?? "revision unknown"}, ${Object.keys(lock.files).length} owned files)`,
+	);
+
 	if (state.packageJson) {
 		console.log("");
 		console.log("## package.json");
 		mergePackageJson(target, state, forceScripts);
-
-		console.log("");
-		console.log("Next (see languages/js-ts/MODULE.md):");
-		console.log(
-			"  1. Adjust rev-dep.config.json entry points / moduleBoundaries",
-		);
-		console.log(
-			"  2. If pnpm-workspace.yaml already existed, merge allowBuilds: esbuild",
-		);
-		console.log("  3. pnpm install");
-		console.log("  4. Seed complexity: pnpm lint:complexity -- --update");
-		console.log(
-			"  5. Seed rev-dep:    pnpm lint:graph -- --update-snapshot  (creates .rev-dep.baseline.json + .rev-dep.duplicates.json; do not hand-write them)",
-		);
-		console.log("  6. Merge AGENTS.quality.md into AGENTS.md");
-		if (packs.includes("python")) {
-			console.log(
-				"  7. Refine tach.toml modules; uvx vulture@2.16 --make-whitelist",
-			);
-		}
 	}
 
-	if (packs.includes("dart")) {
+	for (const { pack, steps } of state.nextSteps) {
 		console.log("");
-		console.log("Next (see languages/dart/MODULE.md):");
-		console.log(
-			'  1. Set quality-kit.dart.json roots (e.g. ["app"]) and flutterEnv if needed',
-		);
-		console.log(
-			"  2. Install Betterleaks v1.9.0+ and lefthook on the host",
-		);
-		console.log("  3. lefthook install");
-		console.log(
-			"  4. If Makefile already existed, wire gate / gate-fast to tools/quality/gate.sh",
-		);
-		console.log("  5. Merge AGENTS.quality.md into AGENTS.md");
-		console.log("  6. ./tools/quality/gate.sh full");
-	}
-
-	if (packs.includes("kotlin-android")) {
-		console.log("");
-		console.log("Next (see languages/kotlin-android/MODULE.md):");
-		console.log(
-			'  1. settings.gradle.kts: pluginManagement { includeBuild("build-logic/quality") }',
-		);
-		console.log('  2. root build.gradle.kts plugins: id("quality-kit.root")');
-		console.log(
-			'  3. each Android module plugins (after com.android.*): id("quality-kit.android")',
-		);
-		console.log(
-			"  4. Merge gradle.quality.properties into gradle.properties; merge AGENTS.quality.md into AGENTS.md",
-		);
-		console.log(
-			"  5. ./tools/quality/doctor.sh; install Betterleaks v1.9.0+ and lefthook; lefthook install",
-		);
-		console.log(
-			"  6. ./tools/quality/run-format.sh --fix; ./tools/quality/screenshots.sh record",
-		);
-		console.log("  7. ./tools/quality/gate.sh full");
+		console.log(`Next (see languages/${pack}/MODULE.md):`);
+		steps.forEach((step, i) => console.log(`  ${i + 1}. ${step}`));
 	}
 }
 

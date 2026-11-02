@@ -1,0 +1,13 @@
+# dart additions to the shared .betterleaks.toml (appended by
+# tools/quality/run-secret-scan.sh). Tables only: no top-level keys.
+
+[[allowlists]]
+description = "dart: Flutter/Android build caches, Cloudflare local vars"
+paths = [
+  '''(?i)\.dart_tool\/''',
+  '''(?i)(?:^|/)build/''',
+  '''(?i)(?:^|/)android/\.gradle/''',
+  '''(?i)(?:^|/)android/app/build/''',
+  '''(?:^|/)\.dev\.vars$''',
+  '''(?:^|/)\.dev\.vars\.'''
+]

@@ -1,22 +1,38 @@
 import { existsSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
-import type { Contribution, Pack, Placement } from "./types";
+import { effectiveKind } from "./effective-kind";
+import { type PlacementKindDecl, placeFiles } from "./placements";
+import { postApplySteps } from "./post-apply";
+import { sharedPlacements } from "./shared";
+import type { Contribution, Pack, PackId } from "./types";
 import { PYTHON_HELPER_DIRS, walkFiles } from "./walk";
+import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
-const COPY_PATHS = [
-	"pyproject.toml",
-	"tach.toml",
-	"vulture_whitelist.py",
-] as const;
+/** Always placed (Host and Fragment). */
+const COMMON_FILES: Record<string, PlacementKindDecl> = {
+	"pyproject.toml": {
+		dest: "pyproject.toml",
+		markers: ["[tool.ruff]", "[tool.basedpyright]", "[tool.vulture]"],
+	},
+	"tach.toml": "seed",
+	"vulture_whitelist.py": "seed",
+};
 
-function rootPlacements(): Placement[] {
-	return COPY_PATHS.map((rel) => ({
-		pack: "python" as const,
-		templateRel: rel,
-		targetRel: rel,
-	}));
-}
+/** Host-only scripts / CI / hooks inputs (namespaced under tools/quality/python/). */
+const HOST_FILES: Record<string, PlacementKindDecl> = {
+	".betterleaks.d/python.toml": "owned",
+	".github/actions/setup-uv/action.yml": "owned",
+	".github/actions/python-quality-gate/action.yml": "owned",
+	"tools/quality/python/gate.sh": "owned",
+	"tools/quality/python/run-format.sh": "owned",
+	"tools/quality/python/run-lint.sh": "owned",
+	"tools/quality/python/run-types.sh": "owned",
+	"tools/quality/python/run-boundaries.sh": "owned",
+	"tools/quality/python/run-deadcode.sh": "owned",
+	"tools/quality/python/run-test.sh": "owned",
+	"tools/quality/python/collect-coverage.sh": "owned",
+};
 
 /** True when a path segment is a known helper-script directory. */
 function underPythonHelperDir(target: string, filePath: string): boolean {
@@ -38,24 +54,45 @@ export function detectPythonProduct(target: string): boolean {
 	});
 }
 
+function fragmentContribution(): Contribution {
+	const scripts = JSON.parse(
+		readText(join(packTemplatesRoot("python"), "package.scripts.json")),
+	) as Record<string, string>;
+
+	return {
+		rootPlacements: placeFiles("python", COMMON_FILES),
+		packagePlacements: [],
+		packageJson: {
+			scripts,
+			gateFragments: ["lint:py"],
+		},
+		nextSteps: postApplySteps("python"),
+		probes: [],
+	};
+}
+
+function hostContribution(): Contribution {
+	return {
+		rootPlacements: [
+			...placeFiles("python", COMMON_FILES),
+			...placeFiles("python", HOST_FILES),
+			...sharedPlacements("python"),
+		],
+		packagePlacements: [],
+		nextSteps: postApplySteps("python"),
+		probes: [hooksInstalledProbe(LEFTHOOK)],
+	};
+}
+
 export const pythonPack: Pack = {
 	id: "python",
-	kind: "fragment",
+	kind: "host",
 	detect(target: string): boolean {
 		return detectPythonProduct(target);
 	},
-	contribute(_target: string, _selected: readonly string[]): Contribution {
-		const scripts = JSON.parse(
-			readText(join(packTemplatesRoot("python"), "package.scripts.json")),
-		) as Record<string, string>;
-
-		return {
-			rootPlacements: rootPlacements(),
-			packagePlacements: [],
-			packageJson: {
-				scripts,
-				gateFragments: ["lint:py"],
-			},
-		};
+	contribute(_target: string, selected: readonly PackId[]): Contribution {
+		return effectiveKind("python", selected) === "fragment"
+			? fragmentContribution()
+			: hostContribution();
 	},
 };

@@ -11,9 +11,12 @@ pnpm apply -- --target ~/mycode/<repo>
 pnpm apply -- --target ~/mycode/<repo> --packs js-ts,python
 pnpm apply -- --target ~/mycode/<repo> --packs dart
 pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
+pnpm run upgrade -- --target ~/mycode/<repo> [--dry-run]
 ```
 
-Packs are detected from the target, or set with `--packs`. `--python` force-adds the python Fragment.
+`upgrade` replaces owned files left untouched since apply with the current templates and lists customized ones to merge by hand. Run it (and `audit`) via `pnpm run`: `pnpm upgrade` and `pnpm audit` are pnpm builtins that shadow the scripts.
+
+Packs are detected from the target, or set with `--packs`. `--python` force-adds the python Pack (Host alone, or Fragment onto js-ts).
 
 `js-ts` detection ignores stub `package.json` files with no dependencies (common in Flutter repos). Python detection ignores helper-script dirs (`tool/`, `scripts/`, …) so Flutter `tool/*.py` does not pull the Fragment; use `--packs dart` for Dart hosts. Override with `--packs` when needed.
 
@@ -32,8 +35,10 @@ When adding or renaming the skill, or moving the repo, update both links. Shared
 
 - `languages/<pack>/templates/` — files `apply` copies into a target repo
 - `languages/<pack>/MODULE.md` — pack tools, pins, post-apply steps
+- `languages/shared/` — Shared layer every Host Pack composes (Betterleaks config, wrapper, checksum-pinned installer); not a Pack
 - `languages/kotlin-android/templates/build-logic/quality/` — Gradle convention plugins (`quality-kit.root`, `quality-kit.android`) copied into the Target
 - `scripts/packs/` — Pack adapters (detect + Contribution)
 - `scripts/desired-state.ts` — Desired state build + diff
-- `scripts/audit.ts` / `scripts/apply.ts` — thin adapters over Desired state
+- `scripts/audit.ts` / `scripts/apply.ts` / `scripts/upgrade.ts` — thin adapters over Desired state
+- `scripts/lint-templates.ts` — `pnpm lint:templates`: shellcheck + actionlint over templates (kit CI; see REFERENCE.md "Kit CI")
 - `GLOSSARY.md` — domain terms (Pack, Desired state, Target, …)

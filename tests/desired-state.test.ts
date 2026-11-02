@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { test } from "node:test";
 import { desiredState, diffAgainst } from "../scripts/desired-state";
-import { packTemplatesRoot } from "../scripts/kit-fs";
+import { packTemplatesRoot, templatePath } from "../scripts/kit-fs";
 import { detectPacks, PACK_IDS } from "../scripts/packs";
 
 function tempTarget(): string {
@@ -109,11 +109,12 @@ test("desiredState: kotlin-android places build-logic and executable scripts", (
 	);
 });
 
-test("every Pack placement has a template file", () => {
+test("every Pack placement has a template file (or generated content)", () => {
 	for (const id of PACK_IDS) {
 		const state = desiredState(tempTarget(), [id]);
 		for (const p of state.rootPlacements) {
-			const src = join(packTemplatesRoot(p.pack), p.templateRel);
+			if (p.content !== undefined) continue;
+			const src = templatePath(p);
 			assert.ok(existsSync(src), `${id}: missing template ${p.templateRel}`);
 		}
 	}
@@ -146,10 +147,14 @@ test("desiredState: js-ts + python composes gate:fast and fragment scripts", () 
 	const state = desiredState(target, ["js-ts", "python"]);
 	assert.ok(state.packageJson);
 	assert.ok(state.packageJson!.scripts["lint:py"]);
-	assert.ok(state.packageJson!.scripts["gate:fast:py"]);
+	assert.equal(state.packageJson!.scripts["gate:fast:py"], "pnpm lint:py");
 	assert.match(
 		state.packageJson!.scripts["gate:fast"]!,
-		/&& pnpm lint:py$/,
+		/tools\/quality\/js-ts\/gate\.sh fast lint:py$/,
+	);
+	assert.equal(
+		(state.packageJson!.scripts["gate:fast"]!.match(/lint:py/g) ?? []).length,
+		1,
 	);
 	assert.ok(
 		state.rootPlacements.some((p) => p.targetRel === "pyproject.toml"),
@@ -157,12 +162,15 @@ test("desiredState: js-ts + python composes gate:fast and fragment scripts", () 
 	assert.ok(state.rootPlacements.some((p) => p.targetRel === "biome.json"));
 });
 
-test("desiredState: python alone has files but no packageJson", () => {
+test("desiredState: python alone is Host (files + gate, no packageJson)", () => {
 	const target = tempTarget();
 	const state = desiredState(target, ["python"]);
 	assert.equal(state.packageJson, null);
 	assert.ok(
 		state.rootPlacements.some((p) => p.targetRel === "pyproject.toml"),
+	);
+	assert.ok(
+		state.rootPlacements.some((p) => p.targetRel === "tools/quality/python/gate.sh"),
 	);
 });
 
@@ -190,21 +198,6 @@ test("desiredState: dart package placements use resolved roots", () => {
 	);
 });
 
-test("desiredState: first-wins on overlapping targetRel by pack order", () => {
-	const target = tempTarget();
-	const dartFirst = desiredState(target, ["dart", "js-ts"]);
-	const jsFirst = desiredState(target, ["js-ts", "dart"]);
-
-	const dartEditor = dartFirst.rootPlacements.find(
-		(p) => p.targetRel === ".editorconfig",
-	);
-	const jsEditor = jsFirst.rootPlacements.find(
-		(p) => p.targetRel === ".editorconfig",
-	);
-	assert.equal(dartEditor?.pack, "dart");
-	assert.equal(jsEditor?.pack, "js-ts");
-});
-
 test("diffAgainst: missing files and scripts", () => {
 	const target = tempTarget();
 	writeFileSync(
@@ -214,6 +207,6 @@ test("diffAgainst: missing files and scripts", () => {
 
 	const state = desiredState(target, ["js-ts"]);
 	const report = diffAgainst(target, state);
-	assert.ok(report.files.some((f) => f.kind === "missing"));
+	assert.ok(report.files.some((f) => f.status === "missing"));
 	assert.ok(report.scripts.some((s) => s.kind === "missing"));
 });

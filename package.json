@@ -6,9 +6,13 @@
 	"scripts": {
 		"audit": "tsx scripts/audit.ts",
 		"apply": "tsx scripts/apply.ts",
+		"upgrade": "tsx scripts/upgrade.ts",
+		"lint:templates": "tsx scripts/lint-templates.ts",
+		"smoke": "tsx scripts/smoke.ts",
 		"test": "tsx --test tests/**/*.test.ts"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "2.6.3",
 		"@types/node": "^24.19.2",
 		"tsx": "^4.23.15",
 		"typescript": "^5.9.3"

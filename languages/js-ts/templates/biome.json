@@ -11,8 +11,10 @@
 			"!!**/dist",
 			"!!**/node_modules",
 			"!!**/.wrangler",
+			"!!**/pnpm-lock.yaml",
 			"!!.rev-dep.baseline.json",
-			"!!.rev-dep.duplicates.json"
+			"!!.rev-dep.duplicates.json",
+			"!!**/tools/quality/ratchets"
 		]
 	},
 	"formatter": {
@@ -23,8 +25,18 @@
 		"enabled": true,
 		"rules": {
 			"preset": "recommended",
+			"correctness": {
+				"noUnusedImports": { "level": "on", "fix": "safe" }
+			},
+			"nursery": {
+				"noFloatingPromises": "error",
+				"noMisusedPromises": "error",
+				"noUnsafeReturn": "error",
+				"useExhaustiveSwitchCases": "error"
+			},
 			"style": {
-				"noNonNullAssertion": "off"
+				"noNonNullAssertion": "off",
+				"useTemplate": { "level": "on", "fix": "safe" }
 			},
 			"suspicious": {
 				"noConsole": "error"

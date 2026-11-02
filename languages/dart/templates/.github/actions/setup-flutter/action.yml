@@ -1,30 +1,12 @@
 name: Setup Flutter
-description: Install Flutter (stable), Betterleaks v1, dependency_validator, and pub get per root
+description: Install pinned Flutter, dependency_validator, and pub get per root
 runs:
   using: composite
   steps:
     - uses: subosito/flutter-action@v2
       with:
-        channel: stable
+        flutter-version: 3.47.9
         cache: true
-
-    - name: Install Betterleaks v1
-      shell: bash
-      run: |
-        set -euo pipefail
-        VERSION=1.9.0
-        ARCH=$(uname -m)
-        case "$ARCH" in
-          x86_64|amd64) ASSET="betterleaks_${VERSION}_linux_x64.tar.gz" ;;
-          aarch64|arm64) ASSET="betterleaks_${VERSION}_linux_arm64.tar.gz" ;;
-          *) echo "Unsupported arch: $ARCH"; exit 1 ;;
-        esac
-        mkdir -p "${HOME}/.local/bin"
-        curl -fsSL "https://github.com/betterleaks/betterleaks/releases/download/v${VERSION}/${ASSET}" \
-          | tar -xz -C "${RUNNER_TEMP}" betterleaks
-        install -m 0755 "${RUNNER_TEMP}/betterleaks" "${HOME}/.local/bin/betterleaks"
-        echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
-        "${HOME}/.local/bin/betterleaks" version
 
     - name: Activate dependency_validator
       shell: bash
@@ -35,7 +17,7 @@ runs:
       run: |
         set -euo pipefail
         # shellcheck source=/dev/null
-        source ./tools/quality/lib.sh
+        source ./tools/quality/dart/lib.sh
         while IFS= read -r root; do
           echo "==> pub get [${root}]"
           if quality_has_flutter "${root}"; then

@@ -1,53 +1,74 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
-import type { Contribution, Pack, Placement } from "./types";
+import { type PlacementKindDecl, placeFiles } from "./placements";
+import { postApplySteps } from "./post-apply";
+import { sharedPlacements } from "./shared";
+import { lefthookHostsOf } from "./local";
+import type { Contribution, Pack, PackId, WiringProbe } from "./types";
+import { HUSKY, LEFTHOOK, hooksInstalledProbe } from "./wiring";
 
-const COPY_PATHS = [
-	"biome.json",
-	"biome.complexity.json",
-	"tsconfig.base.json",
-	"rev-dep.config.json",
-	".editorconfig",
-	".betterleaks.toml",
-	".betterleaksignore",
-	".npmrc",
-	".nvmrc",
-	".gitignore",
-	"pnpm-workspace.yaml",
-	".husky/pre-commit",
-	".husky/pre-push",
-	".github/workflows/ci.yml",
-	".github/actions/setup-pnpm/action.yml",
-	".github/actions/quality-gate/action.yml",
-	"scripts/ratchets/compare.ts",
-	"scripts/ratchets/run-tool.ts",
-	"scripts/ratchets/run-complexity.ts",
-	"scripts/run-rev-dep.ts",
-	"scripts/run-secret-scan.ts",
-	"baselines/complexity.json",
-	"tests/ratchets/ratchet-contract.test.sh",
-	"tests/ratchets/fixtures/baseline-green.json",
-	"tests/ratchets/fixtures/baseline-scored.json",
-	"tests/ratchets/fixtures/baseline-stale.json",
-	"tests/ratchets/fixtures/findings-green.json",
-	"tests/ratchets/fixtures/findings-novel.json",
-	"tests/ratchets/fixtures/findings-regression.json",
-	"tests/ratchets/fixtures/findings-stale.json",
-	"AGENTS.quality.md",
-] as const;
+/** Shared root files (.editorconfig, AGENTS) are composed; husky only when no lefthook Host. */
+const ROOT_FILES: Record<string, PlacementKindDecl> = {
+	"biome.json": "owned",
+	"biome.complexity.json": "seed",
+	"tsconfig.base.json": "owned",
+	"rev-dep.config.json": "seed",
+	".betterleaks.d/js-ts.toml": "owned",
+	".npmrc": { dest: ".npmrc", markers: ["engine-strict=true"] },
+	".nvmrc": "owned",
+	".gitignore": "seed",
+	"pnpm-workspace.yaml": {
+		dest: "pnpm-workspace.yaml",
+		markers: ["esbuild: true"],
+	},
+	".github/actions/setup-pnpm/action.yml": "owned",
+	".github/actions/js-ts-quality-gate/action.yml": "owned",
+	"scripts/ratchets/run-complexity.ts": "owned",
+	"scripts/ratchets/run-biome.ts": "owned",
+	"scripts/run-rev-dep.ts": "owned",
+	"tools/quality/js-ts/gate.sh": "owned",
+	"tools/quality/js-ts/collect-coverage.sh": "owned",
+	"baselines/complexity.json": "seed",
+	"baselines/biome-diagnostics.json": "seed",
+};
+
+const HUSKY_FILES: Record<string, PlacementKindDecl> = {
+	".husky/pre-commit": "owned",
+	".husky/pre-push": "owned",
+};
+
+function withLefthookHost(selected: readonly PackId[]): boolean {
+	return lefthookHostsOf(selected).length > 0;
+}
+
+function hasTestScript(target: string): boolean {
+	const pkgPath = join(target, "package.json");
+	if (!existsSync(pkgPath)) return false;
+	try {
+		const pkg = JSON.parse(readText(pkgPath)) as {
+			scripts?: Record<string, string>;
+		};
+		return Boolean(pkg.scripts?.test);
+	} catch {
+		return false;
+	}
+}
+
+const TEST_PROBE: WiringProbe = {
+	label: "package.json has a test script",
+	check: (target) =>
+		hasTestScript(target)
+			? []
+			: [
+					{
+						fix: 'add a "test" script to package.json (`pnpm lint:coverage` / gate runs tests under c8)',
+					},
+				],
+};
 
 function manifest(name: string): string {
 	return join(packTemplatesRoot("js-ts"), name);
-}
-
-function rootPlacements(): Placement[] {
-	return COPY_PATHS.map((rel) => ({
-		pack: "js-ts" as const,
-		templateRel: rel,
-		targetRel: rel,
-		executable: rel.endsWith(".sh") ? true : undefined,
-	}));
 }
 
 export const jsTsPack: Pack = {
@@ -71,7 +92,7 @@ export const jsTsPack: Pack = {
 			return true;
 		}
 	},
-	contribute(_target: string, _selected: readonly string[]): Contribution {
+	contribute(_target: string, selected: readonly PackId[]): Contribution {
 		const scripts = JSON.parse(readText(manifest("package.scripts.json"))) as Record<
 			string,
 			string
@@ -83,8 +104,20 @@ export const jsTsPack: Pack = {
 			readText(manifest("package.lint-staged.json")),
 		) as Record<string, string[]>;
 
+		// With a lefthook Host, composed lefthook.yml owns hooks (incl. lint-staged).
+		const husky = withLefthookHost(selected)
+			? []
+			: placeFiles("js-ts", HUSKY_FILES);
+		const hooksProbe = withLefthookHost(selected)
+			? hooksInstalledProbe(LEFTHOOK)
+			: hooksInstalledProbe(HUSKY);
+
 		return {
-			rootPlacements: rootPlacements(),
+			rootPlacements: [
+				...placeFiles("js-ts", ROOT_FILES),
+				...husky,
+				...sharedPlacements("js-ts"),
+			],
 			packagePlacements: [],
 			packageJson: {
 				scripts,
@@ -92,6 +125,8 @@ export const jsTsPack: Pack = {
 				lintStaged,
 				enginesNode: ">=24.0.0 <25",
 			},
+			nextSteps: postApplySteps("js-ts"),
+			probes: [hooksProbe, TEST_PROBE],
 		};
 	},
 };

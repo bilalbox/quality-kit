@@ -1,11 +1,14 @@
 {
 	"typecheck": "tsc -b",
-	"lint": "biome check .",
-	"lint:secrets": "tsx scripts/run-secret-scan.ts",
+	"lint": "tsx scripts/ratchets/run-biome.ts",
+	"fix": "biome check --write .",
+	"lint:secrets": "bash tools/quality/run-secret-scan.sh",
+	"lint:vulns": "bash tools/quality/run-vuln-scan.sh",
 	"lint:graph": "tsx scripts/run-rev-dep.ts",
 	"lint:complexity": "tsx scripts/ratchets/run-complexity.ts",
-	"gate:fast": "pnpm lint && pnpm lint:secrets && pnpm lint:graph && pnpm lint:complexity && pnpm typecheck",
-	"gate": "pnpm gate:fast && pnpm test",
-	"test:ratchets": "bash tests/ratchets/ratchet-contract.test.sh",
+	"lint:coverage": "bash tools/quality/run-coverage-ratchet.sh",
+	"gate:fast": "bash tools/quality/js-ts/gate.sh fast",
+	"gate": "bash tools/quality/js-ts/gate.sh full",
+	"test:ratchets": "bash tools/quality/ratchets/ratchet-contract.test.sh",
 	"prepare": "husky"
 }

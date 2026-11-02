@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Quality gates
 
-Language packs live under `languages/`. Workflows: **audit**, **adopt**, **new**.
+Language packs live under `languages/`. Workflows: **audit**, **adopt**, **upgrade**, **new**.
 
 Always run kit CLIs from **`~/mycode/quality-kit`** (this skill is a symlink to that repo, installed for both Cursor at `~/.agents/skills/quality-gates` and Claude Code at `~/.claude/skills/quality-gates` — keep both links when changing the install).
 
@@ -30,31 +30,40 @@ pnpm apply -- --target ~/mycode/<repo> --packs js-ts,python
 pnpm apply -- --target ~/mycode/<repo> --packs dart
 pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
 pnpm apply -- --target ~/mycode/<repo> --python   # force-add python Fragment
+pnpm apply -- --target ~/mycode/<repo> --agent-hooks   # opt-in Claude Code DoD hooks
+pnpm run upgrade -- --target ~/mycode/<repo> --dry-run   # `pnpm run`: bare `pnpm upgrade` is a pnpm builtin
 ```
 
 ### Pack selection
 
 - **Detect** when `--packs` omitted: Host/Fragment signals in the Target.
 - **Override** with `--packs a,b` (recommended when detect is noisy).
-- `--python` force-adds the python Fragment.
+- `--python` force-adds the python Pack (Host alone, or Fragment onto js-ts).
 
 | Pack | Kind | Detect |
 | --- | --- | --- |
 | `js-ts` | Host | Root `package.json` with real deps (Flutter stub JSON ignored) |
 | `dart` | Host | `pubspec.yaml` within depth 3 |
 | `kotlin-android` | Host | Root `settings.gradle(.kts)` + AGP referenced in root build / settings / `gradle/libs.versions.toml` (Flutter `android/` ignored) |
-| `python` | Fragment → **js-ts** Host | Root `pyproject.toml`, or `.py` outside helper dirs (`tool`, `tools`, `scripts`, `script`, `bin`) |
+| `python` | Host alone; Fragment → **js-ts** when co-selected | Root `pyproject.toml`, or `.py` outside helper dirs (`tool`, `tools`, `scripts`, `script`, `bin`) |
 | `rust` | (stub) | `Cargo.toml` — detect only; no templates yet |
 
 **Flutter / Dart with helper scripts:** prefer `--packs dart`. Incidental `tool/*.py` must not pull in python; force with `--python` only for a real Python product surface.
 
-**Fragment without Host:** audit warns. File templates can still apply, but python gate scripts only wire into a js-ts Host `package.json`. Do not treat orphan Fragment gaps as Host debt unless the user wants that pack.
+**python Host vs Fragment:** without `js-ts`, python is a Host (uv gate, lefthook, CI, Shared layer). With `js-ts`, it is a Fragment (`lint:py` on `gate:fast` once).
 
 ## Hosts vs after-apply
 
-- **js-ts Host:** tune entry points → `pnpm install` → seed baselines → merge `AGENTS.quality.md` into `AGENTS.md` → `pnpm gate`.
-- **dart Host:** set `quality-kit.dart.json` roots → install Betterleaks + lefthook → `lefthook install` → merge `AGENTS.quality.md` → `./tools/quality/gate.sh full`.
-- **kotlin-android Host:** wire `includeBuild("build-logic/quality")` + `quality-kit.root` + `quality-kit.android` per module → merge `gradle.quality.properties` and `AGENTS.quality.md` → `./tools/quality/doctor.sh` → `lefthook install` → `run-format.sh --fix` → `screenshots.sh record` → `./tools/quality/gate.sh full`.
+Each Pack owns its post-apply steps: the `## Post-apply` list in its `MODULE.md`. `apply` prints exactly that list per selected Pack under "Next"; do not restate the steps elsewhere.
+
+## Agent hooks (opt-in)
+
+Pass `--agent-hooks` on apply to place Claude Code project hooks that enforce the Definition of Done (see composed `AGENTS.quality.md`):
+
+- **PostToolUse** (`Edit|Write`): format/lint **only the edited file**, routed by extension to each selected Host (Biome for js-ts; `run-format.sh --fix <file>` for dart / kotlin-android).
+- **Stop**: runs the **top-level** `gate fast` (`./tools/quality/gate.sh fast` when a bash-gate Host is selected, else `pnpm gate:fast`) — never a Host-namespaced `tools/quality/<pack>/gate.sh`. A failing gate exits 2 so Claude Code blocks finishing and surfaces the failure output.
+
+Files: `.claude/settings.json` + `tools/quality/agent-hooks.sh` (owned, composed once for the whole Host selection). Audit/upgrade keep the opt-in when the Lock file already records `.claude/settings.json` (or pass `--agent-hooks` again). Cursor / other agents are out of scope for this Placement.
 
 ## Packs
 
@@ -65,18 +74,23 @@ Before pack-specific steps, **read** each selected pack's module:
 - [languages/dart/MODULE.md](languages/dart/MODULE.md)
 - [languages/kotlin-android/MODULE.md](languages/kotlin-android/MODULE.md)
 - [languages/rust/MODULE.md](languages/rust/MODULE.md) (stub)
+- [languages/shared/MODULE.md](languages/shared/MODULE.md) (Shared layer every Host composes: secrets, dependency vulns)
 
 ## Drift playbook
 
-`apply` never overwrites existing files. Audit **drift** means Target content ≠ template.
+`apply` never overwrites existing files; `upgrade` overwrites only stale owned files. Audit groups files by Placement kind (see `GLOSSARY.md`):
 
-For each drifted path, pick one deliberately:
+- **owned** — Target content ≠ template. The Lock file (`.quality-kit.lock.json`, written by apply and upgrade) says why: **stale** = untouched since apply, the kit moved on (run **upgrade**); **customized** = edited in the Target (Keep or Merge); **drift** = no recorded hash, provenance unknown (no lock file: re-run apply). Use the steps below.
+- **seed** — tune freely; only **missing** or **invalid** (JSON no longer parses) is a gap.
+- **merge-into** — **unmerged** means the destination lacks the kit's markers (e.g. `AGENTS.md` has no `## Definition of Done (Mandatory Gate)` section). Merge the fragment in; you may then delete the fragment file.
 
-1. **Keep** — Target policy wins; leave as-is (audit will keep reporting drift).
+For each customized or drift owned path (the ones upgrade lists under "Merge by hand"), pick one deliberately:
+
+1. **Keep** — Target policy wins; leave as-is (audit will keep reporting it as customized or drift).
 2. **Merge** — fold useful template rules into the existing file by hand.
-3. **Replace** — back up, then copy the template over (human/agent deliberate; not `apply`).
+3. **Replace** — back up, then copy the template over (human/agent deliberate; not `apply`). Re-run `apply` afterwards so the Lock file records the new content.
 
-Common dart case: stock Flutter `analysis_options.yaml` vs kit defaults — usually **merge** (keep `flutter_lints` include; adopt kit `analyzer.exclude` / strict linter rules you want).
+Common dart case: stock `analysis_options.yaml` (`flutter_lints` for Flutter apps, `lints` for pure Dart packages) vs kit defaults — usually **merge** (keep the include; adopt kit strict modes, `analyzer.exclude` and linter rules — see dart MODULE.md "Analysis" for legacy adoption).
 
 Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge** the kit's Compose rules section and Composable/Preview exemptions into it.
 
@@ -85,18 +99,18 @@ Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge**
 ### Audit
 
 1. `pnpm run audit -- --target <repo>` (read-only).
-2. Report packs (with host/fragment roles), missing/drifted files, script gaps (js-ts), orphan-Fragment warnings.
+2. Report packs (with host/fragment roles), file gaps by Placement kind (owned missing/stale/customized/drift, seed missing/invalid, merge-into unmerged), script gaps (js-ts), unwired Wiring probes with their printed fixes, orphan-Fragment warnings.
 3. Done when the report lists every gap; do not modify the Target.
 
 ### Adopt (existing repo)
 
 1. Prefer a clean working tree; work on a branch. If WIP must stay, isolate quality-gate files in the adopt commit.
 2. Resolve packs (detect or `--packs`). Read each pack `MODULE.md`.
-3. `pnpm apply -- --target <repo>`. Never overwrites existing files.
-4. Follow pack post-apply steps (MODULE + apply “Next” output).
+3. `pnpm apply -- --target <repo>`. Never overwrites existing files. Commit the `.quality-kit.lock.json` it writes.
+4. Follow each pack's post-apply steps (apply “Next” output = MODULE `## Post-apply`).
 5. Clear first-pass gate failures (format, analyze, secrets, deps, tests). If the repo has an adoption checklist issue, tick it; otherwise MODULE post-apply + green gate is enough.
 6. Merge `AGENTS.quality.md` into `AGENTS.md`.
-7. Done when the Host gate is green (`pnpm gate` or `./tools/quality/gate.sh full`).
+7. Done when the Host gate is green (`pnpm gate` or `./tools/quality/gate.sh full`). Multi-Host Targets use the composed top-level `./tools/quality/gate.sh` (dispatches to each Host); see REFERENCE.md "Local gate + hooks composition".
 
 #### Kotlin / Android (Jetpack Compose) happy path
 
@@ -104,8 +118,7 @@ Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge**
 pnpm run audit -- --target ~/mycode/<repo> --packs kotlin-android
 # branch, then:
 pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
-# 3 Gradle lines → merge gradle.quality.properties + AGENTS → doctor.sh → lefthook install
-# → run-format.sh --fix → screenshots.sh record → gate.sh full
+# then follow the printed "Next" steps (languages/kotlin-android/MODULE.md Post-apply)
 ```
 
 #### Dart / Flutter happy path
@@ -114,14 +127,23 @@ pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
 pnpm run audit -- --target ~/mycode/<repo> --packs dart
 # branch, then:
 pnpm apply -- --target ~/mycode/<repo> --packs dart
-# roots → Betterleaks/lefthook → lefthook install → merge AGENTS → gate.sh full
+# then follow the printed "Next" steps (languages/dart/MODULE.md Post-apply)
 ```
+
+### Upgrade (after the kit's templates moved on)
+
+1. Requires a prior apply (the Target has `.quality-kit.lock.json`); otherwise run **Adopt** first. Prefer a clean working tree on a branch.
+2. `pnpm run upgrade -- --target <repo> --dry-run` (same `--packs` / `--python` as the apply). Use `pnpm run`: bare `pnpm upgrade` is pnpm's builtin `update` and ignores the script. Review the `would update` list.
+3. `pnpm run upgrade -- --target <repo>`. It overwrites only **stale** owned files (untouched since apply) and updates the lock file; it never touches customized or drift owned files, seeds, merge-into destinations, or `package.json`, and never creates files.
+4. For each path under `## Merge by hand`, apply the Drift playbook (Keep / Merge / Replace). For paths under `## Missing`, run apply.
+5. Run `pnpm run audit -- --target <repo>`, then the Host gate; commit the updated files with `.quality-kit.lock.json`.
+6. Done when audit shows no stale owned files and every remaining customized/drift path was decided deliberately.
 
 ### New (greenfield)
 
 1. Create the app (`pnpm create vite`, `flutter create`, an Android Studio / AGP Compose template, or equivalent).
 2. Same as Adopt steps 2–7.
-3. js-ts: set `biome.complexity.json` `maxAllowedComplexity` to **15** (template default is 25 for legacy) — see js-ts module. kotlin-android: set `qualityKit.minLineCoverage=80` (template default 0 for legacy).
+3. js-ts: set `biome.complexity.json` `maxAllowedComplexity` to **15** (template default is 25 for legacy), and add `"exactOptionalPropertyTypes": true` to the Target's own `tsconfig.json` (not to the owned `tsconfig.base.json`) — see js-ts module. Coverage: keep `baselines/coverage.json` `floor` at **80** (seed default); after the first green `gate`/`lint:coverage`, run the Host coverage ratchet with `--update` and commit.
 4. Done when the pack gate is green.
 
 ## Reference

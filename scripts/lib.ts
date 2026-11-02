@@ -10,8 +10,11 @@ export {
 	languagesRoot,
 	normalize,
 	packTemplatesRoot,
+	placementContent,
 	readText,
 	relToKit,
+	sharedTemplatesRoot,
+	templatePath,
 } from "./kit-fs";
 
 export {
@@ -19,21 +22,46 @@ export {
 	PACK_IDS,
 	PACKS,
 	resolveDartRoots,
+	sourceLabel,
 	type Pack,
 	type PackId,
 	type PackKind,
+	type Placement,
+	type PlacementKind,
 } from "./packs";
 
 export {
 	desiredState,
 	diffAgainst,
+	isFileGap,
+	missingMarkers,
 	type DesiredState,
+	type DesiredStateOpts,
 	type DiffReport,
-	type DriftKind,
 	type FileFinding,
+	type FileStatus,
+	type PlacementCollision,
+	type WiringFinding,
 } from "./desired-state";
 
+import type { DesiredState } from "./desired-state";
+import { readLock } from "./lock-file";
 import { detectPacks, PACK_IDS, type PackId } from "./packs";
+
+/** Exit 2 listing every colliding path when selected Packs overlap. */
+export function refuseCollisions(state: DesiredState): void {
+	if (state.collisions.length === 0) return;
+	console.error(
+		"Refusing: selected Packs place the same Target paths with different content:",
+	);
+	for (const c of state.collisions) {
+		console.error(`  ${c.targetRel}  (${c.packs.join(", ")})`);
+	}
+	console.error(
+		"Combining these Host Packs in one Target is not supported yet; select one Host Pack with --packs.",
+	);
+	process.exit(2);
+}
 
 export function resolveTarget(argv: string[]): string {
 	const idx = argv.indexOf("--target");
@@ -71,4 +99,17 @@ export function resolvePacks(target: string, argv: string[]): PackId[] {
 		packs.push("python");
 	}
 	return packs;
+}
+
+/**
+ * Opt-in agent hooks (#20): `--agent-hooks`, or retain when the lock already
+ * records the Claude Code settings Placement from a prior apply.
+ */
+export function resolveAgentHooks(target: string, argv: string[]): boolean {
+	if (argv.includes("--agent-hooks")) return true;
+	const lock = readLock(target);
+	return (
+		lock.state === "present" &&
+		Object.hasOwn(lock.lock.files, ".claude/settings.json")
+	);
 }
