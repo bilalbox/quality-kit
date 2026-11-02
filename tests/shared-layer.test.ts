@@ -27,6 +27,7 @@ const SHARED_FILES = [
 	"osv-scanner.toml",
 	"tools/quality/install-betterleaks.sh",
 	"tools/quality/install-osv-scanner.sh",
+	"tools/quality/gate-lib.sh",
 	"tools/quality/run-secret-scan.sh",
 	"tools/quality/run-vuln-scan.sh",
 ];

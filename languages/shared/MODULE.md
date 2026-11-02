@@ -14,6 +14,7 @@ Shared Placements carry `shared: true`, resolve their template here (`templatePa
 | `osv-scanner.toml` | seed |
 | `tools/quality/install-betterleaks.sh` | owned |
 | `tools/quality/install-osv-scanner.sh` | owned |
+| `tools/quality/gate-lib.sh` | owned |
 | `tools/quality/run-secret-scan.sh` | owned |
 | `tools/quality/check-baseline-growth.sh` | owned |
 | `tools/quality/run-vuln-scan.sh` | owned |

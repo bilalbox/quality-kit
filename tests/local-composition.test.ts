@@ -69,7 +69,8 @@ test("compose: dart + kotlin-android gate.sh runs both Host gates", () => {
 	const sh = composeGateSh(["dart", "kotlin-android"]);
 	assert.match(sh, /tools\/quality\/dart\/gate\.sh/);
 	assert.match(sh, /tools\/quality\/kotlin-android\/gate\.sh/);
-	assert.match(sh, /\[fast\|full\]/);
+	assert.match(sh, /source "\$\{SCRIPT_DIR\}\/gate-lib\.sh"/);
+	assert.match(sh, /quality_gate_require_mode/);
 });
 
 test("compose: js-ts + dart gate.sh runs pnpm and dart", () => {
@@ -208,6 +209,7 @@ test("apply: dart,kotlin-android writes both Host gates and composed entrypoints
 		[
 			"check-baseline-growth.sh",
 			"dart",
+			"gate-lib.sh",
 			"gate.sh",
 			"install-betterleaks.sh",
 			"install-osv-scanner.sh",

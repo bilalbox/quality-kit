@@ -34,8 +34,21 @@ function writeStubs(
 	}
 }
 
+function placeGateLib(target: string): void {
+	const quality = join(target, "tools/quality");
+	mkdirSync(quality, { recursive: true });
+	writeFileSync(
+		join(quality, "gate-lib.sh"),
+		readFileSync(
+			join(kitRoot, "languages/shared/templates/tools/quality/gate-lib.sh"),
+			"utf8",
+		),
+	);
+}
+
 test("dart gate: two independent failures both appear in the summary", () => {
 	const target = tempTarget();
+	placeGateLib(target);
 	const quality = join(target, "tools/quality");
 	mkdirSync(join(quality, "dart"), { recursive: true });
 	const gateSrc = join(
@@ -73,6 +86,7 @@ test("dart gate: two independent failures both appear in the summary", () => {
 
 test("js-ts gate: two independent failures both appear in the summary", () => {
 	const target = tempTarget();
+	placeGateLib(target);
 	mkdirSync(join(target, "tools/quality/js-ts"), { recursive: true });
 	const gateSrc = join(
 		kitRoot,

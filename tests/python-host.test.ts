@@ -11,16 +11,16 @@ import { PACKS } from "../scripts/packs";
 import { composeCiWorkflow } from "../scripts/packs/ci";
 import { composeGateSh, composeLefthook } from "../scripts/packs/local";
 import { HOST_SMOKES } from "../scripts/smoke/index";
-import { packRole } from "../scripts/packs/python";
+import { effectiveKind } from "../scripts/packs/effective-kind";
 
 function tempTarget(): string {
 	return mkdtempSync(join(tmpdir(), "quality-kit-"));
 }
 
-test("python role: Host alone, Fragment onto js-ts", () => {
-	assert.equal(packRole(["python"]), "host");
-	assert.equal(packRole(["js-ts", "python"]), "fragment");
-	assert.equal(packRole(["python", "dart"]), "host");
+test("python effectiveKind: Host alone, Fragment onto js-ts", () => {
+	assert.equal(effectiveKind("python", ["python"]), "host");
+	assert.equal(effectiveKind("python", ["js-ts", "python"]), "fragment");
+	assert.equal(effectiveKind("python", ["python", "dart"]), "host");
 	assert.equal(PACKS.python.kind, "host");
 });
 

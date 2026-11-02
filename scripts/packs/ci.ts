@@ -7,7 +7,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { languagesRoot, normalize, readText } from "../kit-fs";
-import { packRole } from "./python";
+import { actsAsHost } from "./effective-kind";
 import type { PackId, Placement } from "./types";
 
 /** Host Packs that ship a CI workflow template. */
@@ -20,11 +20,9 @@ export function isCiHost(id: PackId): id is CiHostId {
 
 /** Selected Packs that contribute a CI job, in selection order. */
 export function ciHostsOf(packs: readonly PackId[]): CiHostId[] {
-	return packs.filter((id): id is CiHostId => {
-		if (!isCiHost(id)) return false;
-		if (id === "python" && packRole(packs) === "fragment") return false;
-		return true;
-	});
+	return packs.filter(
+		(id): id is CiHostId => isCiHost(id) && actsAsHost(id, packs),
+	);
 }
 
 export type ComposeCiOpts = {

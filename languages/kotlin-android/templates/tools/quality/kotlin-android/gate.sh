@@ -11,6 +11,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 source "${SCRIPT_DIR}/lib.sh"
+# Target layout: tools/quality/gate-lib.sh (shared layer). Kit path differs.
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/../gate-lib.sh"
 
 mode="${1:-full}"
 case "${mode}" in
@@ -21,20 +24,11 @@ case "${mode}" in
 		exit 2
 		;;
 esac
+quality_gate_begin
 
 REPO_ROOT="$(quality_repo_root)"
 marker="$(mktemp)"
 trap 'rm -f "${marker}"' EXIT
-
-failed=()
-step() {
-	local name="$1"
-	shift
-	echo "==> ${name}"
-	if ! "$@"; then
-		failed+=("${name}")
-	fi
-}
 
 echo "# gate:${mode}"
 step format "${SCRIPT_DIR}/run-format.sh"
@@ -48,13 +42,12 @@ if [[ "${mode}" == "full" ]]; then
 	step coverage "${SCRIPT_DIR}/../run-coverage-ratchet.sh"
 fi
 
-if ((${#failed[@]} == 0)); then
+if quality_gate_succeeded; then
 	echo "# gate:${mode} ok"
 	exit 0
 fi
 
-echo
-echo "# gate:${mode} FAILED: ${failed[*]}"
+quality_gate_print_failure
 mapfile -t diffs < <(
 	find "${REPO_ROOT}" \( -name .git -o -name .gradle -o -name node_modules \) -prune -o \
 		-path '*/build/outputs/roborazzi/*_compare.png' -newer "${marker}" -print 2>/dev/null | sort

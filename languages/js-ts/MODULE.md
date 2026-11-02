@@ -78,6 +78,8 @@ They run inside `pnpm lint`, so `gate:fast`, `pnpm fix`, lint-staged, editors an
 
 ### Decision record (2026-11, Biome 2.6.3, TypeScript 7.0.2 is npm `latest`)
 
+**Status (closed):** Biome type-aware nursery rules only. oxlint is **not** shipped — revisit only when its type-aware mode leaves preview, and then only for rules Biome lacks (never as a second full linter). See **Revisit** below.
+
 Measured on a 14-defect sample and on sim-iq (823 TS files, ~249k lines; 16 cores, WSL2), with the same five rules (floating/misused promises, await-thenable, unsafe return, switch exhaustiveness) in each tool:
 
 | | Biome type-aware (chosen) | oxlint `--type-aware` (oxlint 1.90 + oxlint-tsgolint 7.0) | typescript-eslint 8.72 type-checked |

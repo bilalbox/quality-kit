@@ -13,11 +13,11 @@ A Pack that owns a standalone quality-gate story for a Target (CI, hooks, gate e
 _Avoid_: primary pack, base pack
 
 **Fragment Pack**:
-A Pack that only contributes pieces into a Host Pack’s Desired state (extra templates, gate fragments). Today: python onto js-ts (same Pack id; `contribute` switches on selection — Host alone, Fragment when js-ts is co-selected).
+A Pack that only contributes pieces into a Host Pack’s Desired state (extra templates, gate fragments). Today: python onto js-ts (same Pack id; `contribute` switches on selection — Host alone, Fragment when js-ts is co-selected). Selection-dependent kind is `effectiveKind(id, selected)` in kit code; static `Pack.kind` stays `host`.
 _Avoid_: addon, plugin, extension pack
 
 **Shared layer**:
-Templates every Host Pack composes into its Contribution (today: Betterleaks secret scanning), placed once however many Hosts are selected. Not a Pack: it is never selected or detected on its own. Lives in `languages/shared/`. python composes it only in Host mode.
+Templates every Host Pack composes into its Contribution (secrets, vuln scan, coverage ratchet, Host gate helpers such as `gate-lib.sh`), placed once however many Hosts are selected. Not a Pack: it is never selected or detected on its own. Lives in `languages/shared/`. python composes it only in Host mode.
 _Avoid_: common pack, base layer, shared pack
 
 **Desired state**:

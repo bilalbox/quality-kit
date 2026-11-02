@@ -1,10 +1,11 @@
 import { existsSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
+import { effectiveKind } from "./effective-kind";
 import { type PlacementKindDecl, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
-import type { Contribution, Pack, PackId, PackKind } from "./types";
+import type { Contribution, Pack, PackId } from "./types";
 import { PYTHON_HELPER_DIRS, walkFiles } from "./walk";
 import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
@@ -53,14 +54,6 @@ export function detectPythonProduct(target: string): boolean {
 	});
 }
 
-/**
- * Effective role for this selection: Fragment onto js-ts; Host otherwise.
- * Canonical Pack.kind stays "host".
- */
-export function packRole(selected: readonly PackId[]): PackKind {
-	return selected.includes("js-ts") ? "fragment" : "host";
-}
-
 function fragmentContribution(): Contribution {
 	const scripts = JSON.parse(
 		readText(join(packTemplatesRoot("python"), "package.scripts.json")),
@@ -98,7 +91,7 @@ export const pythonPack: Pack = {
 		return detectPythonProduct(target);
 	},
 	contribute(_target: string, selected: readonly PackId[]): Contribution {
-		return packRole(selected) === "fragment"
+		return effectiveKind("python", selected) === "fragment"
 			? fragmentContribution()
 			: hostContribution();
 	},

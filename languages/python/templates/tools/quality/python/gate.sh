@@ -9,25 +9,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Target layout: tools/quality/gate-lib.sh (shared layer). Kit path differs.
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/../gate-lib.sh"
+
 mode="${1:-full}"
-
-case "${mode}" in
-	fast|full) ;;
-	*)
-		echo "usage: $0 [fast|full]" >&2
-		exit 2
-		;;
-esac
-
-failed=()
-step() {
-	local name="$1"
-	shift
-	echo "==> ${name}"
-	if ! "$@"; then
-		failed+=("${name}")
-	fi
-}
+quality_gate_require_mode
 
 echo "# gate:${mode}"
 step format "${SCRIPT_DIR}/run-format.sh"
@@ -43,11 +30,4 @@ if [[ "${mode}" == "full" ]]; then
 	step coverage "${SCRIPT_DIR}/../run-coverage-ratchet.sh"
 fi
 
-if ((${#failed[@]} == 0)); then
-	echo "# gate:${mode} ok"
-	exit 0
-fi
-
-echo
-echo "# gate:${mode} FAILED: ${failed[*]}"
-exit 1
+quality_gate_finish

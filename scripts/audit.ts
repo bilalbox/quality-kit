@@ -9,7 +9,6 @@ import {
 	desiredState,
 	diffAgainst,
 	isFileGap,
-	PACKS,
 	refuseCollisions,
 	resolveAgentHooks,
 	resolvePacks,
@@ -23,16 +22,12 @@ import {
 } from "./lib";
 import { LOCK_FILE } from "./lock-file";
 
-import { packRole } from "./packs/python";
+import { effectiveKind } from "./packs/effective-kind";
 
 function formatPackRoles(packs: readonly PackId[]): string {
 	if (packs.length === 0) return "(none)";
 	return packs
-		.map((id) => {
-			const kind =
-				id === "python" ? packRole(packs) : PACKS[id].kind;
-			return `${id} (${kind})`;
-		})
+		.map((id) => `${id} (${effectiveKind(id, packs)})`)
 		.join(", ");
 }
 
