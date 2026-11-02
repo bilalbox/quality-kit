@@ -3,7 +3,8 @@
 # any archive whose SHA-256 differs from the pin below.
 # Usage: ./tools/quality/install-betterleaks.sh [DEST]   (default: ~/.local/bin)
 #
-# Bumping VERSION: copy both linux hashes from the release's checksums.txt.
+# Bumping VERSION: update pins.json betterleaks + copy both linux hashes
+# from the release's checksums.txt into this script.
 set -euo pipefail
 
 VERSION=1.9.0

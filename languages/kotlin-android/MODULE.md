@@ -121,6 +121,8 @@ audit checks the Wiring section was done (see REFERENCE.md "Wiring probes"):
 
 ## Pins
 
+Source: kit-root `pins.json` (see REFERENCE.md "Pins"). Literals below and in `build-logic/quality/gradle/libs.versions.toml` must match.
+
 | Tool | Pin |
 | --- | --- |
 | AGP API (compile-only) / Kotlin Gradle API | 9.5.0 / 2.4.21 |

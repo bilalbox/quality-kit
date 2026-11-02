@@ -46,9 +46,11 @@ Betterleaks takes one config file. `[extend]` cannot combine `useDefault = true`
 - **Linux (local)**: `./tools/quality/install-betterleaks.sh [DEST]` (default `~/.local/bin`).
 - **macOS**: `brew install --cask betterleaks/tap/betterleaks@1` (gives `betterleaks-v1`).
 
-`install-betterleaks.sh` downloads the Linux x64/arm64 release archive and refuses it (exit 1, nothing installed) unless its SHA-256 matches the hash pinned in the script. Decision: pin the hashes in the script instead of fetching the release's `checksums.txt` at install time, so a replaced release asset (and its checksum file) is still caught. Bump: change `VERSION` and copy both `linux_*` hashes from that release's `checksums.txt`.
+`install-betterleaks.sh` downloads the Linux x64/arm64 release archive and refuses it (exit 1, nothing installed) unless its SHA-256 matches the hash pinned in the script. Decision: pin the hashes in the script instead of fetching the release's `checksums.txt` at install time, so a replaced release asset (and its checksum file) is still caught. Bump: change `betterleaks` in `pins.json` (version + both `linux_*` hashes from that release's `checksums.txt`) and the matching literals in `install-betterleaks.sh` / this table.
 
 ## Pins
+
+Source: kit-root `pins.json` (see REFERENCE.md "Pins"). Literals below must match.
 
 | Tool | Pin |
 | --- | --- |
