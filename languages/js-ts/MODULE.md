@@ -9,6 +9,7 @@ Detect: `package.json` at target root. Templates: `languages/js-ts/templates/`.
 | Format + lint | **Biome** | Defaults only (tabs, double quotes). One config across repos. Gate fails on any diagnostic; `pnpm fix` applies safe fixes (see Biome diagnostics). Also the type-aware linter (see Type-aware lint). |
 | Types | **`tsc -b`** | Extends `tsconfig.base.json` (`strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, …; see tsconfig strictness). |
 | Secrets / leaks | **Betterleaks v1** | From the Shared layer: pre-commit staged guard, `gate:fast`, CI. Pin 1.x until v2 is stable. |
+| Dependency vulns | **osv-scanner** | From the Shared layer: `pnpm lint:vulns` on `pnpm gate` (full only). |
 | Graph / dead code / clones | **rev-dep** | Replaces knip, madge, dependency-cruiser, jscpd. Built-in baseline. |
 | Cognitive complexity | **Biome overlay + custom ratchet** | Only remaining custom ratchet; shrink-only + `biome-ignore` ban. |
 
@@ -19,6 +20,10 @@ Config, wrapper, install and CI step come from the Shared layer: see [languages/
 - **Wiring**: `pnpm lint:secrets` = `bash tools/quality/run-secret-scan.sh`. `.husky/pre-commit` runs `pnpm lint:secrets -- --staged` before `lint-staged`; `pnpm gate:fast` runs it over the working tree.
 - **Pack allowlist** (`.betterleaks.d/js-ts.toml`): `*.test.(ts|js|py)`, `baselines/`, `.rev-dep.*.json`, `.dev.vars*`, `.wrangler/`, plus the `retell-key-prefix` rule for bare `key_[a-f0-9]{28}` literals (built-in Retell rule still needs a nearby `retell` keyword).
 - **v2 later:** CLI/config differ (stdin patch hooks, explicit `--config`, ignore-file model). Revisit when v2.0.0 is stable; keep this pack on 1.x until then.
+
+## Dependency vulns (osv-scanner)
+
+Config, wrapper, install and CI step come from the Shared layer: see [languages/shared/MODULE.md](../shared/MODULE.md). `pnpm lint:vulns` = `bash tools/quality/run-vuln-scan.sh`; `pnpm gate` runs it (not `gate:fast`).
 
 ## Biome diagnostics
 
@@ -144,7 +149,7 @@ audit checks (see REFERENCE.md "Wiring probes"):
 
 1. Adjust `rev-dep.config.json` entry points / `moduleBoundaries`.
 2. If `pnpm-workspace.yaml` already existed, merge `allowBuilds.esbuild`.
-3. Install Betterleaks v1 on the host (see languages/shared/MODULE.md).
+3. Install Betterleaks v1 and osv-scanner on the host (see languages/shared/MODULE.md).
 4. `pnpm install`.
 5. Seed complexity: `pnpm lint:complexity -- --update`.
 6. Seed rev-dep: `pnpm lint:graph -- --update-snapshot` (creates `.rev-dep.*.json`; do not hand-write).
