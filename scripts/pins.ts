@@ -144,7 +144,7 @@ function sitesFor(pins: Pins): Site[] {
 			label: "flutter-action tag",
 		},
 		{
-			file: "languages/dart/templates/tools/quality/lib.sh",
+			file: "languages/dart/templates/tools/quality/dart/lib.sh",
 			pattern: /DEPENDENCY_VALIDATOR_VERSION="\$\{DEPENDENCY_VALIDATOR_VERSION:-([^}]+)\}"/,
 			expected: pins.dependencyValidator,
 			label: "DEPENDENCY_VALIDATOR_VERSION",
@@ -168,7 +168,7 @@ function sitesFor(pins: Pins): Site[] {
 			label: "dart MODULE Dart SDK",
 		},
 		{
-			file: "languages/kotlin-android/templates/tools/quality/lib.sh",
+			file: "languages/kotlin-android/templates/tools/quality/kotlin-android/lib.sh",
 			pattern: /KTFMT_VERSION="\$\{KTFMT_VERSION:-([^}]+)\}"/,
 			expected: pins.ktfmt,
 			label: "KTFMT_VERSION",

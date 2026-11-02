@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # quality-kit kotlin-android gate.
-# Usage: ./tools/quality/gate.sh [fast|full]
+# Usage: ./tools/quality/kotlin-android/gate.sh [fast|full]
 #   fast — ktfmt + secrets + qualityFast (detekt, compile main + unit tests)
 #   full — ktfmt + secrets + qualityFull (fast + lint, unit/screenshot tests,
 #          Kover, buildHealth). Default for CI / pre-push.
 # Every step runs even after a failure so one invocation reports everything.
+# Local multi-Host Targets use the composed ./tools/quality/gate.sh instead.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,7 +38,7 @@ step() {
 
 echo "# gate:${mode}"
 step format "${SCRIPT_DIR}/run-format.sh"
-step secrets "${SCRIPT_DIR}/run-secret-scan.sh"
+step secrets "${SCRIPT_DIR}/../run-secret-scan.sh"
 step gradle quality_gradle -q --continue "${task}"
 
 if ((${#failed[@]} == 0)); then
@@ -65,10 +66,10 @@ done
 if ((${#changed[@]} > 0)); then
 	echo "Screenshot diffs (Reference | Diff | New) — open these images:"
 	printf '  %s\n' "${changed[@]}"
-	echo "If the change is intended: ./tools/quality/screenshots.sh record, then commit the goldens."
+	echo "If the change is intended: ./tools/quality/kotlin-android/screenshots.sh record, then commit the goldens."
 fi
 if ((${#unrecorded[@]} > 0)); then
-	echo "Previews without a golden — run ./tools/quality/screenshots.sh record, inspect, and commit:"
+	echo "Previews without a golden — run ./tools/quality/kotlin-android/screenshots.sh record, inspect, and commit:"
 	printf '  %s\n' "${unrecorded[@]}"
 fi
 exit 1

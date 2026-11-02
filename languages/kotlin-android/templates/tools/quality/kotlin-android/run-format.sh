@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ktfmt (kotlinlang style) over tracked Kotlin sources.
-# Usage: ./tools/quality/run-format.sh [--fix [files…] | --staged]
+# Usage: ./tools/quality/kotlin-android/run-format.sh [--fix [files…] | --staged]
 #   (none)   check only; exit 1 and list files that would change
 #   --fix    format in place: the given repo-relative files, else all files
 #   --staged check the staged content of staged Kotlin files (pre-commit);
@@ -64,7 +64,7 @@ printf '%s\n' "${flags[@]}" "${files[@]}" >"${argfile}"
 
 if ! "${ktfmt}" "@${argfile}"; then
 	if [[ "${mode}" == "check" ]]; then
-		echo "format: files above need ktfmt — run ./tools/quality/run-format.sh --fix" >&2
+		echo "format: files above need ktfmt — run ./tools/quality/kotlin-android/run-format.sh --fix" >&2
 	fi
 	exit 1
 fi

@@ -2,6 +2,7 @@
 SHELL := /bin/bash
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 QUALITY := $(ROOT)/tools/quality
+DART_Q := $(QUALITY)/dart
 
 .PHONY: gate gate-fast format analyze deps secrets test help
 
@@ -22,16 +23,16 @@ gate:
 	@$(QUALITY)/gate.sh full
 
 format:
-	@$(QUALITY)/run-format.sh
+	@$(DART_Q)/run-format.sh
 
 analyze:
-	@$(QUALITY)/run-analyze.sh
+	@$(DART_Q)/run-analyze.sh
 
 deps:
-	@$(QUALITY)/run-deps.sh
+	@$(DART_Q)/run-deps.sh
 
 secrets:
 	@$(QUALITY)/run-secret-scan.sh
 
 test:
-	@$(QUALITY)/run-test.sh
+	@$(DART_Q)/run-test.sh

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Roborazzi screenshot workflow (JVM-only via Robolectric; no emulator).
-# Usage: ./tools/quality/screenshots.sh record|compare|verify [extra gradle args]
+# Usage: ./tools/quality/kotlin-android/screenshots.sh record|compare|verify [extra gradle args]
 #   record  — rewrite goldens under */src/test/screenshots (prunes stale ones)
 #   compare — write *_compare.png diffs without failing
 #   verify  — fail on any diff (what the full gate runs)

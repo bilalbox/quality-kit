@@ -123,10 +123,10 @@ function pathWithoutPython(): string {
 }
 
 function runLib(target: string, fn: string): string {
-	const libDir = join(target, "tools", "quality");
+	const libDir = join(target, "tools", "quality", "dart");
 	mkdirSync(libDir, { recursive: true });
 	copyFileSync(
-		join(packTemplatesRoot("dart"), "tools", "quality", "lib.sh"),
+		join(packTemplatesRoot("dart"), "tools", "quality", "dart", "lib.sh"),
 		join(libDir, "lib.sh"),
 	);
 	const bin = pathWithoutPython();
@@ -134,7 +134,7 @@ function runLib(target: string, fn: string): string {
 		join(bin, "bash"),
 		[
 			"-c",
-			`command -v python3 && exit 99; source tools/quality/lib.sh && ${fn}`,
+			`command -v python3 && exit 99; source tools/quality/dart/lib.sh && ${fn}`,
 		],
 		{ cwd: target, encoding: "utf8", env: { PATH: bin, HOME: target } },
 	);
