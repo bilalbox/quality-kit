@@ -13,6 +13,24 @@ Shrink-only baseline comparison (js-ts complexity and Biome diagnostics use `scr
 
 Finding ID shape is pack-specific (see js-ts module for complexity and Biome diagnostic IDs). Baselines absorb legacy debt at adoption only; disabling a rule to get a pass is not a ratchet strategy. Dart pack v1 has no complexity ratchet yet.
 
+### Baseline growth (CI vs PR base)
+
+`--update` / `--update-snapshot` are refused under `CI=true`, but a human can still commit a larger baseline. Every Host CI job (and each job in a composed multi-Host workflow) runs the Shared layer's `check-baseline-growth` action after checkout. It diffs HEAD against `origin/$GITHUB_BASE_REF` and **fails on added rows** (printed); removing rows passes. Ratchet JSON baselines also fail when an existing id's **score rises**. Non-PR events skip. Deliberate growth: PR label **`allow-baseline-growth`** (workflow skips the step); local/repro: `--allow` or `ALLOW_BASELINE_GROWTH=1`.
+
+Watched paths (absent on both sides → skip; new file on HEAD → all rows count as added):
+
+| Path / glob | Row identity |
+| --- | --- |
+| `baselines/complexity.json`, `baselines/biome-diagnostics.json` | `findings[].id` (+ score rise) |
+| `.rev-dep.baseline.json` | each finding under `workspaces.*.*` |
+| `.rev-dep.duplicates.json` | each `duplications[]` entry |
+| `**/detekt-baseline.xml` | each `<ID>` |
+| `**/lint-baseline.xml` | each `<issue>` (`id`+file+line+column) |
+| `.betterleaksignore`, `vulture_whitelist.py` | non-empty, non-`#` lines |
+| `osv-scanner.toml` | each ignore `id = "…"` (hook for #14; watched when present) |
+
+Script: `tools/quality/check-baseline-growth.sh`. Coverage baselines (#21) should plug into this same guard (a coverage *decrease* is growth).
+
 ## Desired state
 
 Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Contribution**. Those merge into one **Desired state** for the **Target**: root file placements, optional package-scoped placements (dart), and optional `package.json` expectations (js-ts Host, plus Fragment script/gate pieces).
@@ -113,7 +131,7 @@ Principles:
 
 - pre-commit: fast staged checks (Betterleaks `git --staged` + format). A hook never commits unstaged hunks: js-ts relies on lint-staged's stash; dart / kotlin-android check the staged blobs only and fail with the fix command (see their MODULE.md "Pre-commit format")
 - pre-push / CI: full gate
-- **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; CI checks out with `fetch-depth: 0` and installs Betterleaks with `./.github/actions/setup-betterleaks` (checksum-pinned) before the Host's own setup action; the wrapper scans `origin/$GITHUB_BASE_REF..HEAD` in CI
+- **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; CI checks out with `fetch-depth: 0`, runs `./.github/actions/check-baseline-growth` on pull requests (skip with label `allow-baseline-growth`; see Baseline growth above), and installs Betterleaks with `./.github/actions/setup-betterleaks` (checksum-pinned) before the Host's own setup action; the wrapper scans `origin/$GITHUB_BASE_REF..HEAD` in CI
 - **js-ts host:** husky + lint-staged; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
 - **dart host:** lefthook; `./tools/quality/gate.sh`; Flutter via `subosito/flutter-action` pinned to an exact `flutter-version` (dart MODULE.md Pins); dependency_validator installed in `setup-flutter`
 - **kotlin-android host:** lefthook; `./tools/quality/gate.sh` over Gradle `qualityFast` / `qualityFull` (from the copied-in `build-logic/quality` included build); JDK 21 + SDK licenses + `setup-gradle` + Robolectric jar cache in `setup-android`; screenshot diffs uploaded as an artifact on failure

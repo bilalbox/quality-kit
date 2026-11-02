@@ -9,8 +9,10 @@ Shared Placements carry `shared: true`, resolve their template here (`templatePa
 | `.betterleaks.toml` | owned |
 | `.betterleaksignore` | seed |
 | `.github/actions/setup-betterleaks/action.yml` | owned |
+| `.github/actions/check-baseline-growth/action.yml` | owned |
 | `tools/quality/install-betterleaks.sh` | owned |
 | `tools/quality/run-secret-scan.sh` | owned |
+| `tools/quality/check-baseline-growth.sh` | owned |
 
 Each Host adds its own **Pack allowlist**, `.betterleaks.d/<pack>.toml` (owned), from its own templates.
 
@@ -49,6 +51,10 @@ Betterleaks takes one config file. `[extend]` cannot combine `useDefault = true`
 - **macOS**: `brew install --cask betterleaks/tap/betterleaks@1` (gives `betterleaks-v1`).
 
 `install-betterleaks.sh` downloads the Linux x64/arm64 release archive and refuses it (exit 1, nothing installed) unless its SHA-256 matches the hash pinned in the script. Decision: pin the hashes in the script instead of fetching the release's `checksums.txt` at install time, so a replaced release asset (and its checksum file) is still caught. Bump: change `betterleaks` in `pins.json` (version + both `linux_*` hashes from that release's `checksums.txt`) and the matching literals in `install-betterleaks.sh` / this table.
+
+## Baseline growth
+
+`tools/quality/check-baseline-growth.sh` (+ composite action) compares committed baselines on HEAD to the PR base ref and fails when rows are added. Every Host `ci.yml` invokes `./.github/actions/check-baseline-growth` after checkout on `pull_request`, unless the PR has label `allow-baseline-growth`. Inventory and row rules: REFERENCE.md "Baseline growth". `osv-scanner.toml` is included when present so #14's ignore file can ratchet without a second guard.
 
 ## Pins
 
