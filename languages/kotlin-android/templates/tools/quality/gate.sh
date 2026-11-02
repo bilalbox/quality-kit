@@ -38,6 +38,9 @@ step() {
 echo "# gate:${mode}"
 step format "${SCRIPT_DIR}/run-format.sh"
 step secrets "${SCRIPT_DIR}/run-secret-scan.sh"
+if [[ "${mode}" == "full" ]]; then
+	step vulns "${SCRIPT_DIR}/run-vuln-scan.sh"
+fi
 step gradle quality_gradle -q --continue "${task}"
 
 if ((${#failed[@]} == 0)); then
