@@ -87,6 +87,12 @@ Everything not listed is **owned** (audit reports drift), including each package
 - **seed:** `quality-kit.dart.json`, `.betterleaksignore`, each package's `dart_dependency_validator.yaml`
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `Makefile` → itself (`gate-fast:` and `gate:` targets)
 
+## Wiring probes
+
+audit checks (see REFERENCE.md "Wiring probes"):
+
+- **git hooks installed (lefthook)**: `pre-commit` and `pre-push` installed by `lefthook install`.
+
 ## Post-apply
 
 `apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.

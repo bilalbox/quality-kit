@@ -87,7 +87,7 @@ Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge**
 ### Audit
 
 1. `pnpm run audit -- --target <repo>` (read-only).
-2. Report packs (with host/fragment roles), file gaps by Placement kind (owned missing/stale/customized/drift, seed missing/invalid, merge-into unmerged), script gaps (js-ts), orphan-Fragment warnings.
+2. Report packs (with host/fragment roles), file gaps by Placement kind (owned missing/stale/customized/drift, seed missing/invalid, merge-into unmerged), script gaps (js-ts), unwired Wiring probes with their printed fixes, orphan-Fragment warnings.
 3. Done when the report lists every gap; do not modify the Target.
 
 ### Adopt (existing repo)

@@ -36,6 +36,7 @@ export {
 	type FileFinding,
 	type FileStatus,
 	type PlacementCollision,
+	type WiringFinding,
 } from "./desired-state";
 
 import type { DesiredState } from "./desired-state";

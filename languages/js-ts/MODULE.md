@@ -88,6 +88,13 @@ Everything not listed is **owned** (audit reports drift).
 - **seed:** `biome.complexity.json`, `rev-dep.config.json`, `baselines/complexity.json`, `baselines/biome-diagnostics.json`, `.betterleaksignore`, `.gitignore`
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `pnpm-workspace.yaml` → itself (`esbuild: true`); `.npmrc` → itself (`engine-strict=true`)
 
+## Wiring probes
+
+audit checks (see REFERENCE.md "Wiring probes"):
+
+- **git hooks installed (husky)**: `core.hooksPath` points under `.husky/` with executable `pre-commit` and `pre-push` (set by `pnpm install` through the `prepare: husky` script).
+- **package.json has a test script**: `gate` ends with `pnpm test`. Any non-empty `test` script passes; the kit does not judge its content.
+
 ## Post-apply
 
 `apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.

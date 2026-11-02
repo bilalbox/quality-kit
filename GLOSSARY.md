@@ -39,6 +39,10 @@ _Avoid_: file type, mode, policy
 `.quality-kit.lock.json` at the Target root, written by apply: the kit revision of the most recent apply and a hash of each **owned** Placement as the kit last wrote it. Audit uses it to tell an owned file that is **stale** (untouched since apply; the kit template moved on, so it is safe to update) from one that is **customized** (edited in the Target since apply). An owned file equal to the template is **current**.
 _Avoid_: lockfile (reserved for package-manager lockfiles), manifest, state file
 
+**Wiring probe**:
+An audit check, contributed by a Pack, that the Target actually runs its gate beyond having the files: hooks installed, build plugins applied, scripts the gate calls present. A failing probe is a gap and comes with the fix.
+_Avoid_: health check, doctor (the kotlin-android `doctor.sh` checks the machine, not the Target)
+
 **Target**:
 The repository path that apply mutates or audit inspects.
 _Avoid_: project, repo (when meaning the path under `--target`)
