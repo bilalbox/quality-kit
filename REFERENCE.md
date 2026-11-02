@@ -32,7 +32,7 @@ Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Con
 
 Principles:
 
-- pre-commit: fast staged checks (Betterleaks `git --staged` + format)
+- pre-commit: fast staged checks (Betterleaks `git --staged` + format). A hook never commits unstaged hunks: js-ts relies on lint-staged's stash; dart / kotlin-android check the staged blobs only and fail with the fix command (see their MODULE.md "Pre-commit format")
 - pre-push / CI: full gate
 - **js-ts host:** husky + lint-staged; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
 - **dart host:** lefthook; `./tools/quality/gate.sh`; Flutter via `subosito/flutter-action` (stable); Betterleaks + dependency_validator installed in `setup-flutter`

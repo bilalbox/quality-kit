@@ -5,6 +5,7 @@ pre-commit:
   commands:
     secrets:
       run: ./tools/quality/run-secret-scan.sh --staged
+    # Checks staged content only; must never rewrite or re-stage files.
     format:
       glob: "*.{kt,kts}"
       run: ./tools/quality/run-format.sh --staged
