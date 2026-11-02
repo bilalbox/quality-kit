@@ -11,7 +11,8 @@ Detect: `package.json` at target root. Templates: `languages/js-ts/templates/`.
 | Secrets / leaks | **Betterleaks v1** | From the Shared layer: pre-commit staged guard, `gate:fast`, CI. Pin 1.x until v2 is stable. |
 | Dependency vulns | **osv-scanner** | From the Shared layer: `pnpm lint:vulns` on `pnpm gate` (full only). |
 | Graph / dead code / clones | **rev-dep** | Replaces knip, madge, dependency-cruiser, jscpd. Built-in baseline. |
-| Cognitive complexity | **Biome overlay + custom ratchet** | Only remaining custom ratchet; shrink-only + `biome-ignore` ban. |
+| Cognitive complexity | **Biome overlay + shared ratchet** | Shared `tools/quality/ratchets/`; shrink-only + `biome-ignore` ban. |
+| Coverage | **c8 + shared coverage ratchet** | full gate (`lint:coverage`); `baselines/coverage.json` |
 
 ## Secrets (Betterleaks)
 
@@ -150,7 +151,7 @@ Source: kit-root `pins.json` (see REFERENCE.md "Pins").
 
 Everything not listed is **owned** (audit reports drift). Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
-- **seed:** `biome.complexity.json`, `rev-dep.config.json`, `baselines/complexity.json`, `baselines/biome-diagnostics.json`, `.gitignore`
+- **seed:** `biome.complexity.json`, `rev-dep.config.json`, `baselines/complexity.json`, `baselines/biome-diagnostics.json`, `.gitignore` (coverage baseline is Shared-layer seed)
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `pnpm-workspace.yaml` → itself (`esbuild: true`); `.npmrc` → itself (`engine-strict=true`)
 - **generated (owned):** Target `.github/workflows/ci.yml` from this Host's workflow template when js-ts is the only CI Host, or composed with other Hosts' jobs when several are selected.
 
@@ -159,7 +160,7 @@ Everything not listed is **owned** (audit reports drift). Shared-layer files: se
 audit checks (see REFERENCE.md "Wiring probes"):
 
 - **git hooks installed (husky)**: `core.hooksPath` points under `.husky/` with executable `pre-commit` and `pre-push` (set by `pnpm install` through the `prepare: husky` script).
-- **package.json has a test script**: `gate` ends with `pnpm test`. Any non-empty `test` script passes; the kit does not judge its content.
+- **package.json has a test script**: `lint:coverage` / `gate` run tests under c8. Any non-empty `test` script passes; the kit does not judge its content.
 
 ## Post-apply
 
@@ -171,5 +172,6 @@ audit checks (see REFERENCE.md "Wiring probes"):
 4. `pnpm install`.
 5. Seed complexity: `pnpm lint:complexity -- --update`.
 6. Seed rev-dep: `pnpm lint:graph -- --update-snapshot` (creates `.rev-dep.*.json`; do not hand-write).
-7. Merge `AGENTS.quality.md` into `AGENTS.md`.
-8. Biome cleanup: `pnpm fix` as a one-off commit, then baseline the rest with `pnpm lint -- --update` (see Biome diagnostics → Legacy adoption).
+7. Seed coverage: `pnpm lint:coverage -- --update` (requires a working `test` script; legacy may set `baselines/coverage.json` `floor` to 0 first).
+8. Merge `AGENTS.quality.md` into `AGENTS.md`.
+9. Biome cleanup: `pnpm fix` as a one-off commit, then baseline the rest with `pnpm lint -- --update` (see Biome diagnostics → Legacy adoption).

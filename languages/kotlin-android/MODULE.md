@@ -16,7 +16,7 @@ Standalone Host for Jetpack Compose apps and libraries: `tools/quality/*.sh`, le
 | Lint | **Android Lint**, warnings as errors (`config/lint/lint.xml`) | full |
 | Tests | JUnit + **Robolectric** (`testDebugUnitTest`) | full |
 | Screenshots | **Roborazzi** verify; every `@Preview` auto-generated into a test (ComposablePreviewScanner) | full |
-| Coverage | **Kover** line floor (`qualityKit.minLineCoverage`) | full |
+| Coverage | **Kover XML + shared coverage ratchet** | full (`baselines/coverage.json`; replaces minLineCoverage verify) |
 | Dependencies | **dependency-analysis** `buildHealth`, all advice fatal | full |
 | Hooks | **lefthook** | pre-commit: secrets + format check of staged content (see Pre-commit format); pre-push: full |
 | Orchestration | `tools/quality/gate.sh` → `./gradlew -q --continue qualityFast|qualityFull` | — |
@@ -65,7 +65,7 @@ Merge `gradle.quality.properties` into the root `gradle.properties`:
 | --- | --- | --- |
 | `org.gradle.configuration-cache` | `true` | All gate plugins are compatible; a warm `gate.sh fast` is ~5 s |
 | `qualityKit.variant` | `debug` | Variant for compile / lint / test / Roborazzi / Kover tasks |
-| `qualityKit.minLineCoverage` | `0` | Kover line floor per module. Greenfield: **80**, raise only |
+| `qualityKit.minLineCoverage` | `0` | Legacy merge-into marker only; enforcement is `baselines/coverage.json` (`floor` default **80**) |
 | `qualityKit.allWarningsAsErrors` | `true` | Set `false` temporarily on legacy adopts |
 | `qualityKit.addTestDependencies` | `true` | Adds Roborazzi / Robolectric / preview-scanner / `ui-test-junit4` (via the module's Compose BOM) |
 

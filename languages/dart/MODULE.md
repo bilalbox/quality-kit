@@ -14,7 +14,8 @@ Standalone host (not composed onto js-ts): Makefile / `tools/quality/*.sh`, left
 | Dependency vulns | **osv-scanner** | From the Shared layer; `gate.sh full` / `make vulns`. |
 | Dependencies | **dependency_validator 5.1.0** | Missing / unused / over-/under-promoted deps. Activated via `dart pub global`. |
 | Hooks | **lefthook** | pre-commit: secrets + format check of staged content (see Pre-commit format); pre-push: full gate. |
-| Orchestration | **`tools/quality/gate.sh`** | `fast` = format + analyze + secrets + deps; `full` = fast + test. |
+| Orchestration | **`tools/quality/gate.sh`** | `fast` = format + analyze + secrets + deps; `full` = fast + coverage ratchet. |
+| Coverage | **`flutter test --coverage` + shared ratchet** | full; `baselines/coverage.json` per package root |
 
 ## Pre-commit format
 
