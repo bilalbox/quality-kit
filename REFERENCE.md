@@ -40,3 +40,16 @@ Principles:
 - **js-ts host:** husky + lint-staged; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
 - **dart host:** lefthook; `./tools/quality/gate.sh`; Flutter via `subosito/flutter-action` (stable); Betterleaks + dependency_validator installed in `setup-flutter`
 - **kotlin-android host:** lefthook; `./tools/quality/gate.sh` over Gradle `qualityFast` / `qualityFull` (from the copied-in `build-logic/quality` included build); JDK 21 + SDK licenses + `setup-gradle` + Robolectric jar cache + Betterleaks in `setup-android`; screenshot diffs uploaded as an artifact on failure
+
+## Kit CI
+
+The kit's own `.github/workflows/ci.yml` runs on every PR (and on pushes to `main`) as one job, `kit`: `pnpm test`, `pnpm exec tsc --noEmit`, `pnpm lint:templates`. All three steps run and report even when an earlier one fails. Branch protection on `main` must require the `kit` check for failures to block merge (a GitHub setting, not in the repo).
+
+`pnpm lint:templates` (`scripts/lint-templates.ts`) exits 1 on any finding and 2 when a linter is missing:
+
+- **shellcheck** at default severity (style and info included) with `-x -P SCRIPTDIR` on every `*.sh` under `languages/*/templates`. Husky hooks (`.husky/*`, no shebang) are linted with `-s sh`.
+- **actionlint** on the kit's own workflows, and on each Pack's template workflows inside a throwaway `git init` copy of that Pack's `.github`, so `uses: ./.github/actions/…` resolves to the Pack's own composite actions (input names checked). actionlint also shellchecks workflow `run:` steps.
+- Not covered: shell in composite action `run:` steps (neither tool lints it). Extract to a script under the Pack's templates to get coverage.
+- Pins: shellcheck 0.11.0 and actionlint 1.7.12, downloaded in CI and checked against sha256 pinned in the workflow (ubuntu's preinstalled shellcheck is older). Bump version and hash together.
+- Findings are fixed, not suppressed. If a suppression is unavoidable, use an inline `# shellcheck disable=SCxxxx # <reason>` on the line, never a file- or CLI-wide exclusion.
+- Linter-backed tests in `tests/lint-templates.test.ts` skip locally when shellcheck/actionlint are not on PATH, but never when `CI` is set.

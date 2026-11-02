@@ -36,4 +36,5 @@ When adding or renaming the skill, or moving the repo, update both links. Shared
 - `scripts/packs/` — Pack adapters (detect + Contribution)
 - `scripts/desired-state.ts` — Desired state build + diff
 - `scripts/audit.ts` / `scripts/apply.ts` — thin adapters over Desired state
+- `scripts/lint-templates.ts` — `pnpm lint:templates`: shellcheck + actionlint over templates (kit CI; see REFERENCE.md "Kit CI")
 - `GLOSSARY.md` — domain terms (Pack, Desired state, Target, …)

@@ -55,20 +55,24 @@ if [[ ":${LD_LIBRARY_PATH:-}:" == *"/emulator/"* ]]; then
 	warn "LD_LIBRARY_PATH contains emulator libs (quality-kit.android strips them for tests; other JVM tools may break)"
 fi
 
-[[ -x ./gradlew ]] && ok "gradle wrapper" || bad "gradlew missing or not executable"
-grep -q 'build-logic/quality' settings.gradle* 2>/dev/null \
-	&& ok "settings includes build-logic/quality" \
-	|| bad "settings.gradle.kts: add includeBuild(\"build-logic/quality\") to pluginManagement"
-grep -q 'quality-kit.root' build.gradle* 2>/dev/null \
-	&& ok "root applies quality-kit.root" \
-	|| bad "root build.gradle.kts: add id(\"quality-kit.root\") to plugins"
+if [[ -x ./gradlew ]]; then ok "gradle wrapper"; else bad "gradlew missing or not executable"; fi
+if grep -q 'build-logic/quality' settings.gradle* 2>/dev/null; then
+	ok "settings includes build-logic/quality"
+else
+	bad "settings.gradle.kts: add includeBuild(\"build-logic/quality\") to pluginManagement"
+fi
+if grep -q 'quality-kit.root' build.gradle* 2>/dev/null; then
+	ok "root applies quality-kit.root"
+else
+	bad "root build.gradle.kts: add id(\"quality-kit.root\") to plugins"
+fi
 
 if command -v betterleaks >/dev/null 2>&1 || command -v betterleaks-v1 >/dev/null 2>&1; then
 	ok "betterleaks"
 else
 	bad "betterleaks 1.x not on PATH (see languages/kotlin-android/MODULE.md)"
 fi
-command -v lefthook >/dev/null 2>&1 && ok "lefthook" || warn "lefthook not on PATH (hooks inactive)"
+if command -v lefthook >/dev/null 2>&1; then ok "lefthook"; else warn "lefthook not on PATH (hooks inactive)"; fi
 if ktfmt_bin="$(quality_ktfmt_bin 2>/dev/null)"; then ok "ktfmt ${KTFMT_VERSION} (${ktfmt_bin})"; else bad "ktfmt download failed"; fi
 
 if ((problems > 0)); then
