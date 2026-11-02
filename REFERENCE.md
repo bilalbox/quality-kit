@@ -128,6 +128,12 @@ Principles:
 
 The kit's own `.github/workflows/ci.yml` runs on every PR (and on pushes to `main`) as one job, `kit`: `pnpm test`, `pnpm exec tsc --noEmit`, `pnpm lint:templates`. It installs Betterleaks and osv-scanner with the Shared layer's install scripts, so `tests/secret-scan.test.ts` and `tests/vuln-scan.test.ts` (skipped locally without the binary / network, never under `CI`) run the real tools. All three steps run and report even when an earlier one fails. Branch protection on `main` must require the `kit` check for failures to block merge (a GitHub setting, not in the repo).
 
+### Adoption smoke
+
+One workflow per Host Pack (`smoke-js-ts`, `smoke-dart`, `smoke-kotlin-android`) proves scaffold → apply → Post-apply wiring → green `audit` (including wiring probes) → green `gate full`. Logic lives in `scripts/smoke.ts` / `scripts/smoke/`; CI jobs are thin wrappers (`pnpm smoke -- --pack <id>`). `pnpm test` stays fast: it only covers the smoke registry and orchestrator seams (`tests/smoke.test.ts`), never a real Pack smoke.
+
+**Path filters (PR):** each smoke runs when that Pack's templates change, or when Shared-layer templates / smoke scripts / apply·audit·desired-state·packs / `package.json` / that workflow file change. Unrelated Pack PRs do not pay the smoke cost. **Schedule:** weekly Monday (staggered crons) to catch upstream Vite / Flutter / AGP breakage even when no Pack PR lands. **python:** Host Pack smoke lands with #17 — add `scripts/smoke/python.ts`, register it in `scripts/smoke/index.ts`, and add `.github/workflows/smoke-python.yml`. **kotlin scaffold:** Empty Activity–shaped Compose app at `compileSdk` 36 + Compose BOM 2026.06.01 (2026.09+ needs platform 37); bootstraps the Gradle wrapper via `QUALITY_KIT_GRADLE_BIN` or the cached 9.8.2 dist.
+
 `pnpm lint:templates` (`scripts/lint-templates.ts`) exits 1 on any finding and 2 when a linter is missing:
 
 - **shellcheck** at default severity (style and info included) with `-x -P SCRIPTDIR` on every `*.sh` under `languages/*/templates` (Packs and the Shared layer). Husky hooks (`.husky/*`, no shebang) are linted with `-s sh`.
