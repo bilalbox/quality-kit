@@ -14,7 +14,8 @@
 			"!!**/pnpm-lock.yaml",
 			"!!.rev-dep.baseline.json",
 			"!!.rev-dep.duplicates.json",
-			"!!**/tools/quality/ratchets"
+			"!!**/tools/quality/ratchets",
+			"!!**/worker-configuration.d.ts"
 		]
 	},
 	"formatter": {
@@ -39,13 +40,20 @@
 				"useTemplate": { "level": "on", "fix": "safe" }
 			},
 			"suspicious": {
-				"noConsole": "error"
+				"noConsole": "warn"
 			}
 		}
 	},
 	"overrides": [
 		{
-			"includes": ["scripts/**", "tests/**", "**/*.test.*", "**/*.spec.*"],
+			"includes": [
+				"scripts/**",
+				"**/scripts/**",
+				"tests/**",
+				"**/tests/**",
+				"**/*.test.*",
+				"**/*.spec.*"
+			],
 			"linter": {
 				"rules": {
 					"suspicious": {
