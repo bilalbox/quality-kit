@@ -2,7 +2,7 @@
 	"typecheck": "tsc -b",
 	"lint": "tsx scripts/ratchets/run-biome.ts",
 	"fix": "biome check --write .",
-	"lint:secrets": "tsx scripts/run-secret-scan.ts",
+	"lint:secrets": "bash tools/quality/run-secret-scan.sh",
 	"lint:graph": "tsx scripts/run-rev-dep.ts",
 	"lint:complexity": "tsx scripts/ratchets/run-complexity.ts",
 	"gate:fast": "pnpm lint && pnpm lint:secrets && pnpm lint:graph && pnpm lint:complexity && pnpm typecheck",

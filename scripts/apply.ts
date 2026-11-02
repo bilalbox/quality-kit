@@ -11,13 +11,15 @@ import {
 	copyIfMissing,
 	desiredState,
 	missingMarkers,
-	packTemplatesRoot,
 	refuseCollisions,
 	resolvePacks,
 	resolveTarget,
+	sourceLabel,
+	templatePath,
 	type DesiredState,
 	type Placement,
 } from "./lib";
+import { LOCK_FILE, recordOwned } from "./lock-file";
 
 function mergePackageJson(
 	target: string,
@@ -98,7 +100,7 @@ function place(target: string, p: Placement): "copied" | "skipped" | "merged" {
 		return "merged";
 	}
 	const dest = join(target, p.targetRel);
-	const result = copyIfMissing(join(packTemplatesRoot(p.pack), p.templateRel), dest);
+	const result = copyIfMissing(templatePath(p), dest);
 	if (result === "copied" && p.executable) chmodSync(dest, 0o755);
 	return result === "copied" ? "copied" : "skipped";
 }
@@ -143,7 +145,7 @@ function main(): void {
 	console.log("## files");
 	for (const p of state.rootPlacements) {
 		const result = place(target, p);
-		console.log(`  ${result.padEnd(8)} [${p.pack}] ${placementLabel(p)}`);
+		console.log(`  ${result.padEnd(8)} [${sourceLabel(p)}] ${placementLabel(p)}`);
 	}
 
 	if (state.packagePlacements.length > 0) {
@@ -161,6 +163,13 @@ function main(): void {
 			"  (no package roots found — set quality-kit.dart.json roots)",
 		);
 	}
+
+	const lock = recordOwned(target, placements);
+	console.log("");
+	console.log("## lock file");
+	console.log(
+		`  wrote    ${LOCK_FILE} (kit ${lock.kitRevision?.slice(0, 12) ?? "revision unknown"}, ${Object.keys(lock.files).length} owned files)`,
+	);
 
 	if (state.packageJson) {
 		console.log("");

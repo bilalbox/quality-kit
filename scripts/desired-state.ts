@@ -1,6 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { normalize, packTemplatesRoot, readText } from "./kit-fs";
+import {
+	contentHash,
+	normalize,
+	readText,
+	relToKit,
+	templatePath,
+} from "./kit-fs";
+import { readLock, type LockRead } from "./lock-file";
 import {
 	PACKS,
 	resolveDartRoots,
@@ -8,6 +15,8 @@ import {
 	type PackId,
 	type Placement,
 	type PlacementKind,
+	type WiringGap,
+	type WiringProbe,
 } from "./packs";
 
 export type DesiredPackageJson = {
@@ -35,14 +44,30 @@ export type DesiredState = {
 	nextSteps: readonly PackNextSteps[];
 	/** Non-empty means apply/audit must refuse the selection. */
 	collisions: readonly PlacementCollision[];
+	/** Wiring probes of every selected Pack, in Pack order. */
+	probes: readonly PackProbe[];
 };
 
 export type PackNextSteps = { pack: PackId; steps: readonly string[] };
 
-/** Per-kind file status: owned compares bytes, seed checks presence, merge-into checks the dest. */
+export type PackProbe = { pack: PackId; probe: WiringProbe };
+
+/** One probe's result; any gap fails audit. */
+export type WiringFinding = {
+	pack: PackId;
+	label: string;
+	gaps: readonly WiringGap[];
+};
+
+/**
+ * Per-kind file status: owned compares content (and the lock file's recorded hash),
+ * seed checks presence, merge-into checks the dest.
+ */
 export type FileStatus =
 	| "missing"
-	| "match"
+	| "current"
+	| "stale"
+	| "customized"
 	| "drift"
 	| "present-custom"
 	| "present"
@@ -53,16 +78,22 @@ export type FileStatus =
 export type FileFinding = {
 	path: string;
 	pack: PackId;
+	/** From the shared layer rather than `pack`'s own templates. */
+	shared?: true;
 	kind: PlacementKind;
 	status: FileStatus;
 	/** merge-into: the Target file the content must land in. */
 	dest?: string;
 	/** Why a seed is invalid or a merge-into is unmerged. */
 	detail?: string;
+	/** unmerged: which kit file to merge where. */
+	fix?: string;
 };
 
 const FILE_GAPS: ReadonlySet<FileStatus> = new Set([
 	"missing",
+	"stale",
+	"customized",
 	"drift",
 	"invalid",
 	"unmerged",
@@ -81,6 +112,8 @@ export type ScriptFinding = {
 };
 
 export type DiffReport = {
+	/** Whether the Target's lock file could be read; owned files only get stale/customized when present. */
+	lock: LockRead["state"];
 	files: FileFinding[];
 	scripts: ScriptFinding[];
 	devDependencies: {
@@ -93,10 +126,11 @@ export type DiffReport = {
 	enginesNode: string | null;
 	nvmrc: string | null;
 	dartRoots: string[] | null;
+	wiring: WiringFinding[];
 };
 
 function templateText(p: Placement): string | null {
-	const path = join(packTemplatesRoot(p.pack), p.templateRel);
+	const path = templatePath(p);
 	return existsSync(path) ? normalize(readText(path)) : null;
 }
 
@@ -155,6 +189,7 @@ export function desiredState(
 	const gateFragments: string[] = [];
 	let hasJsTsHost = false;
 	const nextSteps: PackNextSteps[] = [];
+	const probes: PackProbe[] = [];
 
 	for (const id of packs) {
 		const contrib = PACKS[id].contribute(target, packs);
@@ -173,6 +208,7 @@ export function desiredState(
 		if (contrib.nextSteps.length > 0) {
 			nextSteps.push({ pack: id, steps: contrib.nextSteps });
 		}
+		for (const probe of contrib.probes) probes.push({ pack: id, probe });
 
 		const pj = contrib.packageJson;
 		if (!pj) continue;
@@ -212,6 +248,7 @@ export function desiredState(
 		packageJson,
 		nextSteps,
 		collisions: [...collisions.values()],
+		probes,
 	};
 }
 
@@ -225,11 +262,17 @@ export function missingMarkers(target: string, merge: MergeInto): string[] {
 	return merge.markers.filter((m) => !lines.some((l) => l.startsWith(m)));
 }
 
-function compareOwned(targetPath: string, templatePath: string): FileStatus {
+/** Owned: current, else stale/customized against the lock's recorded hash, else drift (no hash). */
+function compareOwned(
+	targetPath: string,
+	templatePath: string,
+	recorded: string | undefined,
+): FileStatus {
 	if (!existsSync(templatePath)) return "present-custom";
-	const a = normalize(readText(templatePath));
-	const b = normalize(readText(targetPath));
-	return a === b ? "match" : "drift";
+	const target = contentHash(readText(targetPath));
+	if (target === contentHash(readText(templatePath))) return "current";
+	if (recorded === undefined) return "drift";
+	return target === recorded ? "stale" : "customized";
 }
 
 function seedParseError(targetPath: string): string | undefined {
@@ -245,26 +288,31 @@ function seedParseError(targetPath: string): string | undefined {
 function comparePlacement(
 	targetRoot: string,
 	placement: Placement,
+	recorded: Readonly<Record<string, string>>,
 ): FileFinding {
 	const base = {
 		path: placement.targetRel,
 		pack: placement.pack,
+		shared: placement.shared,
 		kind: placement.kind,
 	};
 
+	const template = templatePath(placement);
+
 	if (placement.kind === "merge-into") {
 		const { dest } = placement.mergeInto;
+		const unmerged = {
+			...base,
+			status: "unmerged" as const,
+			dest,
+			fix: `merge ${relToKit(template)} into ${dest}`,
+		};
 		if (!existsSync(join(targetRoot, dest))) {
-			return { ...base, status: "unmerged", dest, detail: `${dest} missing` };
+			return { ...unmerged, detail: `${dest} missing` };
 		}
 		const absent = missingMarkers(targetRoot, placement.mergeInto);
 		if (absent.length === 0) return { ...base, status: "merged", dest };
-		return {
-			...base,
-			status: "unmerged",
-			dest,
-			detail: `${dest} lacks ${absent.join(", ")}`,
-		};
+		return { ...unmerged, detail: `${dest} lacks ${absent.join(", ")}` };
 	}
 
 	const targetPath = join(targetRoot, placement.targetRel);
@@ -277,22 +325,33 @@ function comparePlacement(
 			: { ...base, status: "present" };
 	}
 
-	const templatePath = join(
-		packTemplatesRoot(placement.pack),
-		placement.templateRel,
+	const status = compareOwned(
+		targetPath,
+		template,
+		recorded[placement.targetRel],
 	);
-	return { ...base, status: compareOwned(targetPath, templatePath) };
+	return OWNED_DETAIL[status]
+		? { ...base, status, detail: OWNED_DETAIL[status] }
+		: { ...base, status };
 }
+
+const OWNED_DETAIL: Partial<Record<FileStatus, string>> = {
+	stale: "unchanged since apply; the kit template moved on",
+	customized: "edited since apply",
+	drift: "no hash in lock file",
+};
 
 /** Diff Target against Desired state, judging each Placement by its kind (ignores file mode). */
 export function diffAgainst(
 	target: string,
 	state: DesiredState,
 ): DiffReport {
+	const lock = readLock(target);
+	const recorded = lock.state === "present" ? lock.lock.files : {};
 	const files: FileFinding[] = [
-		...state.rootPlacements.map((p) => comparePlacement(target, p)),
-		...state.packagePlacements.map((p) => comparePlacement(target, p)),
-	];
+		...state.rootPlacements,
+		...state.packagePlacements,
+	].map((p) => comparePlacement(target, p, recorded));
 
 	const pkgPath = join(target, "package.json");
 	const pkg = existsSync(pkgPath)
@@ -356,6 +415,7 @@ export function diffAgainst(
 	}
 
 	return {
+		lock: lock.state,
 		files,
 		scripts,
 		devDependencies,
@@ -363,5 +423,10 @@ export function diffAgainst(
 		enginesNode,
 		nvmrc,
 		dartRoots,
+		wiring: state.probes.map(({ pack, probe }) => ({
+			pack,
+			label: probe.label,
+			gaps: probe.check(target),
+		})),
 	};
 }

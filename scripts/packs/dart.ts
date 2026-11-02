@@ -3,15 +3,16 @@ import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
 import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
+import { sharedPlacements } from "./shared";
 import type { Contribution, Pack, Placement } from "./types";
 import { SKIP_DIRS, walkFiles } from "./walk";
+import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
 const ROOT_FILES: Record<string, FileKind> = {
 	"quality-kit.dart.json": "seed",
 	"lefthook.yml": "owned",
 	".editorconfig": "owned",
-	".betterleaks.toml": "owned",
-	".betterleaksignore": "seed",
+	".betterleaks.d/dart.toml": "owned",
 	Makefile: { dest: "Makefile", markers: ["gate-fast:", "gate:"] },
 	"AGENTS.quality.md": AGENTS_MD,
 	".github/workflows/ci.yml": "owned",
@@ -19,7 +20,6 @@ const ROOT_FILES: Record<string, FileKind> = {
 	".github/actions/quality-gate/action.yml": "owned",
 	"tools/quality/lib.sh": "owned",
 	"tools/quality/gate.sh": "owned",
-	"tools/quality/run-secret-scan.sh": "owned",
 	"tools/quality/run-format.sh": "owned",
 	"tools/quality/run-analyze.sh": "owned",
 	"tools/quality/run-deps.sh": "owned",
@@ -112,10 +112,14 @@ export const dartPack: Pack = {
 	},
 	contribute(target: string, _selected: readonly string[]): Contribution {
 		return {
-			rootPlacements: placeFiles("dart", ROOT_FILES),
+			rootPlacements: [
+				...placeFiles("dart", ROOT_FILES),
+				...sharedPlacements("dart"),
+			],
 			packagePlacements: packagePlacements(target),
 			// no packageJson — dart Host does not own package.json merges
 			nextSteps: postApplySteps("dart"),
+			probes: [hooksInstalledProbe(LEFTHOOK)],
 		};
 	},
 };

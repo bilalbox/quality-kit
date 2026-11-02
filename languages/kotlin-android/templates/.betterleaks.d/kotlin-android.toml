@@ -1,0 +1,16 @@
+# kotlin-android additions to the shared .betterleaks.toml (appended by
+# tools/quality/run-secret-scan.sh). Tables only: no top-level keys.
+
+[[allowlists]]
+description = "kotlin-android: screenshot goldens, Gradle/Android build caches, local secret files"
+paths = [
+  '''(?i)(?:^|/)build/''',
+  '''(?i)(?:^|/)\.gradle/''',
+  '''(?i)(?:^|/)\.kotlin/''',
+  '''(?i)\.png$''',
+  # Local SDK path / signing secrets (gitignored; still caught if staged/committed).
+  '''(?i)(?:^|/)local\.properties$''',
+  '''(?i)(?:^|/)key(store)?\.properties$''',
+  '''(?i)\.jks$''',
+  '''(?i)\.keystore$'''
+]

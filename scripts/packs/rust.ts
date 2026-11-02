@@ -14,6 +14,7 @@ export const rustPack: Pack = {
 			rootPlacements: [],
 			packagePlacements: [],
 			nextSteps: postApplySteps("rust"),
+			probes: [],
 		};
 	},
 };

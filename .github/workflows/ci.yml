@@ -50,8 +50,11 @@ jobs:
           mkdir -p "${HOME}/.local/bin"
           install -m 0755 "shellcheck-v${SHELLCHECK_VERSION}/shellcheck" actionlint "${HOME}/.local/bin/"
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+      - name: Install Betterleaks (shared-layer installer, checksum-verified)
+        id: betterleaks
+        run: bash languages/shared/templates/tools/quality/install-betterleaks.sh "${HOME}/.local/bin"
       - name: Test
-        if: ${{ !cancelled() && steps.deps.outcome == 'success' && steps.linters.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' && steps.linters.outcome == 'success' && steps.betterleaks.outcome == 'success' }}
         run: pnpm test
       - name: Typecheck
         if: ${{ !cancelled() && steps.deps.outcome == 'success' }}

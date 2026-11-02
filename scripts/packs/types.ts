@@ -16,8 +16,10 @@ export type MergeInto = {
 
 type PlacementBase = {
 	pack: PackId;
-	/** Relpath under languages/<pack>/templates/. */
+	/** Relpath under languages/<pack>/templates/, or languages/shared/templates/ when `shared`. */
 	templateRel: string;
+	/** From the shared layer every Host composes; placed once however many Hosts are selected. */
+	shared?: true;
 	/** Relpath under the Target root. */
 	targetRel: string;
 	executable?: boolean;
@@ -39,6 +41,21 @@ export type PackageJsonContribution = {
 	enginesNode?: string;
 };
 
+/** One piece of wiring a probe found missing, and how to add it. */
+export type WiringGap = {
+	/** Where the gap is (e.g. a module build file); omitted for Target-wide gaps. */
+	detail?: string;
+	fix: string;
+};
+
+/** Checks that the Target actually runs the gate, beyond its files being present. */
+export type WiringProbe = {
+	/** What wired looks like, e.g. "root build applies quality-kit.root". */
+	label: string;
+	/** Empty when wired. */
+	check(target: string): readonly WiringGap[];
+};
+
 /** What one selected Pack adds toward Desired state. */
 export type Contribution = {
 	rootPlacements: readonly Placement[];
@@ -46,6 +63,8 @@ export type Contribution = {
 	packageJson?: PackageJsonContribution;
 	/** Ordered steps the user runs after apply; empty for stub Packs. */
 	nextSteps: readonly string[];
+	/** Wiring audit checks; empty for Packs without a gate of their own. */
+	probes: readonly WiringProbe[];
 };
 
 export type Pack = {

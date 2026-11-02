@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { test } from "node:test";
 import { desiredState, diffAgainst } from "../scripts/desired-state";
-import { packTemplatesRoot } from "../scripts/kit-fs";
+import { packTemplatesRoot, templatePath } from "../scripts/kit-fs";
 import { detectPacks, PACK_IDS } from "../scripts/packs";
 
 function tempTarget(): string {
@@ -113,7 +113,7 @@ test("every Pack placement has a template file", () => {
 	for (const id of PACK_IDS) {
 		const state = desiredState(tempTarget(), [id]);
 		for (const p of state.rootPlacements) {
-			const src = join(packTemplatesRoot(p.pack), p.templateRel);
+			const src = templatePath(p);
 			assert.ok(existsSync(src), `${id}: missing template ${p.templateRel}`);
 		}
 	}

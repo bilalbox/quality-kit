@@ -12,6 +12,8 @@ export {
 	packTemplatesRoot,
 	readText,
 	relToKit,
+	sharedTemplatesRoot,
+	templatePath,
 } from "./kit-fs";
 
 export {
@@ -19,6 +21,7 @@ export {
 	PACK_IDS,
 	PACKS,
 	resolveDartRoots,
+	sourceLabel,
 	type Pack,
 	type PackId,
 	type PackKind,
@@ -36,6 +39,7 @@ export {
 	type FileFinding,
 	type FileStatus,
 	type PlacementCollision,
+	type WiringFinding,
 } from "./desired-state";
 
 import type { DesiredState } from "./desired-state";

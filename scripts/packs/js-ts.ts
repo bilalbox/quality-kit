@@ -3,7 +3,9 @@ import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
 import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
-import type { Contribution, Pack } from "./types";
+import { sharedPlacements } from "./shared";
+import type { Contribution, Pack, WiringProbe } from "./types";
+import { HUSKY, hooksInstalledProbe } from "./wiring";
 
 const ROOT_FILES: Record<string, FileKind> = {
 	"biome.json": "owned",
@@ -11,8 +13,7 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"tsconfig.base.json": "owned",
 	"rev-dep.config.json": "seed",
 	".editorconfig": "owned",
-	".betterleaks.toml": "owned",
-	".betterleaksignore": "seed",
+	".betterleaks.d/js-ts.toml": "owned",
 	".npmrc": { dest: ".npmrc", markers: ["engine-strict=true"] },
 	".nvmrc": "owned",
 	".gitignore": "seed",
@@ -30,7 +31,6 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"scripts/ratchets/run-complexity.ts": "owned",
 	"scripts/ratchets/run-biome.ts": "owned",
 	"scripts/run-rev-dep.ts": "owned",
-	"scripts/run-secret-scan.ts": "owned",
 	"baselines/complexity.json": "seed",
 	"baselines/biome-diagnostics.json": "seed",
 	"tests/ratchets/ratchet-contract.test.sh": "owned",
@@ -43,6 +43,34 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"tests/ratchets/fixtures/findings-stale.json": "owned",
 	"AGENTS.quality.md": AGENTS_MD,
 };
+
+function hasTestScript(target: string): boolean {
+	const pkgPath = join(target, "package.json");
+	if (!existsSync(pkgPath)) return false;
+	try {
+		const pkg = JSON.parse(readText(pkgPath)) as {
+			scripts?: Record<string, string>;
+		};
+		return Boolean(pkg.scripts?.test);
+	} catch {
+		return false;
+	}
+}
+
+const PROBES: readonly WiringProbe[] = [
+	hooksInstalledProbe(HUSKY),
+	{
+		label: "package.json has a test script",
+		check: (target) =>
+			hasTestScript(target)
+				? []
+				: [
+						{
+							fix: 'add a "test" script to package.json (`pnpm gate` ends with `pnpm test`)',
+						},
+					],
+	},
+];
 
 function manifest(name: string): string {
 	return join(packTemplatesRoot("js-ts"), name);
@@ -82,7 +110,10 @@ export const jsTsPack: Pack = {
 		) as Record<string, string[]>;
 
 		return {
-			rootPlacements: placeFiles("js-ts", ROOT_FILES),
+			rootPlacements: [
+				...placeFiles("js-ts", ROOT_FILES),
+				...sharedPlacements("js-ts"),
+			],
 			packagePlacements: [],
 			packageJson: {
 				scripts,
@@ -91,6 +122,7 @@ export const jsTsPack: Pack = {
 				enginesNode: ">=24.0.0 <25",
 			},
 			nextSteps: postApplySteps("js-ts"),
+			probes: PROBES,
 		};
 	},
 };

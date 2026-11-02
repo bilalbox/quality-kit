@@ -31,7 +31,6 @@ function runCli(
 }
 
 const HOST_SHARED_PATHS = [
-	".betterleaks.toml",
 	".editorconfig",
 	".github/actions/quality-gate/action.yml",
 	".github/workflows/ci.yml",
@@ -69,7 +68,6 @@ test("collisions: dart + kotlin-android also collide on gate scripts, hooks, Mak
 		"tools/quality/gate.sh",
 		"tools/quality/lib.sh",
 		"tools/quality/run-format.sh",
-		"tools/quality/run-secret-scan.sh",
 	]);
 	for (const c of state.collisions) {
 		assert.deepEqual(c.packs, ["dart", "kotlin-android"]);
@@ -154,5 +152,5 @@ test("apply + audit: js-ts + python still apply cleanly", () => {
 	assert.ok(readdirSync(target).includes("pyproject.toml"));
 	const audited = runCli("audit", target, "js-ts,python");
 	assert.doesNotMatch(audited.output, /Refusing/);
-	assert.match(audited.output, /- match: \d+/);
+	assert.match(audited.output, /- current: \d+/);
 });
