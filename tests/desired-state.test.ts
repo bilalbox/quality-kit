@@ -190,21 +190,6 @@ test("desiredState: dart package placements use resolved roots", () => {
 	);
 });
 
-test("desiredState: first-wins on overlapping targetRel by pack order", () => {
-	const target = tempTarget();
-	const dartFirst = desiredState(target, ["dart", "js-ts"]);
-	const jsFirst = desiredState(target, ["js-ts", "dart"]);
-
-	const dartEditor = dartFirst.rootPlacements.find(
-		(p) => p.targetRel === ".editorconfig",
-	);
-	const jsEditor = jsFirst.rootPlacements.find(
-		(p) => p.targetRel === ".editorconfig",
-	);
-	assert.equal(dartEditor?.pack, "dart");
-	assert.equal(jsEditor?.pack, "js-ts");
-});
-
 test("diffAgainst: missing files and scripts", () => {
 	const target = tempTarget();
 	writeFileSync(

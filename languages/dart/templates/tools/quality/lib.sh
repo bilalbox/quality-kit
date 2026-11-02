@@ -20,23 +20,36 @@ quality_is_ci() {
 	esac
 }
 
+quality_trim() {
+	local s="$1"
+	s="${s#"${s%%[![:space:]]*}"}"
+	s="${s%"${s##*[![:space:]]}"}"
+	printf '%s' "${s}"
+}
+
+# Config is read with bash regexes only (no python3/jq/node), so string values
+# must not contain escaped quotes.
+quality_config_roots() {
+	[[ -f "${CONFIG_PATH}" ]] || return 0
+	local cfg rest root
+	cfg="$(<"${CONFIG_PATH}")"
+	local roots_re='"roots"[[:space:]]*:[[:space:]]*\[([^]]*)\]'
+	[[ "${cfg}" =~ ${roots_re} ]] || return 0
+	rest="${BASH_REMATCH[1]}"
+	local item_re='^[^"]*"([^"]*)"(.*)$'
+	while [[ "${rest}" =~ ${item_re} ]]; do
+		rest="${BASH_REMATCH[2]}"
+		root="$(quality_trim "${BASH_REMATCH[1]}")"
+		if [[ -n "${root}" ]]; then
+			printf '%s\n' "${root}"
+		fi
+	done
+}
+
 # Load roots from config (non-empty array) or auto-detect.
 quality_dart_roots() {
 	local roots=()
-	if [[ -f "${CONFIG_PATH}" ]] && command -v python3 >/dev/null 2>&1; then
-		mapfile -t roots < <(python3 - <<'PY' "${CONFIG_PATH}"
-import json, sys
-path = sys.argv[1]
-with open(path, encoding="utf-8") as f:
-    cfg = json.load(f)
-roots = cfg.get("roots") or []
-if isinstance(roots, list):
-    for r in roots:
-        if isinstance(r, str) and r.strip():
-            print(r.strip())
-PY
-		)
-	fi
+	mapfile -t roots < <(quality_config_roots)
 
 	if ((${#roots[@]} > 0)); then
 		printf '%s\n' "${roots[@]}"
@@ -91,18 +104,15 @@ PY
 }
 
 quality_flutter_env() {
-	if [[ ! -f "${CONFIG_PATH}" ]] || ! command -v python3 >/dev/null 2>&1; then
-		return 0
+	[[ -f "${CONFIG_PATH}" ]] || return 0
+	local cfg env
+	cfg="$(<"${CONFIG_PATH}")"
+	local env_re='"flutterEnv"[[:space:]]*:[[:space:]]*"([^"]*)"'
+	[[ "${cfg}" =~ ${env_re} ]] || return 0
+	env="$(quality_trim "${BASH_REMATCH[1]}")"
+	if [[ -n "${env}" ]]; then
+		printf '%s\n' "${env}"
 	fi
-	python3 - <<'PY' "${CONFIG_PATH}"
-import json, sys
-path = sys.argv[1]
-with open(path, encoding="utf-8") as f:
-    cfg = json.load(f)
-env = cfg.get("flutterEnv") or ""
-if isinstance(env, str) and env.strip():
-    print(env.strip())
-PY
 }
 
 # Run a command, optionally wrapping with flutterEnv (like airlock tools/flutter-env.sh).

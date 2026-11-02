@@ -31,9 +31,26 @@ export {
 	type DiffReport,
 	type DriftKind,
 	type FileFinding,
+	type PlacementCollision,
 } from "./desired-state";
 
+import type { DesiredState } from "./desired-state";
 import { detectPacks, PACK_IDS, type PackId } from "./packs";
+
+/** Exit 2 listing every colliding path when selected Packs overlap. */
+export function refuseCollisions(state: DesiredState): void {
+	if (state.collisions.length === 0) return;
+	console.error(
+		"Refusing: selected Packs place the same Target paths with different content:",
+	);
+	for (const c of state.collisions) {
+		console.error(`  ${c.targetRel}  (${c.packs.join(", ")})`);
+	}
+	console.error(
+		"Combining these Host Packs in one Target is not supported yet; select one Host Pack with --packs.",
+	);
+	process.exit(2);
+}
 
 export function resolveTarget(argv: string[]): string {
 	const idx = argv.indexOf("--target");

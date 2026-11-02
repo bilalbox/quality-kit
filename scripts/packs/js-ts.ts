@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
+import { postApplySteps } from "./post-apply";
 import type { Contribution, Pack, Placement } from "./types";
 
 const COPY_PATHS = [
@@ -94,6 +95,7 @@ export const jsTsPack: Pack = {
 				lintStaged,
 				enginesNode: ">=24.0.0 <25",
 			},
+			nextSteps: postApplySteps("js-ts"),
 		};
 	},
 };
