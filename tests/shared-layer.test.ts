@@ -135,6 +135,17 @@ for (const host of HOSTS) {
 			[],
 		);
 	});
+
+	test(`shared layer: ${host} CI checks out full history for the PR base-ref scan`, () => {
+		const state = desiredState(tempTarget(), [host]);
+		const ci = state.rootPlacements.find(
+			(p) => p.targetRel === ".github/workflows/ci.yml",
+		);
+		assert.match(
+			readFileSync(templatePath(ci!), "utf8"),
+			/fetch-depth:\s*0/,
+		);
+	});
 }
 
 test("shared layer: a Fragment Pack alone does not compose it", () => {

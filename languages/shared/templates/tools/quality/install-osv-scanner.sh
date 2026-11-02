@@ -3,8 +3,8 @@
 # any binary whose SHA-256 differs from the pin below.
 # Usage: ./tools/quality/install-osv-scanner.sh [DEST]   (default: ~/.local/bin)
 #
-# Bumping VERSION: copy both linux hashes from the release's osv-scanner_SHA256SUMS.
-# Keep VERSION here (single obvious place) until the kit's pins source (#7) owns it.
+# Bumping VERSION: change osvScanner in pins.json and copy both linux hashes
+# from that release's osv-scanner_SHA256SUMS into this script.
 set -euo pipefail
 
 VERSION=2.7.0

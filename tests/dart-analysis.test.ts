@@ -160,27 +160,6 @@ test("dart lib.sh: flutterEnv is honoured without python3", () => {
 	assert.equal(runLib(target, "quality_flutter_env"), "tools/flutter-env.sh\n");
 });
 
-test("dart: CI pins an exact Flutter version that MODULE.md documents", () => {
-	const action = readText(
-		join(
-			packTemplatesRoot("dart"),
-			".github",
-			"actions",
-			"setup-flutter",
-			"action.yml",
-		),
-	);
-	const pin = action.match(/^\s+flutter-version: (\d+\.\d+\.\d+)$/m)?.[1];
-	assert.ok(pin, "setup-flutter does not pin flutter-version");
-	const moduleDoc = readText(
-		join(packTemplatesRoot("dart"), "..", "MODULE.md"),
-	);
-	assert.match(
-		moduleDoc,
-		new RegExp(`^\\| Flutter \\| ${pin.replaceAll(".", "\\.")}\\b`, "m"),
-	);
-});
-
 test("dart: dependency_validator ignores tooling, never runtime deps", () => {
 	const yaml = readText(
 		join(

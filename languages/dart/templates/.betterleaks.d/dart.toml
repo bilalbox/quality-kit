@@ -2,17 +2,12 @@
 # tools/quality/run-secret-scan.sh). Tables only: no top-level keys.
 
 [[allowlists]]
-description = "dart: test files, Flutter/Android build caches, local secret files"
+description = "dart: Flutter/Android build caches, Cloudflare local vars"
 paths = [
-  '''(?i).*_test\.dart$''',
   '''(?i)\.dart_tool\/''',
   '''(?i)(?:^|/)build/''',
   '''(?i)(?:^|/)android/\.gradle/''',
   '''(?i)(?:^|/)android/app/build/''',
   '''(?:^|/)\.dev\.vars$''',
-  '''(?:^|/)\.dev\.vars\.''',
-  # Local Android signing secrets (gitignored; still caught if staged/committed).
-  '''(?i)(?:^|/)key\.properties$''',
-  '''(?i)\.jks$''',
-  '''(?i)\.keystore$'''
+  '''(?:^|/)\.dev\.vars\.'''
 ]

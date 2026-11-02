@@ -5,7 +5,8 @@
 # Modes:
 #   --staged       pre-commit: `betterleaks git --staged`
 #   (default)      local gate: `betterleaks dir .` (working tree + untracked)
-#   CI=true        `betterleaks git --log-opts=origin/main..HEAD` (fallback: full `git`)
+#   CI=true        `betterleaks git --log-opts=origin/$GITHUB_BASE_REF..HEAD`
+#                  (fallback: full `git` when GITHUB_BASE_REF is unset / unresolvable)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -83,8 +84,11 @@ args=()
 if ((is_staged)); then
 	args+=(git --staged)
 elif is_ci; then
-	if git rev-parse --verify origin/main >/dev/null 2>&1; then
-		args+=(git --log-opts=origin/main..HEAD)
+	# PR workflows set GITHUB_BASE_REF; Host ci.yml uses fetch-depth: 0 so the
+	# remote-tracking base ref is present. workflow_dispatch / missing ref → full git.
+	base_ref="${GITHUB_BASE_REF:-}"
+	if [[ -n "${base_ref}" ]] && git rev-parse --verify "origin/${base_ref}" >/dev/null 2>&1; then
+		args+=(git --log-opts="origin/${base_ref}..HEAD")
 	else
 		args+=(git)
 	fi

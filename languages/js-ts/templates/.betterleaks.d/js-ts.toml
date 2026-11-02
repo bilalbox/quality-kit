@@ -2,9 +2,8 @@
 # tools/quality/run-secret-scan.sh). Tables only: no top-level keys.
 
 [[allowlists]]
-description = "js-ts: test files, baselines, Cloudflare local vars"
+description = "js-ts: baselines, Cloudflare local vars"
 paths = [
-  '''(?i).*\.test\.(ts|js|py)$''',
   '''(?i)baselines\/.*''',
   '''(?i)\.rev-dep\..*\.json''',
   '''(?:^|/)\.dev\.vars$''',
