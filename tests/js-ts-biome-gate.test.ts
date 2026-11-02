@@ -41,7 +41,8 @@ function pnpm(
 	const result = spawnSync("pnpm", args, {
 		cwd: target,
 		encoding: "utf8",
-		env: { ...base, ...env },
+		// node_modules is the kit's own: pnpm must not install the Target's deps into it.
+		env: { ...base, pnpm_config_verify_deps_before_run: "false", ...env },
 	});
 	return { status: result.status, output: `${result.stdout}${result.stderr}` };
 }
@@ -99,6 +100,48 @@ test("js-ts gate: generated pnpm-lock.yaml is not a Biome diagnostic", () => {
 	const lint = pnpm(target, ["lint"]);
 
 	assert.equal(lint.status, 0, lint.output);
+});
+
+test("js-ts gate: a floating promise in src/ fails gate:fast", () => {
+	const target = adoptedTarget();
+	writeFileSync(
+		join(target, "src/a.ts"),
+		[
+			"async function save(): Promise<void> {}",
+			"export function onClick(): void {",
+			"\tsave();",
+			"}",
+			"",
+		].join("\n"),
+	);
+
+	const gate = pnpm(target, ["gate:fast"]);
+
+	assert.notEqual(gate.status, 0, gate.output);
+	assert.match(gate.output, /src\/a\.ts:3:\d+ +lint\/nursery\/noFloatingPromises/);
+});
+
+test("js-ts gate: a promise passed where a void callback is expected fails gate:fast", () => {
+	const target = adoptedTarget();
+	writeFileSync(
+		join(target, "src/a.ts"),
+		[
+			"async function save(id: string): Promise<void> {",
+			"\tawait Promise.resolve(id);",
+			"}",
+			"export function saveAll(ids: string[]): void {",
+			"\tids.forEach(async (id) => {",
+			"\t\tawait save(id);",
+			"\t});",
+			"}",
+			"",
+		].join("\n"),
+	);
+
+	const gate = pnpm(target, ["gate:fast"]);
+
+	assert.notEqual(gate.status, 0, gate.output);
+	assert.match(gate.output, /src\/a\.ts:5:\d+ +lint\/nursery\/noMisusedPromises/);
 });
 
 const LEGACY_SOURCE = [
