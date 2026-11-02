@@ -11,6 +11,7 @@
 			"!!**/dist",
 			"!!**/node_modules",
 			"!!**/.wrangler",
+			"!!**/pnpm-lock.yaml",
 			"!!.rev-dep.baseline.json",
 			"!!.rev-dep.duplicates.json"
 		]
@@ -23,8 +24,12 @@
 		"enabled": true,
 		"rules": {
 			"preset": "recommended",
+			"correctness": {
+				"noUnusedImports": { "level": "on", "fix": "safe" }
+			},
 			"style": {
-				"noNonNullAssertion": "off"
+				"noNonNullAssertion": "off",
+				"useTemplate": { "level": "on", "fix": "safe" }
 			},
 			"suspicious": {
 				"noConsole": "error"
