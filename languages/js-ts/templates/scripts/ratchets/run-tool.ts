@@ -6,6 +6,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import {
 	type BaselineFile,
+	type CompareResult,
 	compareFindings,
 	type Finding,
 	isCiEnv,
@@ -24,6 +25,8 @@ export async function runRatchetTool(options: {
 	baselinePath: string;
 	collect: CollectFindings;
 	argv?: string[];
+	/** Extra guidance printed after a failed compare (locations, fix command). */
+	onFailure?: (result: CompareResult) => void;
 }): Promise<void> {
 	const update = parseUpdateFlag(options.argv ?? process.argv.slice(2));
 	const findings = await options.collect();
@@ -53,6 +56,7 @@ export async function runRatchetTool(options: {
 	if (!result.ok) {
 		console.error(`${options.name} ratchet failed:`);
 		reportFailure(result);
+		options.onFailure?.(result);
 		process.exit(1);
 	}
 	console.log(

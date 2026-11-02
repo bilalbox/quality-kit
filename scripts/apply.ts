@@ -18,6 +18,7 @@ import {
 	type DesiredState,
 	type Placement,
 } from "./lib";
+import { LOCK_FILE, recordOwned } from "./lock-file";
 
 function mergePackageJson(
 	target: string,
@@ -161,6 +162,13 @@ function main(): void {
 			"  (no package roots found — set quality-kit.dart.json roots)",
 		);
 	}
+
+	const lock = recordOwned(target, placements);
+	console.log("");
+	console.log("## lock file");
+	console.log(
+		`  wrote    ${LOCK_FILE} (kit ${lock.kitRevision?.slice(0, 12) ?? "revision unknown"}, ${Object.keys(lock.files).length} owned files)`,
+	);
 
 	if (state.packageJson) {
 		console.log("");
