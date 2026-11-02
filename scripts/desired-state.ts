@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { normalize, packTemplatesRoot, readText } from "./kit-fs";
+import { normalize, packTemplatesRoot, readText, relToKit } from "./kit-fs";
 import {
 	PACKS,
 	resolveDartRoots,
@@ -8,6 +8,8 @@ import {
 	type PackId,
 	type Placement,
 	type PlacementKind,
+	type WiringGap,
+	type WiringProbe,
 } from "./packs";
 
 export type DesiredPackageJson = {
@@ -35,9 +37,20 @@ export type DesiredState = {
 	nextSteps: readonly PackNextSteps[];
 	/** Non-empty means apply/audit must refuse the selection. */
 	collisions: readonly PlacementCollision[];
+	/** Wiring probes of every selected Pack, in Pack order. */
+	probes: readonly PackProbe[];
 };
 
 export type PackNextSteps = { pack: PackId; steps: readonly string[] };
+
+export type PackProbe = { pack: PackId; probe: WiringProbe };
+
+/** One probe's result; any gap fails audit. */
+export type WiringFinding = {
+	pack: PackId;
+	label: string;
+	gaps: readonly WiringGap[];
+};
 
 /** Per-kind file status: owned compares bytes, seed checks presence, merge-into checks the dest. */
 export type FileStatus =
@@ -59,6 +72,8 @@ export type FileFinding = {
 	dest?: string;
 	/** Why a seed is invalid or a merge-into is unmerged. */
 	detail?: string;
+	/** unmerged: which kit file to merge where. */
+	fix?: string;
 };
 
 const FILE_GAPS: ReadonlySet<FileStatus> = new Set([
@@ -93,6 +108,7 @@ export type DiffReport = {
 	enginesNode: string | null;
 	nvmrc: string | null;
 	dartRoots: string[] | null;
+	wiring: WiringFinding[];
 };
 
 function templateText(p: Placement): string | null {
@@ -155,6 +171,7 @@ export function desiredState(
 	const gateFragments: string[] = [];
 	let hasJsTsHost = false;
 	const nextSteps: PackNextSteps[] = [];
+	const probes: PackProbe[] = [];
 
 	for (const id of packs) {
 		const contrib = PACKS[id].contribute(target, packs);
@@ -173,6 +190,7 @@ export function desiredState(
 		if (contrib.nextSteps.length > 0) {
 			nextSteps.push({ pack: id, steps: contrib.nextSteps });
 		}
+		for (const probe of contrib.probes) probes.push({ pack: id, probe });
 
 		const pj = contrib.packageJson;
 		if (!pj) continue;
@@ -212,6 +230,7 @@ export function desiredState(
 		packageJson,
 		nextSteps,
 		collisions: [...collisions.values()],
+		probes,
 	};
 }
 
@@ -252,19 +271,25 @@ function comparePlacement(
 		kind: placement.kind,
 	};
 
+	const templatePath = join(
+		packTemplatesRoot(placement.pack),
+		placement.templateRel,
+	);
+
 	if (placement.kind === "merge-into") {
 		const { dest } = placement.mergeInto;
+		const unmerged = {
+			...base,
+			status: "unmerged" as const,
+			dest,
+			fix: `merge ${relToKit(templatePath)} into ${dest}`,
+		};
 		if (!existsSync(join(targetRoot, dest))) {
-			return { ...base, status: "unmerged", dest, detail: `${dest} missing` };
+			return { ...unmerged, detail: `${dest} missing` };
 		}
 		const absent = missingMarkers(targetRoot, placement.mergeInto);
 		if (absent.length === 0) return { ...base, status: "merged", dest };
-		return {
-			...base,
-			status: "unmerged",
-			dest,
-			detail: `${dest} lacks ${absent.join(", ")}`,
-		};
+		return { ...unmerged, detail: `${dest} lacks ${absent.join(", ")}` };
 	}
 
 	const targetPath = join(targetRoot, placement.targetRel);
@@ -277,10 +302,6 @@ function comparePlacement(
 			: { ...base, status: "present" };
 	}
 
-	const templatePath = join(
-		packTemplatesRoot(placement.pack),
-		placement.templateRel,
-	);
 	return { ...base, status: compareOwned(targetPath, templatePath) };
 }
 
@@ -363,5 +384,10 @@ export function diffAgainst(
 		enginesNode,
 		nvmrc,
 		dartRoots,
+		wiring: state.probes.map(({ pack, probe }) => ({
+			pack,
+			label: probe.label,
+			gaps: probe.check(target),
+		})),
 	};
 }

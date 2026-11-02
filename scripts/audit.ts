@@ -16,6 +16,7 @@ import {
 	type FileFinding,
 	type PackId,
 	type PlacementKind,
+	type WiringFinding,
 } from "./lib";
 
 /** Host that currently absorbs python Fragment package.json / gate pieces. */
@@ -79,6 +80,20 @@ function printKindGroup(
 		const path = f.dest && f.dest !== f.path ? `${f.path} → ${f.dest}` : f.path;
 		const detail = f.detail ? ` (${f.detail})` : "";
 		console.log(`  ${f.status.padEnd(8)} [${f.pack}] ${path}${detail}`);
+		if (f.fix) console.log(`           fix: ${f.fix}`);
+	}
+}
+
+function printWiring(wiring: readonly WiringFinding[]): void {
+	console.log("");
+	console.log(`## Wiring (${wiring.length})`);
+	for (const w of wiring) {
+		const status = w.gaps.length > 0 ? "unwired" : "wired";
+		console.log(`  ${status.padEnd(8)} [${w.pack}] ${w.label}`);
+		for (const g of w.gaps) {
+			if (g.detail) console.log(`           ${g.detail}`);
+			console.log(`           fix: ${g.fix}`);
+		}
 	}
 }
 
@@ -109,6 +124,8 @@ function main(): void {
 		const findings = report.files.filter((f) => f.kind === kind);
 		if (findings.length > 0) printKindGroup(kind, findings);
 	}
+
+	if (report.wiring.length > 0) printWiring(report.wiring);
 
 	if (state.packageJson) {
 		console.log("");
@@ -163,7 +180,8 @@ function main(): void {
 
 	const gaps = report.files.filter(isFileGap).length;
 	const scriptGaps = report.scripts.filter((s) => s.kind !== "match").length;
-	process.exit(gaps + scriptGaps > 0 ? 1 : 0);
+	const wiringGaps = report.wiring.filter((w) => w.gaps.length > 0).length;
+	process.exit(gaps + scriptGaps + wiringGaps > 0 ? 1 : 0);
 }
 
 main();

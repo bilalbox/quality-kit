@@ -25,6 +25,30 @@ export const PYTHON_HELPER_DIRS = new Set([
 	"bin",
 ]);
 
+/** Relpaths of every file within maxDepth whose name matches; `skip` prunes extra dirs by relpath. */
+export function listFiles(
+	root: string,
+	maxDepth: number,
+	match: (name: string) => boolean,
+	skip: (rel: string) => boolean = () => false,
+): string[] {
+	const found: string[] = [];
+	const walk = (rel: string, depth: number): void => {
+		if (depth > maxDepth) return;
+		for (const entry of readdirSync(join(root, rel)).sort()) {
+			if (SKIP_DIRS.has(entry)) continue;
+			const child = rel ? join(rel, entry) : entry;
+			if (statSync(join(root, child)).isDirectory()) {
+				if (!skip(child)) walk(child, depth + 1);
+			} else if (match(entry)) {
+				found.push(child);
+			}
+		}
+	};
+	if (existsSync(root)) walk("", 0);
+	return found;
+}
+
 /** Walk Target tree up to maxDepth; return true if predicate matches a file. */
 export function walkFiles(
 	root: string,
