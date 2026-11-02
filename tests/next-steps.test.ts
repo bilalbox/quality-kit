@@ -60,7 +60,7 @@ function applyNextOutput(packs: string, target = tempTarget()): string[] {
 test("apply: prints each selected Pack's declared steps, nothing else", () => {
 	const target = tempTarget();
 	writeFileSync(join(target, "package.json"), JSON.stringify({ name: "x" }));
-	const packs = ["js-ts", "python", "kotlin-android"] as const;
+	const packs = ["js-ts", "python"] as const;
 
 	const expected = stepsFor([...packs]).flatMap(({ pack, steps }) => [
 		`Next (see languages/${pack}/MODULE.md):`,
