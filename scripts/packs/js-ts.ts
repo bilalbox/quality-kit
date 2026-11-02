@@ -24,22 +24,13 @@ const ROOT_FILES: Record<string, FileKind> = {
 	},
 	".github/actions/setup-pnpm/action.yml": "owned",
 	".github/actions/js-ts-quality-gate/action.yml": "owned",
-	"scripts/ratchets/compare.ts": "owned",
-	"scripts/ratchets/run-tool.ts": "owned",
 	"scripts/ratchets/run-complexity.ts": "owned",
 	"scripts/ratchets/run-biome.ts": "owned",
 	"scripts/run-rev-dep.ts": "owned",
 	"tools/quality/js-ts/gate.sh": "owned",
+	"tools/quality/js-ts/collect-coverage.sh": "owned",
 	"baselines/complexity.json": "seed",
 	"baselines/biome-diagnostics.json": "seed",
-	"tests/ratchets/ratchet-contract.test.sh": "owned",
-	"tests/ratchets/fixtures/baseline-green.json": "owned",
-	"tests/ratchets/fixtures/baseline-scored.json": "owned",
-	"tests/ratchets/fixtures/baseline-stale.json": "owned",
-	"tests/ratchets/fixtures/findings-green.json": "owned",
-	"tests/ratchets/fixtures/findings-novel.json": "owned",
-	"tests/ratchets/fixtures/findings-regression.json": "owned",
-	"tests/ratchets/fixtures/findings-stale.json": "owned",
 };
 
 const HUSKY_FILES: Record<string, FileKind> = {
@@ -71,7 +62,7 @@ const TEST_PROBE: WiringProbe = {
 			? []
 			: [
 					{
-						fix: 'add a "test" script to package.json (`pnpm gate` ends with `pnpm test`)',
+						fix: 'add a "test" script to package.json (`pnpm lint:coverage` / gate runs tests under c8)',
 					},
 				],
 };

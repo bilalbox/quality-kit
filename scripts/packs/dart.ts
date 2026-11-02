@@ -20,6 +20,7 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"tools/quality/dart/run-analyze.sh": "owned",
 	"tools/quality/dart/run-deps.sh": "owned",
 	"tools/quality/dart/run-test.sh": "owned",
+	"tools/quality/dart/collect-coverage.sh": "owned",
 };
 
 /** Templated under package/flutter/ or package/dart/, picked per root. */

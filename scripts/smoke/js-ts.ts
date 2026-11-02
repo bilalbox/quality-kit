@@ -21,7 +21,7 @@ export const jsTsSmoke: SmokeRecipe = {
 			"vanilla-ts",
 			"--no-interactive",
 		]);
-		// Gate ends with `pnpm test`; Vite has none. Any non-empty script satisfies the probe.
+		// Gate coverage step runs `pnpm test` under c8; Vite has none. Any non-empty script satisfies the probe.
 		editJson<Pkg>(join(target, "package.json"), (pkg) => {
 			pkg.scripts ??= {};
 			pkg.scripts.test = 'node -e "process.exit(0)"';

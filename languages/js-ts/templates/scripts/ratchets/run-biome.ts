@@ -10,8 +10,11 @@
 
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
-import type { CompareResult, Finding } from "./compare";
-import { runRatchetTool } from "./run-tool";
+import type {
+	CompareResult,
+	Finding,
+} from "../../tools/quality/ratchets/compare";
+import { runRatchetTool } from "../../tools/quality/ratchets/run-tool";
 
 type BiomeDiagnostic = {
 	severity: string;

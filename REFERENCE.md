@@ -4,24 +4,47 @@ Shared across language packs. Pack-specific tools and gotchas live in `languages
 
 ## Ratchet contract
 
-Shrink-only baseline comparison (js-ts complexity and Biome diagnostics use `scripts/ratchets/compare.ts`):
+Shared compare CLI: `tools/quality/ratchets/compare.py` (language-neutral; js-ts tool runners call it via `tools/quality/ratchets/run-tool.ts`). Contract tests: `tools/quality/ratchets/ratchet-contract.test.sh`.
 
 - **Novelty** — finding ID absent from baseline → fail
 - **Stale prune** — baseline row no longer reproduces → fail
-- **Score regression** — same ID, higher score → fail
+- **Score regression** — same ID, worse score → fail
+  - `worseWhen: "higher"` (default; complexity / Biome) — current **>** baseline fails
+  - `worseWhen: "lower"` (coverage) — current **<** baseline fails
+- **Floor** (coverage) — `floor` on the baseline; score below it fails. Empty `findings` → floor only (greenfield / pre-adopt)
 - **`--update`** — rewrite baseline; **refused when `CI=true`**
 
-Finding ID shape is pack-specific (see js-ts module for complexity and Biome diagnostic IDs). Baselines absorb legacy debt at adoption only; disabling a rule to get a pass is not a ratchet strategy. Dart pack v1 has no complexity ratchet yet.
+Finding ID shape is pack-specific (js-ts complexity / Biome IDs; coverage uses per-module path ids). Baselines absorb legacy debt at adoption only; disabling a rule to get a pass is not a ratchet strategy. Dart pack v1 has no complexity ratchet yet.
+
+### Coverage ratchet
+
+Every Host's **full** gate runs `tools/quality/run-coverage-ratchet.sh`, which calls Host `tools/quality/collect-coverage.sh` then the shared compare against seed `baselines/coverage.json`:
+
+```json
+{ "version": 1, "worseWhen": "lower", "floor": 80, "findings": [] }
+```
+
+| Decision | Choice |
+| --- | --- |
+| Greenfield floor default | **80** (`floor` in `baselines/coverage.json`; override per Target) |
+| Per-module baseline format | Shared findings JSON; `id` = module/package path (`.` = repo root); `score` = line coverage % |
+| js-ts collection | **c8** wraps `pnpm test` via `tools/quality/js-ts/collect-coverage.sh` |
+| dart collection | `tools/quality/dart/collect-coverage.sh` → `flutter test --coverage` / lcov |
+| kotlin-android collection | `tools/quality/kotlin-android/collect-coverage.sh` → Kover XML (`koverXmlReport`) |
+| python Host (#17) | Same runner; add `tools/quality/python/collect-coverage.sh` emitting `{ "findings": [...] }` |
+
+Raising coverage passes; lowering fails the gate. Tighten with `--update` locally (refused under `CI`). Legacy adopt: set `"floor": 0`, run the Host collector + `--update`, commit the baseline.
 
 ### Baseline growth (CI vs PR base)
 
-`--update` / `--update-snapshot` are refused under `CI=true`, but a human can still commit a larger baseline. Every Host CI job (and each job in a composed multi-Host workflow) runs the Shared layer's `check-baseline-growth` action after checkout. It diffs HEAD against `origin/$GITHUB_BASE_REF` and **fails on added rows** (printed); removing rows passes. Ratchet JSON baselines also fail when an existing id's **score rises**. Non-PR events skip. Deliberate growth: PR label **`allow-baseline-growth`** (workflow skips the step); local/repro: `--allow` or `ALLOW_BASELINE_GROWTH=1`.
+`--update` / `--update-snapshot` are refused under `CI=true`, but a human can still commit a larger baseline. Every Host CI job (and each job in a composed multi-Host workflow) runs the Shared layer's `check-baseline-growth` action after checkout. It diffs HEAD against `origin/$GITHUB_BASE_REF` and **fails on added rows** (printed); removing rows passes. Ratchet JSON baselines also fail when an existing id's score moves the wrong way (**rise** for `worseWhen: higher`; **decrease** for coverage). Non-PR events skip. Deliberate growth: PR label **`allow-baseline-growth`** (workflow skips the step); local/repro: `--allow` or `ALLOW_BASELINE_GROWTH=1`.
 
 Watched paths (absent on both sides → skip; new file on HEAD → all rows count as added):
 
 | Path / glob | Row identity |
 | --- | --- |
 | `baselines/complexity.json`, `baselines/biome-diagnostics.json` | `findings[].id` (+ score rise) |
+| `baselines/coverage.json` | `findings[].id` (+ score **decrease**) |
 | `.rev-dep.baseline.json` | each finding under `workspaces.*.*` |
 | `.rev-dep.duplicates.json` | each `duplications[]` entry |
 | `**/detekt-baseline.xml` | each `<ID>` |
@@ -29,7 +52,7 @@ Watched paths (absent on both sides → skip; new file on HEAD → all rows coun
 | `.betterleaksignore`, `vulture_whitelist.py` | non-empty, non-`#` lines |
 | `osv-scanner.toml` | each ignore `id = "…"` (Shared layer seed; watched when present) |
 
-Script: `tools/quality/check-baseline-growth.sh`. Coverage baselines (#21) should plug into this same guard (a coverage *decrease* is growth).
+Script: `tools/quality/check-baseline-growth.sh`.
 
 ## Desired state
 

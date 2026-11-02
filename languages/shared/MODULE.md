@@ -17,6 +17,9 @@ Shared Placements carry `shared: true`, resolve their template here (`templatePa
 | `tools/quality/run-secret-scan.sh` | owned |
 | `tools/quality/check-baseline-growth.sh` | owned |
 | `tools/quality/run-vuln-scan.sh` | owned |
+| `tools/quality/run-coverage-ratchet.sh` | owned |
+| `tools/quality/ratchets/*` (compare.py, run-tool.ts, fixtures, contract test) | owned |
+| `baselines/coverage.json` | seed |
 
 Each Host adds its own **Pack allowlist**, `.betterleaks.d/<pack>.toml` (owned), from its own templates.
 
@@ -58,7 +61,11 @@ Betterleaks takes one config file. `[extend]` cannot combine `useDefault = true`
 
 ## Baseline growth
 
-`tools/quality/check-baseline-growth.sh` (+ composite action) compares committed baselines on HEAD to the PR base ref and fails when rows are added. Every Host `ci.yml` invokes `./.github/actions/check-baseline-growth` after checkout on `pull_request`, unless the PR has label `allow-baseline-growth`. Inventory and row rules: REFERENCE.md "Baseline growth". `osv-scanner.toml` ignore `id`s are included so the vuln ignore file ratchets with the same guard.
+`tools/quality/check-baseline-growth.sh` (+ composite action) compares committed baselines on HEAD to the PR base ref and fails when rows are added. Every Host `ci.yml` invokes `./.github/actions/check-baseline-growth` after checkout on `pull_request`, unless the PR has label `allow-baseline-growth`. Inventory and row rules: REFERENCE.md "Baseline growth". `osv-scanner.toml` ignore `id`s are included so the vuln ignore file ratchets with the same guard. Coverage baselines use the same script: a coverage *decrease* counts as growth.
+
+## Coverage ratchet
+
+Shared runner: `tools/quality/run-coverage-ratchet.sh` → Host `tools/quality/<pack>/collect-coverage.sh` → `ratchets/compare.py` against `baselines/coverage.json`. Contract and floor defaults: REFERENCE.md "Coverage ratchet". js-ts / dart / kotlin-android each place a collector beside their namespaced gate scripts; python Host (#17) adds `tools/quality/python/collect-coverage.sh`.
 
 ## Dependency vulns (osv-scanner)
 
