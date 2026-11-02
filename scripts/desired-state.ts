@@ -20,6 +20,7 @@ import {
 	type WiringProbe,
 } from "./packs";
 import { composedCiPlacement } from "./packs/ci";
+import { composedLocalPlacements } from "./packs/local";
 
 export type DesiredPackageJson = {
 	scripts: Record<string, string>;
@@ -242,6 +243,12 @@ export function desiredState(
 	if (ci) {
 		mergePlacements(claimed, collisions, rootPlacements, [ci]);
 	}
+	mergePlacements(
+		claimed,
+		collisions,
+		rootPlacements,
+		composedLocalPlacements(packs),
+	);
 
 	return {
 		packs,

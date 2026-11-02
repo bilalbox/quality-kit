@@ -1,18 +1,19 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
-import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
+import { type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
-import type { Contribution, Pack, WiringProbe } from "./types";
-import { HUSKY, hooksInstalledProbe } from "./wiring";
+import { isLefthookHost } from "./local";
+import type { Contribution, Pack, PackId, WiringProbe } from "./types";
+import { HUSKY, LEFTHOOK, hooksInstalledProbe } from "./wiring";
 
+/** Shared root files (.editorconfig, AGENTS) are composed; husky only when no lefthook Host. */
 const ROOT_FILES: Record<string, FileKind> = {
 	"biome.json": "owned",
 	"biome.complexity.json": "seed",
 	"tsconfig.base.json": "owned",
 	"rev-dep.config.json": "seed",
-	".editorconfig": "owned",
 	".betterleaks.d/js-ts.toml": "owned",
 	".npmrc": { dest: ".npmrc", markers: ["engine-strict=true"] },
 	".nvmrc": "owned",
@@ -21,8 +22,6 @@ const ROOT_FILES: Record<string, FileKind> = {
 		dest: "pnpm-workspace.yaml",
 		markers: ["esbuild: true"],
 	},
-	".husky/pre-commit": "owned",
-	".husky/pre-push": "owned",
 	".github/actions/setup-pnpm/action.yml": "owned",
 	".github/actions/js-ts-quality-gate/action.yml": "owned",
 	"scripts/ratchets/compare.ts": "owned",
@@ -40,8 +39,16 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"tests/ratchets/fixtures/findings-novel.json": "owned",
 	"tests/ratchets/fixtures/findings-regression.json": "owned",
 	"tests/ratchets/fixtures/findings-stale.json": "owned",
-	"AGENTS.quality.md": AGENTS_MD,
 };
+
+const HUSKY_FILES: Record<string, FileKind> = {
+	".husky/pre-commit": "owned",
+	".husky/pre-push": "owned",
+};
+
+function withLefthookHost(selected: readonly PackId[]): boolean {
+	return selected.some(isLefthookHost);
+}
 
 function hasTestScript(target: string): boolean {
 	const pkgPath = join(target, "package.json");
@@ -56,20 +63,17 @@ function hasTestScript(target: string): boolean {
 	}
 }
 
-const PROBES: readonly WiringProbe[] = [
-	hooksInstalledProbe(HUSKY),
-	{
-		label: "package.json has a test script",
-		check: (target) =>
-			hasTestScript(target)
-				? []
-				: [
-						{
-							fix: 'add a "test" script to package.json (`pnpm gate` ends with `pnpm test`)',
-						},
-					],
-	},
-];
+const TEST_PROBE: WiringProbe = {
+	label: "package.json has a test script",
+	check: (target) =>
+		hasTestScript(target)
+			? []
+			: [
+					{
+						fix: 'add a "test" script to package.json (`pnpm gate` ends with `pnpm test`)',
+					},
+				],
+};
 
 function manifest(name: string): string {
 	return join(packTemplatesRoot("js-ts"), name);
@@ -96,7 +100,7 @@ export const jsTsPack: Pack = {
 			return true;
 		}
 	},
-	contribute(_target: string, _selected: readonly string[]): Contribution {
+	contribute(_target: string, selected: readonly PackId[]): Contribution {
 		const scripts = JSON.parse(readText(manifest("package.scripts.json"))) as Record<
 			string,
 			string
@@ -108,9 +112,18 @@ export const jsTsPack: Pack = {
 			readText(manifest("package.lint-staged.json")),
 		) as Record<string, string[]>;
 
+		// With a lefthook Host, composed lefthook.yml owns hooks (incl. lint-staged).
+		const husky = withLefthookHost(selected)
+			? []
+			: placeFiles("js-ts", HUSKY_FILES);
+		const hooksProbe = withLefthookHost(selected)
+			? hooksInstalledProbe(LEFTHOOK)
+			: hooksInstalledProbe(HUSKY);
+
 		return {
 			rootPlacements: [
 				...placeFiles("js-ts", ROOT_FILES),
+				...husky,
 				...sharedPlacements("js-ts"),
 			],
 			packagePlacements: [],
@@ -121,7 +134,7 @@ export const jsTsPack: Pack = {
 				enginesNode: ">=24.0.0 <25",
 			},
 			nextSteps: postApplySteps("js-ts"),
-			probes: PROBES,
+			probes: [hooksProbe, TEST_PROBE],
 		};
 	},
 };
