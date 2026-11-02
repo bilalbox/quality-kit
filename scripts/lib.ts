@@ -36,6 +36,7 @@ export {
 	isFileGap,
 	missingMarkers,
 	type DesiredState,
+	type DesiredStateOpts,
 	type DiffReport,
 	type FileFinding,
 	type FileStatus,
@@ -44,6 +45,7 @@ export {
 } from "./desired-state";
 
 import type { DesiredState } from "./desired-state";
+import { readLock } from "./lock-file";
 import { detectPacks, PACK_IDS, type PackId } from "./packs";
 
 /** Exit 2 listing every colliding path when selected Packs overlap. */
@@ -97,4 +99,17 @@ export function resolvePacks(target: string, argv: string[]): PackId[] {
 		packs.push("python");
 	}
 	return packs;
+}
+
+/**
+ * Opt-in agent hooks (#20): `--agent-hooks`, or retain when the lock already
+ * records the Claude Code settings Placement from a prior apply.
+ */
+export function resolveAgentHooks(target: string, argv: string[]): boolean {
+	if (argv.includes("--agent-hooks")) return true;
+	const lock = readLock(target);
+	return (
+		lock.state === "present" &&
+		Object.hasOwn(lock.lock.files, ".claude/settings.json")
+	);
 }
