@@ -17,7 +17,12 @@ const FIXTURES = join(
 	"shared/templates/tools/quality/ratchets/fixtures",
 );
 
-const HOSTS = ["js-ts", "dart", "kotlin-android"] as const satisfies PackId[];
+const HOSTS = [
+	"js-ts",
+	"python",
+	"dart",
+	"kotlin-android",
+] as const satisfies PackId[];
 
 function compare(
 	baseline: string,
@@ -80,9 +85,7 @@ for (const host of HOSTS) {
 	});
 }
 
-test("coverage-ratchet: python Host extension point is tools/quality/python/collect-coverage.sh", () => {
-	// #17 adds tools/quality/python/collect-coverage.sh; the shared runner globs
-	// tools/quality/*/collect-coverage.sh when --findings is omitted.
+test("coverage-ratchet: shared runner globs tools/quality/*/collect-coverage.sh", () => {
 	const runner = join(
 		languagesRoot,
 		"shared/templates/tools/quality/run-coverage-ratchet.sh",
@@ -91,5 +94,4 @@ test("coverage-ratchet: python Host extension point is tools/quality/python/coll
 		encoding: "utf8",
 	}).stdout;
 	assert.match(text, /tools\/quality\/\*\/collect-coverage\.sh/);
-	assert.match(text, /#17|python/i);
 });

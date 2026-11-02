@@ -6,7 +6,6 @@
 # Without --findings, runs every Host collector matching
 #   tools/quality/*/collect-coverage.sh
 # Each collector prints findings JSON on stdout; results are merged by id.
-# Python Host (#17): add tools/quality/python/collect-coverage.sh with the same shape.
 #
 # Convention for multi-Host local gate composition (#9): keep invoking this script
 # by path; Hosts only add tools/quality/<pack>/collect-coverage.sh.
@@ -59,7 +58,7 @@ else
 	)
 	if [[ ${#collectors[@]} -eq 0 ]]; then
 		echo "error: no coverage collector at tools/quality/*/collect-coverage.sh" >&2
-		echo "  Host Packs place collect-coverage.sh under tools/quality/<pack>/; python Host adds one in #17." >&2
+		echo "  Host Packs place collect-coverage.sh under tools/quality/<pack>/." >&2
 		exit 2
 	fi
 	merged='{"findings":[]}'

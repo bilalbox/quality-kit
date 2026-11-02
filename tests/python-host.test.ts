@@ -32,6 +32,14 @@ test("desiredState: python Host places shared layer, gate, lefthook, CI", () => 
 		state.rootPlacements.some((p) => p.targetRel === "tools/quality/python/gate.sh"),
 	);
 	assert.ok(
+		state.rootPlacements.some(
+			(p) => p.targetRel === "tools/quality/python/collect-coverage.sh",
+		),
+	);
+	assert.ok(
+		state.rootPlacements.some((p) => p.targetRel === "baselines/coverage.json"),
+	);
+	assert.ok(
 		state.rootPlacements.some((p) => p.targetRel === "tools/quality/gate.sh"),
 	);
 	assert.ok(state.rootPlacements.some((p) => p.targetRel === "lefthook.yml"));

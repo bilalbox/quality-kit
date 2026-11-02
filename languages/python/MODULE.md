@@ -17,11 +17,12 @@ Incidental helper scripts (e.g. Flutter `tool/*.py`) do **not** auto-select this
 | Types | **basedpyright** (`standard`) | Host: `uv run --with basedpyright==…` against the project env so imports resolve. Fragment: `uvx basedpyright@…`. |
 | Boundaries/cycles | **tach** | Always on when this pack is selected. |
 | Dead code | **vulture** + whitelist | Knip analogue. |
-| Tests | **pytest** (Host full gate) | Via `uv run pytest`; add pytest as a Target dev dependency. |
+| Tests | **pytest** (Host) | Via `uv run pytest` (`make test` / collector); add pytest as a Target dev dependency. |
+| Coverage | **coverage.py + shared ratchet** | Host full gate; `tools/quality/python/collect-coverage.sh` → `baselines/coverage.json`. |
 | Secrets | **Betterleaks v1** | Shared layer (Host mode). |
 | Dependency vulns | **osv-scanner** | Shared layer; Host `gate.sh full` only. |
 | Hooks | **lefthook** (Host) | pre-commit: secrets + format check of staged content; pre-push: full gate. |
-| Orchestration | **`tools/quality/python/gate.sh`** | `fast` = format + lint + types + boundaries + deadcode + secrets; `full` = fast + vulns + pytest. Run-all + summary (same contract as other Hosts). |
+| Orchestration | **`tools/quality/python/gate.sh`** | `fast` = format + lint + types + boundaries + deadcode + secrets; `full` = fast + vulns + coverage ratchet. Run-all + summary (same contract as other Hosts). |
 
 ## Pre-commit format
 
@@ -71,13 +72,14 @@ Host mode only (see REFERENCE.md "Wiring probes"):
 4. Host: install Betterleaks v1.9.0+ and osv-scanner (see languages/shared/MODULE.md) and lefthook; run `lefthook install`. Fragment (js-ts): rely on the Host's hooks; `pnpm gate:fast` already runs `lint:py`.
 5. Host: if `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.
 6. Host: merge `AGENTS.quality.md` into `AGENTS.md`.
-7. Host: `uv add --dev pytest` (and any other test deps), then `./tools/quality/gate.sh full`. Fragment: `pnpm lint:py`.
+7. Host: `uv add --dev pytest` (and any other test deps), then `./tools/quality/gate.sh full` (coverage ratchet runs pytest under coverage.py). Fragment: `pnpm lint:py`.
+8. Host: after the first green full gate, run `./tools/quality/run-coverage-ratchet.sh --update` and commit `baselines/coverage.json` (keep `floor` at 80 unless legacy-adopting).
 
 ## Pins
 
 Source: kit-root `pins.json` (see REFERENCE.md "Pins"). Literals below and in `package.scripts.json` / Host `run-*.sh` must match.
 
-`ruff@0.17.2`, `basedpyright@1.40.2`, `tach@0.35.3`, `vulture@2.16`.
+`ruff@0.17.2`, `basedpyright@1.40.2`, `tach@0.35.3`, `vulture@2.16`, `coverage@7.17.0`.
 
 - `tach.toml`: run `uvx tach@0.35.3 init` then refine `[[modules]]`. Keep `forbid_circular_dependencies = true`.
 - Vulture: commit `vulture_whitelist.py` from `--make-whitelist`; treat like a baseline.

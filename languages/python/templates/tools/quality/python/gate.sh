@@ -2,7 +2,7 @@
 # quality-kit python gate.
 # Usage: ./tools/quality/python/gate.sh [fast|full]
 #   fast — format + lint + types + boundaries + deadcode + secrets
-#   full — fast + osv-scanner + pytest (default for CI / pre-push)
+#   full — fast + osv-scanner + coverage ratchet (default for CI / pre-push)
 # Every step runs even after a failure so one invocation reports everything
 # (same run-all contract as other Hosts; see REFERENCE.md / #15).
 # Local multi-Host Targets use the composed ./tools/quality/gate.sh instead.
@@ -39,10 +39,8 @@ step secrets "${SCRIPT_DIR}/../run-secret-scan.sh"
 
 if [[ "${mode}" == "full" ]]; then
 	step vulns "${SCRIPT_DIR}/../run-vuln-scan.sh"
-	# Coverage ratchet (#21): add collect-coverage.sh + 
-	#   step coverage "${SCRIPT_DIR}/../run-coverage-ratchet.sh"
-	# (pytest-cov) when wiring coverage; until then keep pytest as `test`.
-	step test "${SCRIPT_DIR}/run-test.sh"
+	# Collector runs pytest under coverage.py; replaces bare run-test.sh.
+	step coverage "${SCRIPT_DIR}/../run-coverage-ratchet.sh"
 fi
 
 if ((${#failed[@]} == 0)); then

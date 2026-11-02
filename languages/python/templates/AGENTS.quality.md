@@ -11,6 +11,6 @@ Do not declare completion with only piecemeal checks (`ruff` alone, format alone
 5. `vulture` (+ committed whitelist)
 6. Betterleaks secret scan
 
-`./tools/quality/gate.sh full` = fast + osv-scanner (lockfile vulns) + `pytest` (CI and pre-push). Acknowledge a finding only with an `id` + `reason` in `osv-scanner.toml`.
+`./tools/quality/gate.sh full` = fast + osv-scanner (lockfile vulns) + coverage ratchet (`pytest` under coverage.py vs `baselines/coverage.json`; CI and pre-push). Acknowledge a finding only with an `id` + `reason` in `osv-scanner.toml`.
 
 A task is not complete until `gate.sh fast` passes cleanly.
