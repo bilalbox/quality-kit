@@ -76,7 +76,7 @@ Pin **5.1.0** (`dart pub global activate dependency_validator 5.1.0`). Config pe
 2. Install Betterleaks v1.9.0+ and lefthook on the host; run `lefthook install`.
 3. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.
 4. Merge `AGENTS.quality.md` into `AGENTS.md`.
-5. Resolve **drift** deliberately (see skill Drift playbook). A stock `analysis_options.yaml` often drifts from the kit template — prefer **merge** over blind replace, and follow [Adopting on legacy code](#adopting-on-legacy-code) for the strict modes.
+5. Resolve **drift** deliberately (see skill Drift playbook). A stock `analysis_options.yaml` often drifts from the kit template — prefer **merge** over blind replace, and follow "Adopting on legacy code" in `languages/dart/MODULE.md` for the strict modes.
 6. `./tools/quality/gate.sh full`.
 
 Helper `tool/*.py` scripts do not require the python pack; adopt with `--packs dart` unless the repo has a real Python product surface.
