@@ -109,6 +109,30 @@ test("shared layer: Pack allowlists hold only array tables, so appending them is
 	}
 });
 
+for (const host of HOSTS) {
+	test(`shared layer: ${host} CI installs Betterleaks only through the shared action`, () => {
+		const state = desiredState(tempTarget(), [host]);
+		const ci = state.rootPlacements.find(
+			(p) => p.targetRel === ".github/workflows/ci.yml",
+		);
+		assert.match(
+			readFileSync(templatePath(ci!), "utf8"),
+			/uses: \.\/\.github\/actions\/setup-betterleaks\n/,
+		);
+		const ownDownloads = state.rootPlacements.filter(
+			(p) =>
+				!p.shared &&
+				readFileSync(templatePath(p), "utf8").includes(
+					"betterleaks/releases/download",
+				),
+		);
+		assert.deepEqual(
+			ownDownloads.map((p) => p.targetRel),
+			[],
+		);
+	});
+}
+
 test("shared layer: a Fragment Pack alone does not compose it", () => {
 	const state = desiredState(tempTarget(), ["python"]);
 	assert.ok(!state.rootPlacements.some((p) => p.shared));
