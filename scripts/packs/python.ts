@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
+import { postApplySteps } from "./post-apply";
 import type { Contribution, Pack, Placement } from "./types";
 import { PYTHON_HELPER_DIRS, walkFiles } from "./walk";
 
@@ -56,6 +57,7 @@ export const pythonPack: Pack = {
 				scripts,
 				gateFragments: ["lint:py"],
 			},
+			nextSteps: postApplySteps("python"),
 		};
 	},
 };
