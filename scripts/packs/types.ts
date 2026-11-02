@@ -27,6 +27,8 @@ export type Contribution = {
 	rootPlacements: readonly Placement[];
 	packagePlacements: readonly Placement[];
 	packageJson?: PackageJsonContribution;
+	/** Ordered steps the user runs after apply; empty for stub Packs. */
+	nextSteps: readonly string[];
 };
 
 export type Pack = {
