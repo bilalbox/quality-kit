@@ -54,6 +54,7 @@ export const pythonPack: Pack = {
 				gateFragments: ["lint:py"],
 			},
 			nextSteps: postApplySteps("python"),
+			probes: [],
 		};
 	},
 };

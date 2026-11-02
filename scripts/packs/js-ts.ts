@@ -4,7 +4,8 @@ import { packTemplatesRoot, readText } from "../kit-fs";
 import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
-import type { Contribution, Pack } from "./types";
+import type { Contribution, Pack, WiringProbe } from "./types";
+import { HUSKY, hooksInstalledProbe } from "./wiring";
 
 const ROOT_FILES: Record<string, FileKind> = {
 	"biome.json": "owned",
@@ -42,6 +43,34 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"tests/ratchets/fixtures/findings-stale.json": "owned",
 	"AGENTS.quality.md": AGENTS_MD,
 };
+
+function hasTestScript(target: string): boolean {
+	const pkgPath = join(target, "package.json");
+	if (!existsSync(pkgPath)) return false;
+	try {
+		const pkg = JSON.parse(readText(pkgPath)) as {
+			scripts?: Record<string, string>;
+		};
+		return Boolean(pkg.scripts?.test);
+	} catch {
+		return false;
+	}
+}
+
+const PROBES: readonly WiringProbe[] = [
+	hooksInstalledProbe(HUSKY),
+	{
+		label: "package.json has a test script",
+		check: (target) =>
+			hasTestScript(target)
+				? []
+				: [
+						{
+							fix: 'add a "test" script to package.json (`pnpm gate` ends with `pnpm test`)',
+						},
+					],
+	},
+];
 
 function manifest(name: string): string {
 	return join(packTemplatesRoot("js-ts"), name);
@@ -93,6 +122,7 @@ export const jsTsPack: Pack = {
 				enginesNode: ">=24.0.0 <25",
 			},
 			nextSteps: postApplySteps("js-ts"),
+			probes: PROBES,
 		};
 	},
 };

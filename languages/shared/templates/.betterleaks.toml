@@ -12,8 +12,10 @@ betterleaksMinVersion = "v1.9.0"
 useDefault = true
 
 [[allowlists]]
-description = "Tests, fixtures, and local secret files (every Host)"
+description = "Tests, fixtures, the kit lock file, and local secret files (every Host)"
 paths = [
+  # apply's lock file: content hashes keyed by path (e.g. run-secret-scan.sh).
+  '''(?:^|/)\.quality-kit\.lock\.json$''',
   '''(?i)tests?\/.*''',
   '''(?i)fixtures\/.*''',
   # Local-only secrets (still caught if staged/committed via git scan).

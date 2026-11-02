@@ -99,6 +99,15 @@ Everything not listed is **owned** (audit reports drift), including `config/dete
 
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `gradle.quality.properties` → `gradle.properties` (all four `qualityKit.*` keys; values may be tuned); `Makefile` → itself (`gate-fast:` and `gate:` targets)
 
+## Wiring probes
+
+audit checks the Wiring section was done (see REFERENCE.md "Wiring probes"):
+
+- **git hooks installed (lefthook)**: `pre-commit` and `pre-push` installed by `lefthook install`.
+- **settings includes the quality build-logic**: `settings.gradle(.kts)` has `includeBuild("build-logic/quality")`.
+- **root build applies quality-kit.root**: root `build.gradle(.kts)` has `id("quality-kit.root")`.
+- **each Android module applies quality-kit.android**: every subproject build (depth ≤ 4; `build-logic/` and `buildSrc/` skipped) that names `com.android.application|library`, or a `libs.plugins.android.application|library` catalog alias, must have `id("quality-kit.android")`. Each unwired module is reported by its build file. Decision: if no module applies `quality-kit.android` at all, the probe fails too (the gate's `qualityFast` / `qualityFull` tasks would not exist), so AGP aliases the probe does not recognise cannot pass silently.
+
 ## Post-apply
 
 `apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.

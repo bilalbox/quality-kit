@@ -15,6 +15,7 @@ import { test } from "node:test";
 import { desiredState, diffAgainst } from "../scripts/desired-state";
 import { kitRoot, packTemplatesRoot } from "../scripts/kit-fs";
 import { PACK_IDS, type PackId } from "../scripts/packs";
+import { wireHooks, wireKotlinBuild } from "./wired-target";
 
 function tempTarget(): string {
 	return mkdtempSync(join(tmpdir(), "quality-kit-"));
@@ -77,11 +78,16 @@ function mergeFragment(target: string, fragment: string, dest: string): void {
 	rmSync(join(target, fragment));
 }
 
-test("audit: js-ts + python Target with tuned seeds and merged content is green", () => {
+test("audit: wired js-ts + python Target with tuned seeds and merged content is green", () => {
 	const target = tempTarget();
+	wireHooks(target, "husky");
 	writeFileSync(
 		join(target, "package.json"),
-		JSON.stringify({ name: "x", dependencies: { lodash: "4" } }),
+		JSON.stringify({
+			name: "x",
+			scripts: { test: "node --test" },
+			dependencies: { lodash: "4" },
+		}),
 	);
 	writeFileSync(join(target, "AGENTS.md"), "# Repo agents\n");
 	runKit("apply", target, "js-ts,python");
@@ -113,8 +119,10 @@ test("audit: js-ts + python Target with tuned seeds and merged content is green"
 	assert.equal(status, 0, stdout);
 });
 
-test("audit: kotlin-android Target with tuned seeds and merged content is green", () => {
+test("audit: wired kotlin-android Target with tuned seeds and merged content is green", () => {
 	const target = tempTarget();
+	wireHooks(target, "lefthook");
+	wireKotlinBuild(target);
 	writeFileSync(join(target, "gradle.properties"), "android.useAndroidX=true\n");
 	runKit("apply", target, "kotlin-android");
 
@@ -126,8 +134,9 @@ test("audit: kotlin-android Target with tuned seeds and merged content is green"
 	assert.equal(status, 0, stdout);
 });
 
-test("audit: dart Target with tuned roots config and merged content is green", () => {
+test("audit: wired dart Target with tuned roots config and merged content is green", () => {
 	const target = tempTarget();
+	wireHooks(target, "lefthook");
 	mkdirSync(join(target, "app"));
 	writeFileSync(join(target, "app", "pubspec.yaml"), "name: app\n");
 	writeFileSync(

@@ -34,7 +34,7 @@ Hosts call it from: js-ts `pnpm lint:secrets` (`.husky/pre-commit` passes `--sta
 
 Betterleaks takes one config file. `[extend]` cannot combine `useDefault = true` with `path`, and `[allowlist]` cannot be mixed with `[[allowlists]]` (both verified on 1.9.0). So the wrapper builds the config at scan time: `.betterleaks.toml`, then every `.betterleaks.d/*.toml` in name order, concatenated into a temp file passed with `-c`.
 
-- `.betterleaks.toml` (shared): `useDefault = true` plus the allowlist every Host had: `tests/`, `fixtures/`, `.env`, `.env.*`.
+- `.betterleaks.toml` (shared): `useDefault = true` plus the allowlist every Host had (`tests/`, `fixtures/`, `.env`, `.env.*`) and apply's `.quality-kit.lock.json` (path-keyed sha256 hashes trip `generic-api-key` on the `run-secret-scan.sh` entry).
 - `.betterleaks.d/<pack>.toml` (one per selected Host): that Pack's extra entries. Additive only: an allowlist entry can only skip more paths, never re-enable one the shared config skips.
 - Every `.betterleaks.d/*.toml` holds only `[[allowlists]]` / `[[rules]]` tables. A top-level key would attach to the previous file's last table, and `[extend]` / `[allowlist]` clash with the shared config. A test enforces this for the kit's own files.
 - Target-specific entries go in a new file such as `.betterleaks.d/local.toml`; audit does not track it, and the kit files stay matching.

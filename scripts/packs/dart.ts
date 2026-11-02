@@ -6,6 +6,7 @@ import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
 import type { Contribution, Pack, Placement } from "./types";
 import { SKIP_DIRS, walkFiles } from "./walk";
+import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
 const ROOT_FILES: Record<string, FileKind> = {
 	"quality-kit.dart.json": "seed",
@@ -118,6 +119,7 @@ export const dartPack: Pack = {
 			packagePlacements: packagePlacements(target),
 			// no packageJson — dart Host does not own package.json merges
 			nextSteps: postApplySteps("dart"),
+			probes: [hooksInstalledProbe(LEFTHOOK)],
 		};
 	},
 };

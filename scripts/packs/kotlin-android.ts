@@ -1,10 +1,12 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { readText } from "../kit-fs";
 import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
-import type { Contribution, Pack } from "./types";
+import type { Contribution, Pack, WiringProbe } from "./types";
+import { listFiles } from "./walk";
+import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
 const ROOT_FILES: Record<string, FileKind> = {
 	"lefthook.yml": "owned",
@@ -65,6 +67,106 @@ export function detectKotlinAndroid(target: string): boolean {
 	});
 }
 
+type GradleBuild = { rel: string; code: string };
+
+/** Comments stripped so commented-out wiring does not count. */
+function readGradle(target: string, rel: string): GradleBuild {
+	const code = readText(join(target, rel))
+		.replace(/\/\*[\s\S]*?\*\//g, "")
+		.replace(/\/\/.*$/gm, "");
+	return { rel, code };
+}
+
+/** Kotlin DSL first, then Groovy. */
+function gradleBuild(target: string, base: string): GradleBuild | null {
+	const rel = [`${base}.kts`, base].find((r) => existsSync(join(target, r)));
+	return rel ? readGradle(target, rel) : null;
+}
+
+const INCLUDES_QUALITY_BUILD =
+	/\bincludeBuild\s*\(?\s*["']build-logic\/quality["']/;
+
+/** `id("…")` (Kotlin DSL) or `id '…'` (Groovy) in a plugins block. */
+function appliesPlugin(code: string, pluginId: string): boolean {
+	const escaped = pluginId.replace(/\./g, "\\.");
+	return new RegExp(`\\bid\\s*\\(?\\s*["']${escaped}["']`).test(code);
+}
+
+/** AGP module plugin by id, or by the usual version-catalog alias names. */
+const ANDROID_MODULE =
+	/["']com\.android\.(application|library)["']|\blibs\.plugins\.android[._-]?(application|library)\b/i;
+
+/** Included builds never hold app modules; build-logic/quality is the kit's own. */
+const NOT_MODULE_DIRS = new Set(["build-logic", "buildSrc", ".gradle"]);
+
+/** Every subproject build file (root excluded), comments stripped. */
+function moduleBuilds(target: string): GradleBuild[] {
+	return listFiles(
+		target,
+		4,
+		(name) => name === "build.gradle.kts" || name === "build.gradle",
+		(rel) => NOT_MODULE_DIRS.has(rel),
+	)
+		.filter((rel) => dirname(rel) !== ".")
+		.map((rel) => readGradle(target, rel));
+}
+
+const ANDROID_MODULE_FIX =
+	'add id("quality-kit.android") to plugins { } after com.android.application|library';
+
+const PROBES: readonly WiringProbe[] = [
+	hooksInstalledProbe(LEFTHOOK),
+	{
+		label: "settings includes the quality build-logic",
+		check(target) {
+			const settings = gradleBuild(target, "settings.gradle");
+			if (settings && INCLUDES_QUALITY_BUILD.test(settings.code)) return [];
+			return [
+				{
+					detail: settings?.rel ?? "settings.gradle(.kts) missing",
+					fix: 'add includeBuild("build-logic/quality") inside pluginManagement { } in settings.gradle.kts',
+				},
+			];
+		},
+	},
+	{
+		label: "root build applies quality-kit.root",
+		check(target) {
+			const root = gradleBuild(target, "build.gradle");
+			if (root && appliesPlugin(root.code, "quality-kit.root")) return [];
+			return [
+				{
+					detail: root?.rel ?? "build.gradle(.kts) missing",
+					fix: 'add id("quality-kit.root") to plugins { } in the root build.gradle.kts',
+				},
+			];
+		},
+	},
+	{
+		label: "each Android module applies quality-kit.android",
+		check(target) {
+			const modules = moduleBuilds(target);
+			const unwired = modules.filter(
+				(m) =>
+					ANDROID_MODULE.test(m.code) &&
+					!appliesPlugin(m.code, "quality-kit.android"),
+			);
+			if (unwired.length > 0) {
+				return unwired.map((m) => ({ detail: m.rel, fix: ANDROID_MODULE_FIX }));
+			}
+			if (modules.some((m) => appliesPlugin(m.code, "quality-kit.android"))) {
+				return [];
+			}
+			return [
+				{
+					detail: "no module applies it, so qualityFast / qualityFull do not exist",
+					fix: `in each Android module build: ${ANDROID_MODULE_FIX}`,
+				},
+			];
+		},
+	},
+];
+
 export const kotlinAndroidPack: Pack = {
 	id: "kotlin-android",
 	kind: "host",
@@ -77,6 +179,7 @@ export const kotlinAndroidPack: Pack = {
 			],
 			packagePlacements: [],
 			nextSteps: postApplySteps("kotlin-android"),
+			probes: PROBES,
 		};
 	},
 };

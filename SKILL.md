@@ -69,15 +69,15 @@ Before pack-specific steps, **read** each selected pack's module:
 
 `apply` never overwrites existing files. Audit groups files by Placement kind (see `GLOSSARY.md`):
 
-- **owned** — **drift** means Target content ≠ template. Use the steps below.
+- **owned** — Target content ≠ template. The Lock file (`.quality-kit.lock.json`, written by apply) says why: **stale** = untouched since apply, the kit moved on (usually **Replace**); **customized** = edited in the Target (Keep or Merge); **drift** = no recorded hash, provenance unknown (no lock file: re-run apply). Use the steps below.
 - **seed** — tune freely; only **missing** or **invalid** (JSON no longer parses) is a gap.
 - **merge-into** — **unmerged** means the destination lacks the kit's markers (e.g. `AGENTS.md` has no `## Definition of Done (Mandatory Gate)` section). Merge the fragment in; you may then delete the fragment file.
 
 For each drifted owned path, pick one deliberately:
 
-1. **Keep** — Target policy wins; leave as-is (audit will keep reporting drift).
+1. **Keep** — Target policy wins; leave as-is (audit will keep reporting it as customized or drift).
 2. **Merge** — fold useful template rules into the existing file by hand.
-3. **Replace** — back up, then copy the template over (human/agent deliberate; not `apply`).
+3. **Replace** — back up, then copy the template over (human/agent deliberate; not `apply`). Re-run `apply` afterwards so the Lock file records the new content.
 
 Common dart case: stock `analysis_options.yaml` (`flutter_lints` for Flutter apps, `lints` for pure Dart packages) vs kit defaults — usually **merge** (keep the include; adopt kit strict modes, `analyzer.exclude` and linter rules — see dart MODULE.md "Analysis" for legacy adoption).
 
@@ -88,14 +88,14 @@ Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge**
 ### Audit
 
 1. `pnpm run audit -- --target <repo>` (read-only).
-2. Report packs (with host/fragment roles), file gaps by Placement kind (owned missing/drift, seed missing/invalid, merge-into unmerged), script gaps (js-ts), orphan-Fragment warnings.
+2. Report packs (with host/fragment roles), file gaps by Placement kind (owned missing/stale/customized/drift, seed missing/invalid, merge-into unmerged), script gaps (js-ts), unwired Wiring probes with their printed fixes, orphan-Fragment warnings.
 3. Done when the report lists every gap; do not modify the Target.
 
 ### Adopt (existing repo)
 
 1. Prefer a clean working tree; work on a branch. If WIP must stay, isolate quality-gate files in the adopt commit.
 2. Resolve packs (detect or `--packs`). Read each pack `MODULE.md`.
-3. `pnpm apply -- --target <repo>`. Never overwrites existing files.
+3. `pnpm apply -- --target <repo>`. Never overwrites existing files. Commit the `.quality-kit.lock.json` it writes.
 4. Follow each pack's post-apply steps (apply “Next” output = MODULE `## Post-apply`).
 5. Clear first-pass gate failures (format, analyze, secrets, deps, tests). If the repo has an adoption checklist issue, tick it; otherwise MODULE post-apply + green gate is enough.
 6. Merge `AGENTS.quality.md` into `AGENTS.md`.

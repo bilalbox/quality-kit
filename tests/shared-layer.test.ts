@@ -89,7 +89,7 @@ test("apply + audit: shared files are labelled with the shared layer, not a Host
 
 	appendFileSync(join(target, ".betterleaks.toml"), "# local edit\n");
 	const audited = runKit("audit", target, "kotlin-android");
-	assert.match(audited.output, /drift +\[shared\] \.betterleaks\.toml/);
+	assert.match(audited.output, /customized +\[shared\] \.betterleaks\.toml/);
 });
 
 test("shared layer: Pack allowlists hold only array tables, so appending them is safe", () => {
