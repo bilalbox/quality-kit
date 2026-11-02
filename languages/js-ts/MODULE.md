@@ -124,12 +124,18 @@ All of these flags behave the same in TypeScript 7.
 
 madge + dependency-cruiser need patches under TS7 (`ts.sys` removed). **rev-dep avoids that.** Do not reintroduce madge/depcruise. Same rule for typescript-eslint (peer `typescript <6.1.0` at 8.72); type-aware lint stays in Biome (see Type-aware lint).
 
+## CI
+
+- Gate action: `.github/actions/js-ts-quality-gate/` (namespaced so multi-Host Targets can place every Host's gate).
+- Workflow template `templates/.github/workflows/ci.yml` is a composition input; Desired state places a generated `.github/workflows/ci.yml` (see REFERENCE.md "CI composition"). Single-Host Targets get this template verbatim.
+
 ## Placement kinds
 
 Everything not listed is **owned** (audit reports drift). Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
 - **seed:** `biome.complexity.json`, `rev-dep.config.json`, `baselines/complexity.json`, `baselines/biome-diagnostics.json`, `.gitignore`
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `pnpm-workspace.yaml` → itself (`esbuild: true`); `.npmrc` → itself (`engine-strict=true`)
+- **generated (owned):** Target `.github/workflows/ci.yml` from this Host's workflow template when js-ts is the only CI Host, or composed with other Hosts' jobs when several are selected.
 
 ## Wiring probes
 
