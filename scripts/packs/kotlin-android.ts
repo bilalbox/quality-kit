@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readText } from "../kit-fs";
+import { postApplySteps } from "./post-apply";
 import type { Contribution, Pack, Placement } from "./types";
 
 const ROOT_COPY_PATHS = [
@@ -73,6 +74,7 @@ export const kotlinAndroidPack: Pack = {
 		return {
 			rootPlacements: rootPlacements(),
 			packagePlacements: [],
+			nextSteps: postApplySteps("kotlin-android"),
 		};
 	},
 };

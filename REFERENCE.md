@@ -24,6 +24,7 @@ Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Con
 ## apply / audit semantics
 
 - **apply** builds Desired state, copies missing placement files only (never overwrites), sets executable bit when the placement asks for it, and merges missing `package.json` scripts/devDeps/`lint-staged`/`engines` from Desired state. Policy flags like `--force-scripts` stay in the apply adapter.
+- **Next steps:** each Pack's Contribution carries `nextSteps`, read from the numbered list under `## Post-apply` in `languages/<pack>/MODULE.md` (one line per step). apply prints a "Next" block per selected Pack that declares steps, in Pack order, and nothing else. A Fragment prints its own block whether or not its Host is selected (audit already warns about orphan Fragments). Stub Packs (rust) declare none.
 - **audit** builds the same Desired state, diffs the Target via `diffAgainst` (content/presence; mode ignored), labels packs as host/fragment, warns on orphan Fragments, and exits non-zero on gaps.
 - Template updates: audit shows drift; humans re-copy deliberately (no auto-overwrite). Drift playbook (keep / merge / replace) lives in `SKILL.md`.
 - Packs: detect from target, or `--packs a,b`. `--python` adds the `python` pack. Python detect ignores helper-script dirs (`tool`, `tools`, `scripts`, …).
