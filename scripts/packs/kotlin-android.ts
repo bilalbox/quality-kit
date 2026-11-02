@@ -34,6 +34,7 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"tools/quality/kotlin-android/run-format.sh": "owned",
 	"tools/quality/kotlin-android/screenshots.sh": "owned",
 	"tools/quality/kotlin-android/doctor.sh": "owned",
+	"tools/quality/kotlin-android/collect-coverage.sh": "owned",
 };
 
 /** Root build files that name the Android Gradle Plugin in Gradle Android projects. */

@@ -9,7 +9,7 @@ DART_Q := $(QUALITY)/dart
 help:
 	@echo "Targets:"
 	@echo "  make gate-fast  format + analyze + secrets + deps"
-	@echo "  make gate       gate-fast + osv-scanner + flutter test"
+	@echo "  make gate       gate-fast + osv-scanner + coverage ratchet"
 	@echo "  make format     dart format --set-exit-if-changed"
 	@echo "  make analyze    flutter/dart analyze --fatal-infos"
 	@echo "  make deps       dependency_validator"

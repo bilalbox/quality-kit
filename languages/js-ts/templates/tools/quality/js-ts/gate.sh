@@ -2,7 +2,7 @@
 # quality-kit js-ts gate.
 # Usage: ./tools/quality/js-ts/gate.sh [fast|full] [extra-pnpm-script…]
 #   fast — lint + secrets + graph + complexity + typecheck (+ Fragment scripts)
-#   full — fast + vulns + test (default for CI / pre-push)
+#   full — fast + vulns + coverage ratchet (default for CI / pre-push)
 # Every step runs even after a failure so one invocation reports everything.
 # Fragment Packs append their pnpm script names as extra args (via Desired state).
 # Local multi-Host Targets use the composed ./tools/quality/gate.sh instead.
@@ -44,7 +44,7 @@ done
 
 if [[ "${mode}" == "full" ]]; then
 	step vulns pnpm lint:vulns
-	step test pnpm test
+	step coverage pnpm lint:coverage
 fi
 
 if ((${#failed[@]} == 0)); then

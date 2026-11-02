@@ -6,8 +6,9 @@
 	"lint:vulns": "bash tools/quality/run-vuln-scan.sh",
 	"lint:graph": "tsx scripts/run-rev-dep.ts",
 	"lint:complexity": "tsx scripts/ratchets/run-complexity.ts",
+	"lint:coverage": "bash tools/quality/run-coverage-ratchet.sh",
 	"gate:fast": "bash tools/quality/js-ts/gate.sh fast",
 	"gate": "bash tools/quality/js-ts/gate.sh full",
-	"test:ratchets": "bash tests/ratchets/ratchet-contract.test.sh",
+	"test:ratchets": "bash tools/quality/ratchets/ratchet-contract.test.sh",
 	"prepare": "husky"
 }

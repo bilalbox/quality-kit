@@ -134,6 +134,80 @@ test("baseline-growth: score increase on an existing id fails", () => {
 	assert.match(output, /f\|r/);
 });
 
+test("baseline-growth: coverage score decrease fails (decrease counts as growth)", () => {
+	const repo = tempRepo();
+	write(
+		repo,
+		"baselines/coverage.json",
+		`${JSON.stringify(
+			{
+				version: 1,
+				worseWhen: "lower",
+				floor: 80,
+				findings: [{ id: ".", score: 90 }],
+			},
+			null,
+			"\t",
+		)}\n`,
+	);
+	commitAll(repo, "base");
+	write(
+		repo,
+		"baselines/coverage.json",
+		`${JSON.stringify(
+			{
+				version: 1,
+				worseWhen: "lower",
+				floor: 80,
+				findings: [{ id: ".", score: 85 }],
+			},
+			null,
+			"\t",
+		)}\n`,
+	);
+	commitAll(repo, "drop");
+	const { status, output } = check(repo, { base: "HEAD~1" });
+	assert.equal(status, 1, output);
+	assert.match(output, /baselines\/coverage\.json/);
+	assert.match(output, /90(?:\.0)? → 85(?:\.0)?/);
+});
+
+test("baseline-growth: coverage score increase passes", () => {
+	const repo = tempRepo();
+	write(
+		repo,
+		"baselines/coverage.json",
+		`${JSON.stringify(
+			{
+				version: 1,
+				worseWhen: "lower",
+				floor: 80,
+				findings: [{ id: ".", score: 85 }],
+			},
+			null,
+			"\t",
+		)}\n`,
+	);
+	commitAll(repo, "base");
+	write(
+		repo,
+		"baselines/coverage.json",
+		`${JSON.stringify(
+			{
+				version: 1,
+				worseWhen: "lower",
+				floor: 80,
+				findings: [{ id: ".", score: 92 }],
+			},
+			null,
+			"\t",
+		)}\n`,
+	);
+	commitAll(repo, "raise");
+	const { status, output } = check(repo, { base: "HEAD~1" });
+	assert.equal(status, 0, output);
+});
+
 test("baseline-growth: .betterleaksignore and vulture whitelist grow fails", () => {
 	const repo = tempRepo();
 	write(repo, ".betterleaksignore", "# c\nold:line:1\n");

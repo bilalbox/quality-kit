@@ -212,8 +212,18 @@ test("apply: dart,kotlin-android writes both Host gates and composed entrypoints
 			"install-betterleaks.sh",
 			"install-osv-scanner.sh",
 			"kotlin-android",
+			"ratchets",
+			"run-coverage-ratchet.sh",
 			"run-secret-scan.sh",
 			"run-vuln-scan.sh",
 		].sort(),
+	);
+	assert.ok(
+		existsSync(join(target, "tools/quality/dart/collect-coverage.sh")),
+	);
+	assert.ok(
+		existsSync(
+			join(target, "tools/quality/kotlin-android/collect-coverage.sh"),
+		),
 	);
 });

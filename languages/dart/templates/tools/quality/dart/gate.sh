@@ -2,7 +2,7 @@
 # quality-kit dart gate.
 # Usage: ./tools/quality/dart/gate.sh [fast|full]
 #   fast — format + analyze + secrets + deps
-#   full — fast + vulns + test (default for CI / pre-push)
+#   full — fast + vulns + coverage ratchet (default for CI / pre-push)
 # Every step runs even after a failure so one invocation reports everything.
 # Local multi-Host Targets use the composed ./tools/quality/gate.sh instead.
 set -euo pipefail
@@ -36,7 +36,8 @@ step deps "${SCRIPT_DIR}/run-deps.sh"
 
 if [[ "${mode}" == "full" ]]; then
 	step vulns "${SCRIPT_DIR}/../run-vuln-scan.sh"
-	step test "${SCRIPT_DIR}/run-test.sh"
+	# Collector runs flutter test --coverage; replaces bare run-test.sh.
+	step coverage "${SCRIPT_DIR}/../run-coverage-ratchet.sh"
 fi
 
 if ((${#failed[@]} == 0)); then

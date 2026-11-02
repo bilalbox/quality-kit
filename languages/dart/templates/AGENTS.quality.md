@@ -9,6 +9,6 @@ Do not declare completion with only piecemeal checks (`flutter analyze` alone, f
 3. Betterleaks secret scan
 4. `dependency_validator` (missing / unused / mis-promoted deps)
 
-`./tools/quality/gate.sh full` = fast + osv-scanner (lockfile vulns) + `flutter test` (CI and pre-push). The Host gate runs every step even after a failure and ends with `# gate:… FAILED: …` listing step names. Acknowledge a finding only with an `id` + `reason` in `osv-scanner.toml`.
+`./tools/quality/gate.sh full` = fast + osv-scanner (lockfile vulns) + coverage ratchet (`flutter test --coverage` per root vs `baselines/coverage.json`; CI and pre-push). The Host gate runs every step even after a failure and ends with `# gate:… FAILED: …` listing step names. Acknowledge a finding only with an `id` + `reason` in `osv-scanner.toml`.
 
 A task is not complete until `gate.sh fast` passes cleanly.
