@@ -166,9 +166,12 @@ function main(): void {
 			"  5. Seed rev-dep:    pnpm lint:graph -- --update-snapshot  (creates .rev-dep.baseline.json + .rev-dep.duplicates.json; do not hand-write them)",
 		);
 		console.log("  6. Merge AGENTS.quality.md into AGENTS.md");
+		console.log(
+			"  7. Biome cleanup: pnpm fix (commit alone), then baseline the rest: pnpm lint -- --update",
+		);
 		if (packs.includes("python")) {
 			console.log(
-				"  7. Refine tach.toml modules; uvx vulture@2.16 --make-whitelist",
+				"  8. Refine tach.toml modules; uvx vulture@2.16 --make-whitelist",
 			);
 		}
 	}
