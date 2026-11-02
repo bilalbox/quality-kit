@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Quality gates
 
-Language packs live under `languages/`. Workflows: **audit**, **adopt**, **new**.
+Language packs live under `languages/`. Workflows: **audit**, **adopt**, **upgrade**, **new**.
 
 Always run kit CLIs from **`~/mycode/quality-kit`** (this skill is a symlink to that repo, installed for both Cursor at `~/.agents/skills/quality-gates` and Claude Code at `~/.claude/skills/quality-gates` — keep both links when changing the install).
 
@@ -30,6 +30,7 @@ pnpm apply -- --target ~/mycode/<repo> --packs js-ts,python
 pnpm apply -- --target ~/mycode/<repo> --packs dart
 pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
 pnpm apply -- --target ~/mycode/<repo> --python   # force-add python Fragment
+pnpm run upgrade -- --target ~/mycode/<repo> --dry-run   # `pnpm run`: bare `pnpm upgrade` is a pnpm builtin
 ```
 
 ### Pack selection
@@ -66,13 +67,13 @@ Before pack-specific steps, **read** each selected pack's module:
 
 ## Drift playbook
 
-`apply` never overwrites existing files. Audit groups files by Placement kind (see `GLOSSARY.md`):
+`apply` never overwrites existing files; `upgrade` overwrites only stale owned files. Audit groups files by Placement kind (see `GLOSSARY.md`):
 
-- **owned** — Target content ≠ template. The Lock file (`.quality-kit.lock.json`, written by apply) says why: **stale** = untouched since apply, the kit moved on (usually **Replace**); **customized** = edited in the Target (Keep or Merge); **drift** = no recorded hash, provenance unknown (no lock file: re-run apply). Use the steps below.
+- **owned** — Target content ≠ template. The Lock file (`.quality-kit.lock.json`, written by apply and upgrade) says why: **stale** = untouched since apply, the kit moved on (run **upgrade**); **customized** = edited in the Target (Keep or Merge); **drift** = no recorded hash, provenance unknown (no lock file: re-run apply). Use the steps below.
 - **seed** — tune freely; only **missing** or **invalid** (JSON no longer parses) is a gap.
 - **merge-into** — **unmerged** means the destination lacks the kit's markers (e.g. `AGENTS.md` has no `## Definition of Done (Mandatory Gate)` section). Merge the fragment in; you may then delete the fragment file.
 
-For each drifted owned path, pick one deliberately:
+For each customized or drift owned path (the ones upgrade lists under "Merge by hand"), pick one deliberately:
 
 1. **Keep** — Target policy wins; leave as-is (audit will keep reporting it as customized or drift).
 2. **Merge** — fold useful template rules into the existing file by hand.
@@ -117,6 +118,15 @@ pnpm run audit -- --target ~/mycode/<repo> --packs dart
 pnpm apply -- --target ~/mycode/<repo> --packs dart
 # then follow the printed "Next" steps (languages/dart/MODULE.md Post-apply)
 ```
+
+### Upgrade (after the kit's templates moved on)
+
+1. Requires a prior apply (the Target has `.quality-kit.lock.json`); otherwise run **Adopt** first. Prefer a clean working tree on a branch.
+2. `pnpm run upgrade -- --target <repo> --dry-run` (same `--packs` / `--python` as the apply). Use `pnpm run`: bare `pnpm upgrade` is pnpm's builtin `update` and ignores the script. Review the `would update` list.
+3. `pnpm run upgrade -- --target <repo>`. It overwrites only **stale** owned files (untouched since apply) and updates the lock file; it never touches customized or drift owned files, seeds, merge-into destinations, or `package.json`, and never creates files.
+4. For each path under `## Merge by hand`, apply the Drift playbook (Keep / Merge / Replace). For paths under `## Missing`, run apply.
+5. Run `pnpm run audit -- --target <repo>`, then the Host gate; commit the updated files with `.quality-kit.lock.json`.
+6. Done when audit shows no stale owned files and every remaining customized/drift path was decided deliberately.
 
 ### New (greenfield)
 
