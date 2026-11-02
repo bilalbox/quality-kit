@@ -3,8 +3,18 @@ export type PackId = (typeof PACK_IDS)[number];
 
 export type PackKind = "host" | "fragment";
 
-/** One template → Target path mapping contributed by a Pack. */
-export type Placement = {
+/** How audit judges a Placement (see GLOSSARY.md "Placement kind"). */
+export type PlacementKind = "owned" | "seed" | "merge-into";
+
+/** Where merge-into content must land, and the lines that prove it did. */
+export type MergeInto = {
+	/** Relpath under the Target root; may equal the Placement's targetRel. */
+	dest: string;
+	/** Each must start some line of dest (leading whitespace ignored). */
+	markers: readonly string[];
+};
+
+type PlacementBase = {
 	pack: PackId;
 	/** Relpath under languages/<pack>/templates/. */
 	templateRel: string;
@@ -12,6 +22,13 @@ export type Placement = {
 	targetRel: string;
 	executable?: boolean;
 };
+
+/** One template → Target path mapping contributed by a Pack. */
+export type Placement = PlacementBase &
+	(
+		| { kind: "owned" | "seed" }
+		| { kind: "merge-into"; mergeInto: MergeInto }
+	);
 
 export type PackageJsonContribution = {
 	scripts?: Record<string, string>;

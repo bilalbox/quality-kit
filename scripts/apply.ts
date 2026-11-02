@@ -10,10 +10,12 @@ import { join } from "node:path";
 import {
 	copyIfMissing,
 	desiredState,
+	missingMarkers,
 	packTemplatesRoot,
 	resolvePacks,
 	resolveTarget,
 	type DesiredState,
+	type Placement,
 } from "./lib";
 
 function mergePackageJson(
@@ -85,6 +87,27 @@ function packageRootLabel(targetRel: string): { root: string; file: string } {
 	};
 }
 
+/** Copy a Placement if missing; a merge-into fragment is skipped once its dest is merged. */
+function place(target: string, p: Placement): "copied" | "skipped" | "merged" {
+	if (
+		p.kind === "merge-into" &&
+		p.mergeInto.dest !== p.targetRel &&
+		missingMarkers(target, p.mergeInto).length === 0
+	) {
+		return "merged";
+	}
+	const dest = join(target, p.targetRel);
+	const result = copyIfMissing(join(packTemplatesRoot(p.pack), p.templateRel), dest);
+	if (result === "copied" && p.executable) chmodSync(dest, 0o755);
+	return result === "copied" ? "copied" : "skipped";
+}
+
+function placementLabel(p: Placement): string {
+	return p.kind === "merge-into" && p.mergeInto.dest !== p.targetRel
+		? `${p.targetRel} → ${p.mergeInto.dest}`
+		: p.targetRel;
+}
+
 function main(): void {
 	const argv = process.argv.slice(2);
 	const target = resolveTarget(argv);
@@ -117,27 +140,17 @@ function main(): void {
 
 	console.log("## files");
 	for (const p of state.rootPlacements) {
-		const src = join(packTemplatesRoot(p.pack), p.templateRel);
-		const dest = join(target, p.targetRel);
-		const result = copyIfMissing(src, dest);
-		console.log(`  ${result.padEnd(8)} [${p.pack}] ${p.targetRel}`);
-		if (result === "copied" && p.executable) {
-			chmodSync(dest, 0o755);
-		}
+		const result = place(target, p);
+		console.log(`  ${result.padEnd(8)} [${p.pack}] ${placementLabel(p)}`);
 	}
 
 	if (state.packagePlacements.length > 0) {
 		console.log("");
 		console.log("## dart package files");
 		for (const p of state.packagePlacements) {
-			const src = join(packTemplatesRoot(p.pack), p.templateRel);
-			const dest = join(target, p.targetRel);
-			const result = copyIfMissing(src, dest);
+			const result = place(target, p);
 			const { root, file } = packageRootLabel(p.targetRel);
 			console.log(`  ${result.padEnd(8)} [${root}] ${file}`);
-			if (result === "copied" && p.executable) {
-				chmodSync(dest, 0o755);
-			}
 		}
 	} else if (packs.includes("dart")) {
 		console.log("");
