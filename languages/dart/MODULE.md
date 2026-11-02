@@ -70,7 +70,7 @@ Strict modes usually surface many findings in an existing codebase, and `--fatal
 
 Config, wrapper (`tools/quality/run-secret-scan.sh`), install and CI step come from the Shared layer: see [languages/shared/MODULE.md](../shared/MODULE.md). lefthook pre-commit runs it with `--staged`; `gate.sh fast` and `make secrets` scan the working tree.
 
-**Pack allowlist** (`.betterleaks.d/dart.toml`): `*_test.dart`, `.dart_tool/`, `build/`, `android/.gradle/`, `android/app/build/`, `.dev.vars*`, `key.properties`, `*.jks`, `*.keystore`.
+**Pack allowlist** (`.betterleaks.d/dart.toml`): `.dart_tool/`, `build/`, `android/.gradle/`, `android/app/build/`, `.dev.vars*`. Test sources, `.env`, and signing files (`key.properties`, `*.jks`, `*.keystore`) are scanned.
 
 ## dependency_validator
 

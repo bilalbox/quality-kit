@@ -104,7 +104,7 @@ Principles:
 
 - pre-commit: fast staged checks (Betterleaks `git --staged` + format). A hook never commits unstaged hunks: js-ts relies on lint-staged's stash; dart / kotlin-android check the staged blobs only and fail with the fix command (see their MODULE.md "Pre-commit format")
 - pre-push / CI: full gate
-- **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; CI installs Betterleaks with `./.github/actions/setup-betterleaks` (checksum-pinned) before the Host's own setup action
+- **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; CI checks out with `fetch-depth: 0` and installs Betterleaks with `./.github/actions/setup-betterleaks` (checksum-pinned) before the Host's own setup action; the wrapper scans `origin/$GITHUB_BASE_REF..HEAD` in CI
 - **js-ts host:** husky + lint-staged; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
 - **dart host:** lefthook; `./tools/quality/gate.sh`; Flutter via `subosito/flutter-action` pinned to an exact `flutter-version` (dart MODULE.md Pins); dependency_validator installed in `setup-flutter`
 - **kotlin-android host:** lefthook; `./tools/quality/gate.sh` over Gradle `qualityFast` / `qualityFull` (from the copied-in `build-logic/quality` included build); JDK 21 + SDK licenses + `setup-gradle` + Robolectric jar cache in `setup-android`; screenshot diffs uploaded as an artifact on failure
