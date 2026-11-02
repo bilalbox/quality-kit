@@ -9,13 +9,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PackId } from "../packs/types";
 import { ciEnv, onPath, sh, StepFailed } from "./run";
-import type { SmokeRecipe } from "./types";
+import type { HostSmoke } from "./types";
 
 export { StepFailed };
 
 export type RunSmokeOptions = {
 	pack: PackId;
-	recipe: SmokeRecipe;
+	smoke: HostSmoke;
 	kitRoot: string;
 	/** Directory that will hold the unique Target child. Defaults to os.tmpdir(). */
 	workParent?: string;
@@ -70,11 +70,11 @@ function freshTargetPath(workParent: string, pack: PackId): string {
  * Returns the Target path. Throws StepFailed on the first failing step.
  */
 export function runSmoke(opts: RunSmokeOptions): string {
-	const { pack, recipe, kitRoot } = opts;
-	const missing = recipe.tools.filter((bin) => !onPath(bin));
+	const { pack, smoke, kitRoot } = opts;
+	const missing = smoke.tools.filter((bin) => !onPath(bin));
 	if (missing.length > 0) {
 		throw new StepFailed(
-			`missing tool(s) on PATH: ${missing.join(", ")} (needed for ${pack} smoke)`,
+			`missing tool(s) on PATH: ${missing.join(", ")} (needed for ${pack} Host smoke)`,
 		);
 	}
 
@@ -83,16 +83,16 @@ export function runSmoke(opts: RunSmokeOptions): string {
 	let succeeded = false;
 	try {
 		console.log(`# smoke ${pack} → ${target}`);
-		recipe.scaffold(target);
+		smoke.scaffold(target);
 		sh(target, ["git", "init", "-q"]);
 		sh(target, ["git", "config", "user.email", "smoke@quality-kit.local"]);
 		sh(target, ["git", "config", "user.name", "quality-kit smoke"]);
 
 		(opts.apply ?? ((t) => defaultApply(kitRoot, pack, t)))(target);
-		recipe.wire(target);
+		smoke.wire(target);
 		(opts.audit ?? ((t) => defaultAudit(kitRoot, pack, t)))(target);
 
-		for (const argv of recipe.gate) {
+		for (const argv of smoke.gate) {
 			sh(target, argv, ciEnv());
 		}
 		succeeded = true;

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { readText } from "../kit-fs";
-import { type FileKind, placeFiles } from "./placements";
+import { type PlacementKindDecl, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
 import type { Contribution, Pack, WiringProbe } from "./types";
@@ -9,7 +9,7 @@ import { listFiles } from "./walk";
 import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
 /** Host scripts under tools/quality/kotlin-android/; shared root files are composed (see local.ts). */
-const ROOT_FILES: Record<string, FileKind> = {
+const ROOT_FILES: Record<string, PlacementKindDecl> = {
 	".betterleaks.d/kotlin-android.toml": "owned",
 	"gradle.quality.properties": {
 		dest: "gradle.properties",

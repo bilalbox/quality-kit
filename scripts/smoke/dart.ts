@@ -2,10 +2,10 @@ import { copyFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { kitRoot } from "../kit-fs";
 import { mergeAgentsMd, sh } from "./run";
-import type { SmokeRecipe } from "./types";
+import type { HostSmoke } from "./types";
 
 /** flutter create greenfield + dart Post-apply. */
-export const dartSmoke: SmokeRecipe = {
+export const dartSmoke: HostSmoke = {
 	tools: ["flutter", "dart", "betterleaks", "osv-scanner", "lefthook", "git"],
 	scaffold(target) {
 		const name = basename(target).replace(/[^a-z0-9_]/g, "_");

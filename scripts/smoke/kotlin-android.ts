@@ -5,7 +5,7 @@
 import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { appendFragment, mergeAgentsMd, sh } from "./run";
-import type { SmokeRecipe } from "./types";
+import type { HostSmoke } from "./types";
 
 const PKG = "dev.qualitykit.smoke";
 const PKG_PATH = "dev/qualitykit/smoke";
@@ -340,7 +340,7 @@ include(":app")
 	sh(target, ["./tools/quality/kotlin-android/run-format.sh", "--fix"]);
 }
 
-export const kotlinAndroidSmoke: SmokeRecipe = {
+export const kotlinAndroidSmoke: HostSmoke = {
 	tools: ["java", "betterleaks", "osv-scanner", "lefthook", "git"],
 	scaffold: scaffoldComposeApp,
 	wire: wireKotlin,

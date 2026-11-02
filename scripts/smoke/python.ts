@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } 
 import { basename, dirname, join } from "node:path";
 import { kitRoot } from "../kit-fs";
 import { mergeAgentsMd, sh } from "./run";
-import type { SmokeRecipe } from "./types";
+import type { HostSmoke } from "./types";
 
 /** First src/<pkg>/ directory from a `uv init` layout. */
 function packageDir(target: string): string | null {
@@ -15,7 +15,7 @@ function packageDir(target: string): string | null {
 }
 
 /** uv init greenfield + python Host Post-apply. */
-export const pythonSmoke: SmokeRecipe = {
+export const pythonSmoke: HostSmoke = {
 	tools: ["uv", "betterleaks", "osv-scanner", "lefthook", "git"],
 	scaffold(target) {
 		const name = basename(target).replace(/[^a-z0-9_]/g, "_");

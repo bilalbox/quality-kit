@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
-import { type FileKind, placeFiles } from "./placements";
+import { type PlacementKindDecl, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
 import type { Contribution, Pack, PackId, PackKind } from "./types";
@@ -9,7 +9,7 @@ import { PYTHON_HELPER_DIRS, walkFiles } from "./walk";
 import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
 /** Always placed (Host and Fragment). */
-const COMMON_FILES: Record<string, FileKind> = {
+const COMMON_FILES: Record<string, PlacementKindDecl> = {
 	"pyproject.toml": {
 		dest: "pyproject.toml",
 		markers: ["[tool.ruff]", "[tool.basedpyright]", "[tool.vulture]"],
@@ -19,7 +19,7 @@ const COMMON_FILES: Record<string, FileKind> = {
 };
 
 /** Host-only scripts / CI / hooks inputs (namespaced under tools/quality/python/). */
-const HOST_FILES: Record<string, FileKind> = {
+const HOST_FILES: Record<string, PlacementKindDecl> = {
 	".betterleaks.d/python.toml": "owned",
 	".github/actions/setup-uv/action.yml": "owned",
 	".github/actions/python-quality-gate/action.yml": "owned",

@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
-import { type FileKind, placeFiles } from "./placements";
+import { type PlacementKindDecl, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
 import type { Contribution, Pack, Placement } from "./types";
@@ -9,7 +9,7 @@ import { SKIP_DIRS, walkFiles } from "./walk";
 import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
 /** Host scripts under tools/quality/dart/; shared root files are composed (see local.ts). */
-const ROOT_FILES: Record<string, FileKind> = {
+const ROOT_FILES: Record<string, PlacementKindDecl> = {
 	"quality-kit.dart.json": "seed",
 	".betterleaks.d/dart.toml": "owned",
 	".github/actions/setup-flutter/action.yml": "owned",
@@ -24,11 +24,11 @@ const ROOT_FILES: Record<string, FileKind> = {
 };
 
 /** Templated under package/flutter/ or package/dart/, picked per root. */
-const VARIANT_PACKAGE_FILES: Record<string, FileKind> = {
+const VARIANT_PACKAGE_FILES: Record<string, PlacementKindDecl> = {
 	"analysis_options.yaml": "owned",
 };
 
-const PACKAGE_FILES: Record<string, FileKind> = {
+const PACKAGE_FILES: Record<string, PlacementKindDecl> = {
 	"dart_dependency_validator.yaml": "seed",
 };
 

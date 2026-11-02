@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import type { MergeInto, PackId, Placement } from "./types";
 
-/** Per-path kind declaration: `"owned"`, `"seed"`, or a merge-into destination. */
-export type FileKind = "owned" | "seed" | MergeInto;
+/** Per-path Placement kind declaration: `"owned"`, `"seed"`, or a merge-into destination. */
+export type PlacementKindDecl = "owned" | "seed" | MergeInto;
 
 /** `AGENTS.quality.md` is merged into the Target's `AGENTS.md`. */
 export const AGENTS_MD: MergeInto = {
@@ -16,7 +16,7 @@ export const AGENTS_MD: MergeInto = {
  */
 export function placeFiles(
 	pack: PackId,
-	files: Readonly<Record<string, FileKind>>,
+	files: Readonly<Record<string, PlacementKindDecl>>,
 	dirs: { templateDir?: string; targetDir?: string } = {},
 ): Placement[] {
 	const under = (dir: string | undefined, rel: string) =>

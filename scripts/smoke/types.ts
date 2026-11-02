@@ -1,6 +1,6 @@
 /** How one Host Pack is adopted into a freshly scaffolded project. */
-export type SmokeRecipe = {
-	/** Executables the recipe needs on PATH (checked before anything runs). */
+export type HostSmoke = {
+	/** Executables the Host smoke needs on PATH (checked before anything runs). */
 	tools: readonly string[];
 	/** Create the upstream project at `target` (a path that does not exist yet). */
 	scaffold(target: string): void;

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
-import { type FileKind, placeFiles } from "./placements";
+import { type PlacementKindDecl, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
 import { lefthookHostsOf } from "./local";
@@ -9,7 +9,7 @@ import type { Contribution, Pack, PackId, WiringProbe } from "./types";
 import { HUSKY, LEFTHOOK, hooksInstalledProbe } from "./wiring";
 
 /** Shared root files (.editorconfig, AGENTS) are composed; husky only when no lefthook Host. */
-const ROOT_FILES: Record<string, FileKind> = {
+const ROOT_FILES: Record<string, PlacementKindDecl> = {
 	"biome.json": "owned",
 	"biome.complexity.json": "seed",
 	"tsconfig.base.json": "owned",
@@ -33,7 +33,7 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"baselines/biome-diagnostics.json": "seed",
 };
 
-const HUSKY_FILES: Record<string, FileKind> = {
+const HUSKY_FILES: Record<string, PlacementKindDecl> = {
 	".husky/pre-commit": "owned",
 	".husky/pre-push": "owned",
 };

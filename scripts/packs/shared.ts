@@ -1,8 +1,8 @@
-import { type FileKind, placeFiles } from "./placements";
+import { type PlacementKindDecl, placeFiles } from "./placements";
 import type { PackId, Placement } from "./types";
 
 /** languages/shared/templates/, composed into every Host Pack. */
-const SHARED_FILES: Record<string, FileKind> = {
+const SHARED_FILES: Record<string, PlacementKindDecl> = {
 	".betterleaks.toml": "owned",
 	".betterleaksignore": "seed",
 	".github/actions/setup-betterleaks/action.yml": "owned",

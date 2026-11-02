@@ -10,7 +10,7 @@ import { desiredState } from "../scripts/desired-state";
 import { PACKS } from "../scripts/packs";
 import { composeCiWorkflow } from "../scripts/packs/ci";
 import { composeGateSh, composeLefthook } from "../scripts/packs/local";
-import { SMOKE_RECIPES } from "../scripts/smoke/index";
+import { HOST_SMOKES } from "../scripts/smoke/index";
 import { packRole } from "../scripts/packs/python";
 
 function tempTarget(): string {
@@ -100,7 +100,7 @@ test("desiredState: js-ts + python stays Fragment; lint:py once", () => {
 	assert.equal(state.probes.filter((p) => p.pack === "python").length, 0);
 });
 
-test("smoke registry: python Host has a recipe", () => {
-	assert.ok(SMOKE_RECIPES.python);
-	assert.ok(SMOKE_RECIPES.python!.tools.includes("uv"));
+test("smoke registry: python Host has a HostSmoke", () => {
+	assert.ok(HOST_SMOKES.python);
+	assert.ok(HOST_SMOKES.python!.tools.includes("uv"));
 });
