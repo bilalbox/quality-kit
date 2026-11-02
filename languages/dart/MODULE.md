@@ -8,12 +8,24 @@ Standalone host (not composed onto js-ts): Makefile / `tools/quality/*.sh`, left
 
 | Concern | Tool | Notes |
 | --- | --- | --- |
-| Format | **`dart format`** | `--output=none --set-exit-if-changed` per package root. |
+| Format | **`dart format`** | `--output=none --set-exit-if-changed` per package root; `run-format.sh --fix [files…]` formats in place. |
 | Lint / types | **`flutter analyze --fatal-infos`** (or `dart analyze`) | Per-root `analysis_options.yaml`: `flutter_lints` (Flutter) or `lints` (pure Dart) + strict modes. See [Analysis](#analysis). |
 | Secrets | **Betterleaks v1** | Same pin/contract as js-ts; bash wrapper (no Node). |
 | Dependencies | **dependency_validator 5.1.0** | Missing / unused / over-/under-promoted deps. Activated via `dart pub global`. |
-| Hooks | **lefthook** | pre-commit: secrets + format staged; pre-push: full gate. |
+| Hooks | **lefthook** | pre-commit: secrets + format check of staged content (see Pre-commit format); pre-push: full gate. |
 | Orchestration | **`tools/quality/gate.sh`** | `fast` = format + analyze + secrets + deps; `full` = fast + test. |
+
+## Pre-commit format
+
+`run-format.sh --staged` checks what will be committed, not the working tree: each staged `.dart` blob is piped from the index into `dart format --set-exit-if-changed --stdin-name=<path>` (so the package's `analysis_options.yaml` and language version still apply). It never formats or re-stages files, so unstaged hunks of a partially staged file stay out of the commit whether the hook runs through lefthook or a plain `.git/hooks/pre-commit`.
+
+A misformatted staged file fails the hook and prints the fix command:
+
+```text
+fix: ./tools/quality/run-format.sh --fix lib/a.dart && git add lib/a.dart
+```
+
+Files that also have unstaged changes get `git add -p <file>` instead, so only the formatted hunks are re-staged. lefthook hides unstaged hunks while the hook runs; the script reads lefthook's `info/lefthook-unstaged.patch` to still spot them.
 
 ## Config
 

@@ -8,7 +8,7 @@ Standalone Host for Jetpack Compose apps and libraries: `tools/quality/*.sh`, le
 
 | Concern | Tool | Gate |
 | --- | --- | --- |
-| Format | **ktfmt** `--kotlinlang-style` (native binary, auto-downloaded + sha256-checked; jar fallback) | fast, pre-commit (staged, no JVM) |
+| Format | **ktfmt** `--kotlinlang-style` (native binary, auto-downloaded + sha256-checked; jar fallback); `run-format.sh --fix [files…]` formats in place | fast, pre-commit (staged content, no JVM) |
 | Static analysis | **detekt 2.0** + **compose-rules** (`config/detekt/detekt.yml`) | fast |
 | Compiler | Kotlin `allWarningsAsErrors` (main + unit-test sources) | fast |
 | Secrets | **Betterleaks v1** (same contract as js-ts / dart) | fast, pre-commit |
@@ -17,9 +17,22 @@ Standalone Host for Jetpack Compose apps and libraries: `tools/quality/*.sh`, le
 | Screenshots | **Roborazzi** verify; every `@Preview` auto-generated into a test (ComposablePreviewScanner) | full |
 | Coverage | **Kover** line floor (`qualityKit.minLineCoverage`) | full |
 | Dependencies | **dependency-analysis** `buildHealth`, all advice fatal | full |
+| Hooks | **lefthook** | pre-commit: secrets + format check of staged content (see Pre-commit format); pre-push: full |
 | Orchestration | `tools/quality/gate.sh` → `./gradlew -q --continue qualityFast|qualityFull` | — |
 
 `gate.sh` runs every step even after a failure and ends with a summary: failing steps, `*_compare.png` diff images to open, and previews that have no golden yet.
+
+## Pre-commit format
+
+`run-format.sh --staged` checks what will be committed, not the working tree: each staged `.kt` / `.kts` blob is piped from the index into `ktfmt --dry-run --set-exit-if-changed --stdin-name=<path> -`. It never formats or re-stages files, so unstaged hunks of a partially staged file stay out of the commit whether the hook runs through lefthook or a plain `.git/hooks/pre-commit`.
+
+A misformatted staged file fails the hook and prints the fix command:
+
+```text
+fix: ./tools/quality/run-format.sh --fix app/src/main/kotlin/A.kt && git add app/src/main/kotlin/A.kt
+```
+
+Files that also have unstaged changes get `git add -p <file>` instead, so only the formatted hunks are re-staged. lefthook hides unstaged hunks while the hook runs; the script reads lefthook's `info/lefthook-unstaged.patch` to still spot them.
 
 ## Wiring (post-apply)
 

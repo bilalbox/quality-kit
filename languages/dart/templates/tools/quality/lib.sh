@@ -47,6 +47,48 @@ quality_config_roots() {
 }
 
 # Load roots from config (non-empty array) or auto-detect.
+quality_quote() {
+	local quoted=() arg
+	for arg in "$@"; do
+		quoted+=("$(printf '%q' "${arg}")")
+	done
+	printf '%s' "${quoted[*]}"
+}
+
+# True if the file has unstaged changes. lefthook hides those while its hooks
+# run and keeps them in info/lefthook-unstaged.patch, so look there too.
+quality_has_unstaged() {
+	local f="$1" patch
+	patch="$(git -C "${REPO_ROOT}" rev-parse --path-format=absolute --git-path info/lefthook-unstaged.patch)"
+	! git -C "${REPO_ROOT}" diff --quiet -- "${f}" \
+		|| { [[ -f "${patch}" ]] && grep -qxF "diff --git a/${f} b/${f}" "${patch}"; }
+}
+
+# Explain a pre-commit format failure for repo-relative files and print the fix
+# command. Files with unstaged changes get `git add -p` so those hunks are not
+# staged along with the formatting.
+quality_staged_format_failure() {
+	local whole=() partial=() f
+	for f in "$@"; do
+		if quality_has_unstaged "${f}"; then
+			partial+=("${f}")
+		else
+			whole+=("${f}")
+		fi
+	done
+	echo "format: staged content is not formatted:" >&2
+	printf '  %s\n' "$@" >&2
+	local fix
+	fix="./tools/quality/run-format.sh --fix $(quality_quote "$@")"
+	if ((${#whole[@]} > 0)); then
+		fix+=" && git add $(quality_quote "${whole[@]}")"
+	fi
+	if ((${#partial[@]} > 0)); then
+		fix+=" && git add -p $(quality_quote "${partial[@]}")"
+	fi
+	echo "fix: ${fix}" >&2
+}
+
 quality_dart_roots() {
 	local roots=()
 	mapfile -t roots < <(quality_config_roots)
