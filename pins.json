@@ -30,7 +30,8 @@
 		"ruff": "0.17.2",
 		"basedpyright": "1.40.2",
 		"tach": "0.35.3",
-		"vulture": "2.16"
+		"vulture": "2.16",
+		"coverage": "7.17.0"
 	},
 	"kotlin": {
 		"agp": "9.5.0",

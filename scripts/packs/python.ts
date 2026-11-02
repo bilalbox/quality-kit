@@ -30,6 +30,7 @@ const HOST_FILES: Record<string, FileKind> = {
 	"tools/quality/python/run-boundaries.sh": "owned",
 	"tools/quality/python/run-deadcode.sh": "owned",
 	"tools/quality/python/run-test.sh": "owned",
+	"tools/quality/python/collect-coverage.sh": "owned",
 };
 
 /** True when a path segment is a known helper-script directory. */

@@ -31,7 +31,7 @@ Every Host's **full** gate runs `tools/quality/run-coverage-ratchet.sh`, which c
 | js-ts collection | **c8** wraps `pnpm test` via `tools/quality/js-ts/collect-coverage.sh` |
 | dart collection | `tools/quality/dart/collect-coverage.sh` → `flutter test --coverage` / lcov |
 | kotlin-android collection | `tools/quality/kotlin-android/collect-coverage.sh` → Kover XML (`koverXmlReport`) |
-| python Host (#17) | Same runner; add `tools/quality/python/collect-coverage.sh` emitting `{ "findings": [...] }` |
+| python Host | **coverage.py** wraps `pytest` via `tools/quality/python/collect-coverage.sh` (per `src/<pkg>` or `.`) |
 
 Raising coverage passes; lowering fails the gate. Tighten with `--update` locally (refused under `CI`). Legacy adopt: set `"floor": 0`, run the Host collector + `--update`, commit the baseline.
 
@@ -156,9 +156,9 @@ All three non-current states are gaps: an owned file must match the template, an
 Every Host gate (`tools/quality/<pack>/gate.sh`, or `pnpm gate:fast` / `pnpm gate` for js-ts which invoke that script) **runs every step even after a failure**, then prints a summary and exits non-zero when any step failed. Agents get the full list of broken checks in one run instead of fixing one failure per invocation.
 
 - **Summary line:** `# gate:<mode> FAILED: <step>…` (space-separated step names). Success: `# gate:<mode> ok`.
-- **Step names** are short labels printed as `==> <name>` before each command (python: `format`, `lint`, `types`, `boundaries`, `deadcode`, `secrets`, plus `vulns`/`test` on full; dart: `format`, `analyze`, `secrets`, `deps`, plus `vulns`/`test` on full; js-ts: `lint`, `secrets`, `graph`, `complexity`, `typecheck`, Fragment script names, plus `vulns`/`test` on full; kotlin-android: `format`, `secrets`, optional `vulns`, `gradle`).
+- **Step names** are short labels printed as `==> <name>` before each command (python: `format`, `lint`, `types`, `boundaries`, `deadcode`, `secrets`, plus `vulns`/`coverage` on full; dart: `format`, `analyze`, `secrets`, `deps`, plus `vulns`/`coverage` on full; js-ts: `lint`, `secrets`, `graph`, `complexity`, `typecheck`, Fragment script names, plus `vulns`/`coverage` on full; kotlin-android: `format`, `secrets`, optional `vulns`, `gradle`, plus `coverage` on full).
 - **js-ts Fragment scripts** (e.g. python `lint:py`) are appended as extra args on `gate:fast` by Desired state and become named steps inside the Host gate — not `&&`-chained after it.
-- **Top-level composed `tools/quality/gate.sh`** stays a thin dispatcher across Hosts; run-all-then-summarize lives inside each Host gate so #17 (python Host) and #20 (agent hooks → top-level `gate fast`) share one contract. A future full-gate step (e.g. #21 coverage) is another Host step, not dispatcher logic.
+- **Top-level composed `tools/quality/gate.sh`** stays a thin dispatcher across Hosts; run-all-then-summarize lives inside each Host gate so #17 (python Host) and #20 (agent hooks → top-level `gate fast`) share one contract. Coverage (#21) is another Host step inside each Host gate, not dispatcher logic.
 
 ### Local gate + hooks composition
 
@@ -179,7 +179,7 @@ Principles:
 - pre-push / CI: full gate
 - **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; dependency vulns via `tools/quality/run-vuln-scan.sh` on the **full** gate only; CI checks out with `fetch-depth: 0`, runs `./.github/actions/check-baseline-growth` on pull requests (skip with label `allow-baseline-growth`; see Baseline growth above), and installs Betterleaks and osv-scanner with `./.github/actions/setup-betterleaks` and `./.github/actions/setup-osv-scanner` (checksum-pinned) before the Host's own setup action; the secret-scan wrapper scans `origin/$GITHUB_BASE_REF..HEAD` in CI. Ignore policy and offline/severity decisions: `languages/shared/MODULE.md`
 - **js-ts host:** husky + lint-staged when alone; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
-- **python host:** lefthook; `./tools/quality/gate.sh` → `./tools/quality/python/gate.sh` (run-all + summary); uv via `setup-uv`; basedpyright via `uv run --with basedpyright==…` against the project env; pytest on full
+- **python host:** lefthook; `./tools/quality/gate.sh` → `./tools/quality/python/gate.sh` (run-all + summary); uv via `setup-uv`; basedpyright via `uv run --with basedpyright==…` against the project env; coverage ratchet (pytest under coverage.py) on full
 - **dart host:** lefthook; `./tools/quality/gate.sh` → `./tools/quality/dart/gate.sh`; Flutter via `subosito/flutter-action` pinned to an exact `flutter-version` (dart MODULE.md Pins); dependency_validator installed in `setup-flutter`
 - **kotlin-android host:** lefthook; `./tools/quality/gate.sh` → `./tools/quality/kotlin-android/gate.sh` over Gradle `qualityFast` / `qualityFull` (from the copied-in `build-logic/quality` included build); JDK 21 + SDK licenses + `setup-gradle` + Robolectric jar cache in `setup-android`; screenshot diffs uploaded as an artifact on failure
 

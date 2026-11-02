@@ -35,6 +35,7 @@ export type Pins = {
 		basedpyright: string;
 		tach: string;
 		vulture: string;
+		coverage: string;
 	};
 	kotlin: {
 		agp: string;
@@ -399,9 +400,15 @@ function sitesFor(pins: Pins): Site[] {
 		{
 			file: "languages/python/MODULE.md",
 			pattern:
-				/`ruff@([^`]+)`, `basedpyright@([^`]+)`, `tach@([^`]+)`, `vulture@([^`]+)`/,
-			expected: `${py.ruff} / ${py.basedpyright} / ${py.tach} / ${py.vulture}`,
+				/`ruff@([^`]+)`, `basedpyright@([^`]+)`, `tach@([^`]+)`, `vulture@([^`]+)`, `coverage@([^`]+)`/,
+			expected: `${py.ruff} / ${py.basedpyright} / ${py.tach} / ${py.vulture} / ${py.coverage}`,
 			label: "python MODULE Pins",
+		},
+		{
+			file: "languages/python/templates/tools/quality/python/collect-coverage.sh",
+			pattern: /coverage==([\d.]+)/,
+			expected: py.coverage,
+			label: "python collect-coverage coverage pin",
 		},
 		{
 			file: ".github/workflows/ci.yml",
@@ -656,6 +663,16 @@ function scanRules(pins: Pins): { label: string; pattern: RegExp; expected: stri
 			label: "vulture@ pin prose",
 			pattern: /`vulture@([\d.]+)`/g,
 			expected: py.vulture,
+		},
+		{
+			label: "coverage@ pin prose",
+			pattern: /`coverage@([\d.]+)`/g,
+			expected: py.coverage,
+		},
+		{
+			label: "uv run coverage",
+			pattern: /coverage==([\d.]+)/g,
+			expected: py.coverage,
 		},
 	];
 }

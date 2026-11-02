@@ -4,12 +4,12 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 QUALITY := $(ROOT)/tools/quality
 PY_Q := $(QUALITY)/python
 
-.PHONY: gate gate-fast format lint types boundaries deadcode secrets vulns test help
+.PHONY: gate gate-fast format lint types boundaries deadcode secrets vulns coverage test help
 
 help:
 	@echo "Targets:"
 	@echo "  make gate-fast  format + lint + types + boundaries + deadcode + secrets"
-	@echo "  make gate       gate-fast + osv-scanner + pytest"
+	@echo "  make gate       gate-fast + osv-scanner + coverage ratchet"
 	@echo "  make format     ruff format --check"
 	@echo "  make lint       ruff check"
 	@echo "  make types      basedpyright (project env)"
@@ -17,6 +17,7 @@ help:
 	@echo "  make deadcode   vulture"
 	@echo "  make secrets    Betterleaks scan"
 	@echo "  make vulns      osv-scanner lockfile scan"
+	@echo "  make coverage   coverage ratchet (pytest under coverage.py)"
 	@echo "  make test       pytest"
 
 gate-fast:
@@ -45,6 +46,9 @@ secrets:
 
 vulns:
 	@$(QUALITY)/run-vuln-scan.sh
+
+coverage:
+	@$(QUALITY)/run-coverage-ratchet.sh
 
 test:
 	@$(PY_Q)/run-test.sh

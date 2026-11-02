@@ -1,5 +1,5 @@
 name: Quality gate
-description: Format, lint, types, boundaries, deadcode, secrets, vulns, and pytest
+description: Format, lint, types, boundaries, deadcode, secrets, vulns, and coverage ratchet
 runs:
   using: composite
   steps:

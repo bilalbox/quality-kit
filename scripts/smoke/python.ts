@@ -38,7 +38,10 @@ export const pythonSmoke: SmokeRecipe = {
 			appendFileSync(dest, prefix + readFileSync(kitPy, "utf8"));
 		}
 
-		const pkg = packageDir(target) ?? ".";
+		const pkg = packageDir(target);
+		if (!pkg) {
+			throw new Error("smoke python: expected uv init src/<pkg>/ layout");
+		}
 		writeFileSync(
 			join(target, "tach.toml"),
 			[
@@ -57,9 +60,16 @@ export const pythonSmoke: SmokeRecipe = {
 
 		sh(target, ["uv", "add", "--dev", "pytest"]);
 		sh(target, ["mkdir", "-p", "tests"]);
+		// Cover the scaffold entrypoint so greenfield floor (80) passes.
 		writeFileSync(
 			join(target, "tests", "test_smoke.py"),
-			"def test_smoke() -> None:\n    assert True\n",
+			[
+				`from ${pkg} import main`,
+				"",
+				"def test_smoke() -> None:",
+				"    main()",
+				"",
+			].join("\n"),
 		);
 
 		mergeAgentsMd(target);
