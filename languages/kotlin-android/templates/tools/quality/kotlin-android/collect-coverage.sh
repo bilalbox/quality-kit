@@ -28,7 +28,7 @@ PY
 variant_task="$(python3 -c 'import sys; v=sys.argv[1]; print(v[:1].upper()+v[1:])' "${variant}")"
 
 # Ensure XML reports exist (qualityFull already ran tests; this is a no-op when up to date).
-quality_gradle -q "koverXmlReport${variant_task}" || true
+quality_gradle -q "koverXmlReport${variant_task}" >&2 || true
 
 python3 - "${REPO_ROOT}" "${variant}" <<'PY'
 import json, re, sys
@@ -47,17 +47,22 @@ for xml in sorted(root.glob(f"**/build/reports/kover/{pattern}")):
     if module.startswith("build-logic"):
         continue
     text = xml.read_text(encoding="utf-8", errors="replace")
-    # Prefer counter type="LINE" covered/missed on the root <report> or first <module>.
-    counters = re.findall(
-        r'<counter\s+type="LINE"\s+missed="(\d+)"\s+covered="(\d+)"',
-        text,
-    )
-    if not counters:
-        score = 0.0
-    else:
-        missed, covered = map(int, counters[0])
-        total = missed + covered
-        score = round(100.0 * covered / total, 2) if total else 100.0
+    score = 0.0
+    try:
+        import xml.etree.ElementTree as ET
+        tree = ET.fromstring(text)
+        line_counter = tree.find("./counter[@type='LINE']")
+        if line_counter is None:
+            counters = tree.findall(".//counter[@type='LINE']")
+            if counters:
+                line_counter = counters[-1]
+        if line_counter is not None:
+            missed = int(line_counter.attrib.get("missed", 0))
+            covered = int(line_counter.attrib.get("covered", 0))
+            total = missed + covered
+            score = round(100.0 * covered / total, 2) if total else 100.0
+    except Exception:
+        pass
     findings.append({"id": module, "score": score})
 
 print(json.dumps({"findings": findings}, indent="\t"))

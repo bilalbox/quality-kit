@@ -14,6 +14,7 @@ export class StepFailed extends Error {}
 export function adopterEnv(): NodeJS.ProcessEnv {
 	const env = { ...process.env };
 	delete env.CI;
+	delete env.HUSKY;
 	return env;
 }
 

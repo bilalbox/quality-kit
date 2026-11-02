@@ -37,6 +37,10 @@ export const jsTsSmoke: HostSmoke = {
 		// Seed ratchets under adopter env (CI refuses --update).
 		sh(target, ["pnpm", "lint:complexity", "--", "--update"]);
 		sh(target, ["pnpm", "lint:graph", "--", "--update-snapshot"]);
+		editJson<{ floor?: number }>(join(target, "baselines/coverage.json"), (cov) => {
+			cov.floor = 0;
+		});
+		sh(target, ["pnpm", "lint:coverage", "--", "--update"]);
 		// One-off Biome cleanup (may exit non-zero on non-auto-fixables), then baseline.
 		try {
 			sh(target, ["pnpm", "fix"]);

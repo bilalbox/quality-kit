@@ -86,10 +86,16 @@ private fun Project.configureAndroidModule() {
         dependsOn(
             fast,
             "lint$variantTask",
+            "test${variantTask}UnitTest",
             "verifyRoborazzi$variantTask",
             "koverXmlReport$variantTask",
         )
     }
+    tasks
+        .matching { it.name == "koverXmlReport$variantTask" }
+        .configureEach {
+            mustRunAfter("test${variantTask}UnitTest")
+        }
 }
 
 private fun Project.configureAndroidDsl() {

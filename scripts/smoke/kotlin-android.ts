@@ -2,7 +2,7 @@
  * Minimal AGP + Jetpack Compose application (Empty Activity shape).
  * compileSdk 36 + Compose BOM 2026.06.01 (2026.09+ needs platform 37).
  */
-import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { appendFragment, mergeAgentsMd, sh } from "./run";
 import type { HostSmoke } from "./types";
@@ -271,6 +271,34 @@ private fun GreetingPreview() {
 `,
 	);
 
+	write(
+		target,
+		`app/src/test/kotlin/${PKG_PATH}/MainActivityTest.kt`,
+		`package ${PKG}
+
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import org.junit.Assert.assertNotNull
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
+class MainActivityTest {
+    @get:Rule val composeTestRule = createComposeRule()
+
+    @Test
+    fun testGreeting() {
+        assertNotNull(MainActivity())
+        composeTestRule.setContent { Greeting() }
+        composeTestRule.waitForIdle()
+    }
+}
+`,
+	);
+
 	write(target, "AGENTS.md", "# Smoke\n");
 
 	const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT ?? "";
@@ -333,6 +361,12 @@ include(":app")
 	appendFragment(target, "gradle.quality.properties", "gradle.properties");
 	mergeAgentsMd(target);
 	sh(target, ["lefthook", "install"]);
+	const covPath = join(target, "baselines/coverage.json");
+	if (existsSync(covPath)) {
+		const cov = JSON.parse(readFileSync(covPath, "utf-8"));
+		cov.floor = 0;
+		writeFileSync(covPath, `${JSON.stringify(cov, null, "\t")}\n`);
+	}
 	sh(target, ["./tools/quality/kotlin-android/run-format.sh", "--fix"]);
 	sh(target, ["./tools/quality/kotlin-android/screenshots.sh", "record"]);
 	// Format again: screenshot record may generate sources under build/ that

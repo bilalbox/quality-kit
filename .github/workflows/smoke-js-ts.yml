@@ -30,8 +30,6 @@ jobs:
     name: smoke-js-ts
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      HUSKY: "0"
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

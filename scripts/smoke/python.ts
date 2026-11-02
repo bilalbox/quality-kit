@@ -66,6 +66,7 @@ export const pythonSmoke: HostSmoke = {
 			[
 				`from ${pkg} import main`,
 				"",
+				"",
 				"def test_smoke() -> None:",
 				"    main()",
 				"",
@@ -74,6 +75,7 @@ export const pythonSmoke: HostSmoke = {
 
 		mergeAgentsMd(target);
 		sh(target, ["lefthook", "install"]);
+		sh(target, ["./tools/quality/python/run-format.sh", "--fix"]);
 		// Refresh lock hashes after seed edits.
 		sh(kitRoot, [
 			"pnpm",

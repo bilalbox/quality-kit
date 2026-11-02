@@ -12,7 +12,7 @@ cd "${REPO_ROOT}"
 COVERAGE_PIN="coverage==7.17.0"
 
 if [[ -f "uv.lock" ]] || [[ -f "pyproject.toml" ]]; then
-	uv sync --frozen 2>/dev/null || uv sync
+	uv sync --frozen 2>/dev/null || uv sync >&2
 fi
 
 tmpdir="$(mktemp -d)"
@@ -33,11 +33,11 @@ uv run --with "${COVERAGE_PIN}" coverage run \
 	"--data-file=${cov_data}" \
 	"${source_args[@]}" \
 	"--omit=${omit}" \
-	-m pytest
+	-m pytest >&2
 
 uv run --with "${COVERAGE_PIN}" coverage json \
 	"--data-file=${cov_data}" \
-	-o "${cov_json}" >/dev/null
+	-o "${cov_json}" >/dev/null 2>&1
 
 python3 - "${cov_json}" "${REPO_ROOT}" <<'PY'
 import json, sys

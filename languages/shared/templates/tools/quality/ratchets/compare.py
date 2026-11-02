@@ -46,9 +46,7 @@ def floor_of(baseline: dict[str, Any]) -> float | None:
     return float(baseline["floor"])
 
 
-def compare_findings(
-    baseline: dict[str, Any], current: list[dict[str, Any]]
-) -> dict[str, Any]:
+def compare_findings(baseline: dict[str, Any], current: list[dict[str, Any]]) -> dict[str, Any]:
     direction = worse_when(baseline)
     floor = floor_of(baseline)
     baseline_by_id = {str(f["id"]): f for f in baseline.get("findings", [])}
@@ -77,28 +75,20 @@ def compare_findings(
         if base is None:
             continue
         base_score = base.get("score")
-        if not isinstance(base_score, (int, float)) or not isinstance(
-            cur_score, (int, float)
-        ):
+        if not isinstance(base_score, (int, float)) or not isinstance(cur_score, (int, float)):
             continue
-        if direction == "higher" and cur_score > base_score:
-            regressions.append(
-                {"id": fid, "baseline": base_score, "current": cur_score}
-            )
-        elif direction == "lower" and cur_score < base_score:
-            regressions.append(
-                {"id": fid, "baseline": base_score, "current": cur_score}
-            )
+        if (
+            direction == "higher"
+            and cur_score > base_score
+            or direction == "lower"
+            and cur_score < base_score
+        ):
+            regressions.append({"id": fid, "baseline": base_score, "current": cur_score})
 
     regressions.sort(key=lambda r: r["id"])
     below_floor.sort(key=lambda r: r["id"])
 
-    ok = (
-        len(novel) == 0
-        and len(stale) == 0
-        and len(regressions) == 0
-        and len(below_floor) == 0
-    )
+    ok = len(novel) == 0 and len(stale) == 0 and len(regressions) == 0 and len(below_floor) == 0
     return {
         "ok": ok,
         "novel": novel,
@@ -108,9 +98,7 @@ def compare_findings(
     }
 
 
-def rewrite_baseline(
-    previous: dict[str, Any], current: list[dict[str, Any]]
-) -> dict[str, Any]:
+def rewrite_baseline(previous: dict[str, Any], current: list[dict[str, Any]]) -> dict[str, Any]:
     prev_by_id = {str(f["id"]): f for f in previous.get("findings", [])}
     findings: list[dict[str, Any]] = []
     for f in sorted(current, key=lambda x: str(x["id"])):
@@ -191,19 +179,13 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         next_b = rewrite_baseline(baseline, findings)
-        baseline_path.write_text(
-            json.dumps(next_b, indent="\t") + "\n", encoding="utf-8"
-        )
-        print(
-            f"Updated baseline {baseline_path} ({len(next_b['findings'])} findings)."
-        )
+        baseline_path.write_text(json.dumps(next_b, indent="\t") + "\n", encoding="utf-8")
+        print(f"Updated baseline {baseline_path} ({len(next_b['findings'])} findings).")
         return 0
 
     result = compare_findings(baseline, findings)
     if args.result_json:
-        Path(args.result_json).write_text(
-            json.dumps(result, indent="\t") + "\n", encoding="utf-8"
-        )
+        Path(args.result_json).write_text(json.dumps(result, indent="\t") + "\n", encoding="utf-8")
     if not result["ok"]:
         # When --result-json is set, the caller (run-tool.ts) prints the report.
         if not args.result_json:

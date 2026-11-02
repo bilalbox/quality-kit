@@ -19,7 +19,7 @@ while IFS= read -r root; do
 	echo "==> coverage [${root}]" >&2
 	lcov=""
 	if quality_has_flutter "${root}"; then
-		if ! quality_in_root "${root}" flutter test --coverage; then
+		if ! quality_in_root "${root}" flutter test --coverage >&2; then
 			status=1
 			continue
 		fi
@@ -31,7 +31,7 @@ while IFS= read -r root; do
 		# Pure dart: no built-in coverage flag as stable as Flutter's; run tests
 		# and emit 100 only when there is no lib/ to cover, else require lcov via
 		# `dart run coverage:test_with_coverage` when the Target adds it.
-		if ! quality_in_root "${root}" dart test; then
+		if ! quality_in_root "${root}" dart test >&2; then
 			status=1
 			continue
 		fi
