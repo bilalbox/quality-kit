@@ -35,6 +35,10 @@ How audit judges a Placement. One of three:
 - **merge-into**: the kit's content must appear in a destination file (`AGENTS.quality.md` → `AGENTS.md`); audit checks the destination for the kit's markers. The destination may be the placed path itself when a Target usually brings its own file (`pyproject.toml`, `Makefile`).
 _Avoid_: file type, mode, policy
 
+**Wiring probe**:
+An audit check, contributed by a Pack, that the Target actually runs its gate beyond having the files: hooks installed, build plugins applied, scripts the gate calls present. A failing probe is a gap and comes with the fix.
+_Avoid_: health check, doctor (the kotlin-android `doctor.sh` checks the machine, not the Target)
+
 **Target**:
 The repository path that apply mutates or audit inspects.
 _Avoid_: project, repo (when meaning the path under `--target`)

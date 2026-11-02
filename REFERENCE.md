@@ -27,7 +27,7 @@ Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Con
 - Both refuse colliding Pack selections (exit `2`, nothing written) — see Desired state above.
 - **apply** builds Desired state, copies missing placement files only (never overwrites), sets executable bit when the placement asks for it, and merges missing `package.json` scripts/devDeps/`lint-staged`/`engines` from Desired state. Policy flags like `--force-scripts` stay in the apply adapter.
 - **Next steps:** each Pack's Contribution carries `nextSteps`, read from the numbered list under `## Post-apply` in `languages/<pack>/MODULE.md` (one line per step). apply prints a "Next" block per selected Pack that declares steps, in Pack order, and nothing else. A Fragment prints its own block whether or not its Host is selected (audit already warns about orphan Fragments). Stub Packs (rust) declare none.
-- **audit** builds the same Desired state, diffs the Target via `diffAgainst` (mode ignored), labels packs as host/fragment, warns on orphan Fragments, groups file findings by Placement kind, and exits non-zero on gaps.
+- **audit** builds the same Desired state, diffs the Target via `diffAgainst` (mode ignored), labels packs as host/fragment, warns on orphan Fragments, groups file findings by Placement kind, runs each selected Pack's Wiring probes, and exits non-zero on gaps (file, `package.json` script, or wiring).
 - Template updates: audit shows drift on **owned** files only; humans re-copy deliberately (no auto-overwrite). Drift playbook (keep / merge / replace) lives in `SKILL.md`.
 - Packs: detect from target, or `--packs a,b`. `--python` adds the `python` pack. Python detect ignores helper-script dirs (`tool`, `tools`, `scripts`, …).
 
@@ -45,6 +45,15 @@ Each Pack adapter declares a kind per template path (`scripts/packs/placements.t
 - **Merge-into markers**: a destination counts as merged when, for every marker, some line (leading whitespace ignored) starts with it. A missing destination is unmerged. Markers are headings or keys, never values, so Targets can tune merged values (e.g. `qualityKit.minLineCoverage=80`). A test asserts each fragment contains its own markers.
 - **The fragment file itself is not audited.** Delete it after merging; apply will not copy it back while the destination stays merged.
 - **Self-merge**: when a Target usually has its own copy of a file (`pyproject.toml`, `Makefile`, `pnpm-workspace.yaml`, `.npmrc`), the destination is the placed path. apply still copies it into a Target that lacks it; otherwise the kit lines must be merged in by hand.
+- audit prints a `fix:` line under each unmerged finding naming the kit template to merge and the destination.
+
+### Wiring probes
+
+Files can all be present while nothing runs the gate. Each Pack's Contribution carries `probes` (`WiringProbe`: a label plus `check(target)` returning gaps, each with an optional location and a fix). audit prints them under `## Wiring` as `wired` / `unwired`, with every gap's location and `fix:` line; any unwired probe exits `1`. Per-pack probe lists live in each Host's `MODULE.md`; Fragment and stub Packs contribute none.
+
+- **Git hooks (every Host)**: asks git for the active hooks dir (`git rev-parse --git-path hooks`, so `core.hooksPath` and worktrees are honoured) and requires an executable `pre-commit` and `pre-push` there that belong to the Host's hook manager: lefthook hooks mention `lefthook`; husky's hooks dir is under `.husky/` (husky 9 sets `core.hooksPath=.husky/_`). A Target that is not a git repository is unwired.
+- **AGENTS.md Definition of Done (every Host)**: not a separate probe. The `AGENTS.quality.md` → `AGENTS.md` merge-into finding already checks the `## Definition of Done (Mandatory Gate)` marker, so audit reports that gap once, under merge-into, with its fix.
+- Probes read Target files as text and never run the Target's build tools (no Gradle, no pnpm), so audit stays fast and read-only. Gradle probes ignore `//` and `/* */` comments.
 
 ## CI / hooks
 
