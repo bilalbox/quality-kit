@@ -27,7 +27,7 @@ Config, wrapper, install and CI step come from the Shared layer: see [languages/
 - **Baseline:** `baselines/biome-diagnostics.json`, shared ratchet contract (REFERENCE.md). Finding ID `file|rule` (e.g. `src/a.ts|lint/suspicious/noExplicitAny`), score = occurrences of that rule in that file. No line numbers, so unrelated edits don't churn IDs; more occurrences = score regression. Greenfield keeps it empty. The file must not be named `biome.json`: Biome loads any nested `biome.json` as config.
 - **Never baselinable:** format, assist (organize imports) and parse diagnostics. They fail outright and block `--update`; `pnpm fix` clears the fixable ones.
 - **Pre-commit:** lint-staged keeps `biome check --write` on staged files (safe fixes; exits 0 on warnings). The gate is the enforcement.
-- **Pin:** `@biomejs/biome` is pinned **exactly** (`2.6.3`, matching `$schema` in `biome.json` / `biome.complexity.json`). A caret range installed 2.6.4, whose schema-mismatch diagnostic then fails the gate; the JSON reporter is also unstable across patches. Bump the dependency and both `$schema` URLs together.
+- **Pin:** `@biomejs/biome` is pinned **exactly** (`2.6.3`, matching `$schema` in `biome.json` / `biome.complexity.json`). A caret range installed 2.6.4, whose schema-mismatch diagnostic then fails the gate; the JSON reporter is also unstable across patches. Bump `biome` in `pins.json`, the dependency, and both `$schema` URLs together.
 - **Generated files:** `pnpm-lock.yaml` is excluded in `biome.json` (Biome 2.6 formats YAML and would rewrite it).
 
 ### Unsafe-fix policy
@@ -123,6 +123,18 @@ All of these flags behave the same in TypeScript 7.
 ## TypeScript 7
 
 madge + dependency-cruiser need patches under TS7 (`ts.sys` removed). **rev-dep avoids that.** Do not reintroduce madge/depcruise. Same rule for typescript-eslint (peer `typescript <6.1.0` at 8.72); type-aware lint stays in Biome (see Type-aware lint).
+
+## Pins
+
+Source: kit-root `pins.json` (see REFERENCE.md "Pins").
+
+| Tool | Pin |
+| --- | --- |
+| `@biomejs/biome` | **exact** `2.6.3` (also `$schema` in `biome.json` / `biome.complexity.json`) |
+| `husky`, `lint-staged`, `rev-dep`, `tsx`, `typescript` | **caret** floors in `pins.json` / `package.devDependencies.json` |
+| Betterleaks | Shared layer pin (languages/shared/MODULE.md) |
+
+**Caret vs exact:** only Biome is exact — a caret installed 2.6.4 and broke the gate (schema mismatch + JSON reporter). Other Target devDependencies stay caret ranges so routine patch/minor bumps do not require a kit commit; floors still live in `pins.json` and the sync test checks the declared range string.
 
 ## Placement kinds
 

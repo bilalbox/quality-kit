@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { kitRoot } from "../scripts/kit-fs";
+import { loadPins } from "../scripts/pins";
 
 /** Betterleaks is optional locally but must be present in CI. */
 function needsBetterleaks(): { skip: string | false } {
@@ -70,6 +71,7 @@ test("secret scan: shared allowlist entries apply to every Host", needsBetterlea
 
 /** A `curl` that "downloads" a well-formed tarball holding a fake betterleaks. */
 function stubCurlDir(): string {
+	const version = loadPins().betterleaks.version;
 	const dir = mkdtempSync(join(tmpdir(), "quality-kit-curl-"));
 	writeFileSync(
 		join(dir, "curl"),
@@ -80,7 +82,7 @@ while [[ $# -gt 0 ]]; do
 	shift
 done
 src="$(mktemp -d)"
-printf '#!/bin/sh\\necho 1.9.0\\n' >"\${src}/betterleaks"
+printf '#!/bin/sh\\necho ${version}\\n' >"\${src}/betterleaks"
 chmod +x "\${src}/betterleaks"
 tar -czf "\${out}" -C "\${src}" betterleaks
 `,
