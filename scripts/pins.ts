@@ -24,6 +24,10 @@ export type Pins = {
 		version: string;
 		sha256: { linux_x64: string; linux_arm64: string };
 	};
+	osvScanner: {
+		version: string;
+		sha256: { linux_amd64: string; linux_arm64: string };
+	};
 	shellcheck: { version: string; sha256: string };
 	actionlint: { version: string; sha256: string };
 	python: {
@@ -85,6 +89,7 @@ type Site = {
 
 function sitesFor(pins: Pins): Site[] {
 	const bl = pins.betterleaks;
+	const osv = pins.osvScanner;
 	const py = pins.python;
 	const k = pins.kotlin;
 	const a = pins.actions;
@@ -335,6 +340,32 @@ function sitesFor(pins: Pins): Site[] {
 			label: "shared MODULE Betterleaks",
 		},
 		{
+			file: "languages/shared/templates/tools/quality/install-osv-scanner.sh",
+			pattern: /^VERSION=(\S+)/m,
+			expected: osv.version,
+			label: "osv-scanner VERSION",
+		},
+		{
+			file: "languages/shared/templates/tools/quality/install-osv-scanner.sh",
+			pattern:
+				/osv-scanner_linux_amd64"\n\t\tsha256=([a-f0-9]{64})/m,
+			expected: osv.sha256.linux_amd64,
+			label: "osv-scanner linux_amd64 sha256",
+		},
+		{
+			file: "languages/shared/templates/tools/quality/install-osv-scanner.sh",
+			pattern:
+				/osv-scanner_linux_arm64"\n\t\tsha256=([a-f0-9]{64})/m,
+			expected: osv.sha256.linux_arm64,
+			label: "osv-scanner linux_arm64 sha256",
+		},
+		{
+			file: "languages/shared/MODULE.md",
+			pattern: /^\| osv-scanner \| (\S+)/m,
+			expected: osv.version,
+			label: "shared MODULE osv-scanner",
+		},
+		{
 			file: "languages/python/templates/package.scripts.json",
 			pattern: /uvx ruff@(\S+) check/,
 			expected: py.ruff,
@@ -510,6 +541,7 @@ function walkFiles(dir: string, out: string[]): void {
  */
 function scanRules(pins: Pins): { label: string; pattern: RegExp; expected: string }[] {
 	const bl = pins.betterleaks.version;
+	const osv = pins.osvScanner.version;
 	const py = pins.python;
 	return [
 		{
@@ -544,11 +576,6 @@ function scanRules(pins: Pins): { label: string; pattern: RegExp; expected: stri
 			expected: pins.ktfmt,
 		},
 		{
-			label: "Betterleaks VERSION=",
-			pattern: /^VERSION=(\d+\.\d+\.\d+)$/gm,
-			expected: bl,
-		},
-		{
 			label: "betterleaksMinVersion",
 			pattern: /betterleaksMinVersion = "v(\d+\.\d+\.\d+)"/g,
 			expected: bl,
@@ -557,6 +584,16 @@ function scanRules(pins: Pins): { label: string; pattern: RegExp; expected: stri
 			label: "Install Betterleaks floor",
 			pattern: /Install v(\d+\.\d+\.\d+)\+/g,
 			expected: bl,
+		},
+		{
+			label: "osv-scanner release tag",
+			pattern: /osv-scanner\/releases\/download\/v(\d+\.\d+\.\d+)\//g,
+			expected: osv,
+		},
+		{
+			label: "osv-scanner MODULE pin",
+			pattern: /^\| osv-scanner \| (\d+\.\d+\.\d+)/gm,
+			expected: osv,
 		},
 		{
 			label: "SHELLCHECK_VERSION",
@@ -682,6 +719,27 @@ export function pinDrift(): PinDrift[] {
 			drift.push({
 				file: "languages/shared/templates/tools/quality/install-betterleaks.sh",
 				detail: `Betterleaks ${key} sha256: expected ${expected}, got ${got}`,
+			});
+		}
+	}
+
+	const osvInstaller = read(
+		"languages/shared/templates/tools/quality/install-osv-scanner.sh",
+	);
+	const osvShaHits = [
+		...osvInstaller.matchAll(
+			/osv-scanner_linux_(amd64|arm64)"\n\t\tsha256=([a-f0-9]{64})/g,
+		),
+	];
+	for (const m of osvShaHits) {
+		const arch = m[1] as "amd64" | "arm64";
+		const got = m[2]!;
+		const key = arch === "amd64" ? "linux_amd64" : "linux_arm64";
+		const expected = pins.osvScanner.sha256[key];
+		if (got !== expected) {
+			drift.push({
+				file: "languages/shared/templates/tools/quality/install-osv-scanner.sh",
+				detail: `osv-scanner ${key} sha256: expected ${expected}, got ${got}`,
 			});
 		}
 	}

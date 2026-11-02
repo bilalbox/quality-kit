@@ -21,5 +21,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-betterleaks
+      - uses: ./.github/actions/setup-osv-scanner
       - uses: ./.github/actions/setup-flutter
       - uses: ./.github/actions/dart-quality-gate

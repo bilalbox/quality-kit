@@ -1,0 +1,11 @@
+# Dependency vulnerability ignores for osv-scanner (shared-layer seed).
+# The Target owns this file after apply: add entries deliberately.
+#
+# Every [[IgnoredVulns]] MUST have both:
+#   id     = "GHSA-…" or "CVE-…" (or another OSV id)
+#   reason = "why this finding is accepted"   (non-empty; enforced by run-vuln-scan.sh)
+#
+# Example:
+# [[IgnoredVulns]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# reason = "dev-only; tracked in ISSUE-123"

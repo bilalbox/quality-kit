@@ -53,8 +53,11 @@ jobs:
       - name: Install Betterleaks (shared-layer installer, checksum-verified)
         id: betterleaks
         run: bash languages/shared/templates/tools/quality/install-betterleaks.sh "${HOME}/.local/bin"
+      - name: Install osv-scanner (shared-layer installer, checksum-verified)
+        id: osv
+        run: bash languages/shared/templates/tools/quality/install-osv-scanner.sh "${HOME}/.local/bin"
       - name: Test
-        if: ${{ !cancelled() && steps.deps.outcome == 'success' && steps.linters.outcome == 'success' && steps.betterleaks.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' && steps.linters.outcome == 'success' && steps.betterleaks.outcome == 'success' && steps.osv.outcome == 'success' }}
         run: pnpm test
       - name: Typecheck
         if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
