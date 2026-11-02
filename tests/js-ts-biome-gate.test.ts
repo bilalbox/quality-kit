@@ -144,6 +144,47 @@ test("js-ts gate: a promise passed where a void callback is expected fails gate:
 	assert.match(gate.output, /src\/a\.ts:5:\d+ +lint\/nursery\/noMisusedPromises/);
 });
 
+const TYPE_AWARE_CASES: Array<{ rule: string; line: number; source: string[] }> = [
+	{
+		rule: "noUnsafeReturn",
+		line: 2,
+		source: [
+			"export function parse(raw: string): number {",
+			"\treturn JSON.parse(raw);",
+			"}",
+		],
+	},
+	{
+		rule: "useExhaustiveSwitchCases",
+		line: 3,
+		source: [
+			'type Mode = "a" | "b";',
+			"export function code(mode: Mode): number {",
+			"\tswitch (mode) {",
+			'\t\tcase "a":',
+			"\t\t\treturn 1;",
+			"\t}",
+			"\treturn 0;",
+			"}",
+		],
+	},
+];
+
+for (const { rule, line, source } of TYPE_AWARE_CASES) {
+	test(`js-ts gate: type-aware ${rule} fails lint`, () => {
+		const target = adoptedTarget();
+		writeFileSync(join(target, "src/a.ts"), `${source.join("\n")}\n`);
+
+		const lint = pnpm(target, ["lint"]);
+
+		assert.notEqual(lint.status, 0, lint.output);
+		assert.match(
+			lint.output,
+			new RegExp(`src/a\\.ts:${line}:\\d+ +lint/nursery/${rule}`),
+		);
+	});
+}
+
 const LEGACY_SOURCE = [
 	"export function legacy(a: any, b: any) {",
 	"  let unchanged = a == b",
@@ -200,4 +241,34 @@ test("js-ts legacy adopt: fix, then baseline remaining warnings shrink-only", ()
 	);
 	assert.match(grown.output, /pnpm fix/);
 	assert.equal(ciUpdate.status, 2, ciUpdate.output);
+});
+
+test("js-ts legacy adopt: floating promises baseline per file and cannot grow", () => {
+	const target = adoptedTarget();
+	const call = (n: number) =>
+		[
+			"async function save(): Promise<void> {}",
+			"export function onClick(): void {",
+			...Array.from({ length: n }, () => "\tsave();"),
+			"}",
+			"",
+		].join("\n");
+	writeFileSync(join(target, "src/legacy.ts"), call(1));
+
+	const update = pnpm(target, ["lint", "--", "--update"]);
+	const afterBaseline = pnpm(target, ["lint"]);
+	writeFileSync(join(target, "src/legacy.ts"), call(2));
+	const grown = pnpm(target, ["lint"]);
+
+	assert.equal(update.status, 0, update.output);
+	assert.equal(afterBaseline.status, 0, afterBaseline.output);
+	const baseline = JSON.parse(
+		readFileSync(join(target, "baselines/biome-diagnostics.json"), "utf8"),
+	) as { findings: Array<{ id: string; score: number }> };
+	assert.deepEqual(
+		baseline.findings.map(({ id, score }) => ({ id, score })),
+		[{ id: "src/legacy.ts|lint/nursery/noFloatingPromises", score: 1 }],
+	);
+	assert.notEqual(grown.status, 0, grown.output);
+	assert.match(grown.output, /src\/legacy\.ts\|lint\/nursery\/noFloatingPromises/);
 });

@@ -29,7 +29,9 @@
 			},
 			"nursery": {
 				"noFloatingPromises": "error",
-				"noMisusedPromises": "error"
+				"noMisusedPromises": "error",
+				"noUnsafeReturn": "error",
+				"useExhaustiveSwitchCases": "error"
 			},
 			"style": {
 				"noNonNullAssertion": "off",
