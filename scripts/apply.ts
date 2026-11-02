@@ -151,65 +151,12 @@ function main(): void {
 		console.log("");
 		console.log("## package.json");
 		mergePackageJson(target, state, forceScripts);
-
-		console.log("");
-		console.log("Next (see languages/js-ts/MODULE.md):");
-		console.log(
-			"  1. Adjust rev-dep.config.json entry points / moduleBoundaries",
-		);
-		console.log(
-			"  2. If pnpm-workspace.yaml already existed, merge allowBuilds: esbuild",
-		);
-		console.log("  3. pnpm install");
-		console.log("  4. Seed complexity: pnpm lint:complexity -- --update");
-		console.log(
-			"  5. Seed rev-dep:    pnpm lint:graph -- --update-snapshot  (creates .rev-dep.baseline.json + .rev-dep.duplicates.json; do not hand-write them)",
-		);
-		console.log("  6. Merge AGENTS.quality.md into AGENTS.md");
-		if (packs.includes("python")) {
-			console.log(
-				"  7. Refine tach.toml modules; uvx vulture@2.16 --make-whitelist",
-			);
-		}
 	}
 
-	if (packs.includes("dart")) {
+	for (const { pack, steps } of state.nextSteps) {
 		console.log("");
-		console.log("Next (see languages/dart/MODULE.md):");
-		console.log(
-			'  1. Set quality-kit.dart.json roots (e.g. ["app"]) and flutterEnv if needed',
-		);
-		console.log(
-			"  2. Install Betterleaks v1.9.0+ and lefthook on the host",
-		);
-		console.log("  3. lefthook install");
-		console.log(
-			"  4. If Makefile already existed, wire gate / gate-fast to tools/quality/gate.sh",
-		);
-		console.log("  5. Merge AGENTS.quality.md into AGENTS.md");
-		console.log("  6. ./tools/quality/gate.sh full");
-	}
-
-	if (packs.includes("kotlin-android")) {
-		console.log("");
-		console.log("Next (see languages/kotlin-android/MODULE.md):");
-		console.log(
-			'  1. settings.gradle.kts: pluginManagement { includeBuild("build-logic/quality") }',
-		);
-		console.log('  2. root build.gradle.kts plugins: id("quality-kit.root")');
-		console.log(
-			'  3. each Android module plugins (after com.android.*): id("quality-kit.android")',
-		);
-		console.log(
-			"  4. Merge gradle.quality.properties into gradle.properties; merge AGENTS.quality.md into AGENTS.md",
-		);
-		console.log(
-			"  5. ./tools/quality/doctor.sh; install Betterleaks v1.9.0+ and lefthook; lefthook install",
-		);
-		console.log(
-			"  6. ./tools/quality/run-format.sh --fix; ./tools/quality/screenshots.sh record",
-		);
-		console.log("  7. ./tools/quality/gate.sh full");
+		console.log(`Next (see languages/${pack}/MODULE.md):`);
+		steps.forEach((step, i) => console.log(`  ${i + 1}. ${step}`));
 	}
 }
 

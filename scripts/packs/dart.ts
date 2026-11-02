@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
+import { postApplySteps } from "./post-apply";
 import type { Contribution, Pack, Placement } from "./types";
 import { SKIP_DIRS, walkFiles } from "./walk";
 
@@ -109,6 +110,7 @@ export const dartPack: Pack = {
 			rootPlacements: rootPlacements(),
 			packagePlacements: packagePlacements(target),
 			// no packageJson — dart Host does not own package.json merges
+			nextSteps: postApplySteps("dart"),
 		};
 	},
 };
