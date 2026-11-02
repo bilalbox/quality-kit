@@ -128,12 +128,21 @@ All three non-current states are gaps: an owned file must match the template, an
 - Decision: multi-Host CI is **one workflow, one job per Host** (not one shared job), so concurrent Host CI edits stay isolated and failures are attributed per Pack.
 - CI quality-gate actions call the **namespaced** Host gate (`./tools/quality/<pack>/gate.sh full`), not the composed top-level gate (so a multi-Host CI job does not run every Host).
 
+### Host gate contract
+
+Every Host gate (`tools/quality/<pack>/gate.sh`, or `pnpm gate:fast` / `pnpm gate` for js-ts which invoke that script) **runs every step even after a failure**, then prints a summary and exits non-zero when any step failed. Agents get the full list of broken checks in one run instead of fixing one failure per invocation.
+
+- **Summary line:** `# gate:<mode> FAILED: <step>…` (space-separated step names). Success: `# gate:<mode> ok`.
+- **Step names** are short labels printed as `==> <name>` before each command (dart: `format`, `analyze`, `secrets`, `deps`, plus `vulns`/`test` on full; js-ts: `lint`, `secrets`, `graph`, `complexity`, `typecheck`, Fragment script names, plus `vulns`/`test` on full; kotlin-android: `format`, `secrets`, optional `vulns`, `gradle`).
+- **js-ts Fragment scripts** (e.g. python `lint:py`) are appended as extra args on `gate:fast` by Desired state and become named steps inside the Host gate — not `&&`-chained after it.
+- **Top-level composed `tools/quality/gate.sh`** stays a thin dispatcher across Hosts; run-all-then-summarize lives inside each Host gate so #17 (python Host) and #20 (agent hooks → top-level `gate fast`) share one contract. A future full-gate step (e.g. #21 coverage) is another Host step, not dispatcher logic.
+
 ### Local gate + hooks composition
 
 Kit code: `scripts/packs/local.ts` (`composeGateSh`, `composeLefthook`, `composeEditorconfig`, `composeAgentsQuality`, `composeMakefile`, `composeAgentHooksSettings`, `composeAgentHooksSh`, `composedLocalPlacements`).
 
-- **Namespaced scripts:** dart / kotlin-android Host helpers live under `tools/quality/<pack>/`. Shared-layer scripts stay at `tools/quality/` (`run-secret-scan.sh`, `install-betterleaks.sh`).
-- **Top-level `tools/quality/gate.sh`:** generated whenever a bash-gate Host (dart, kotlin-android) is selected. Thin dispatcher: runs each selected Host's gate in selection order (`pnpm gate:fast`/`pnpm gate` for js-ts; `./tools/quality/<pack>/gate.sh` otherwise). Keep it thin so #14/#15/#17/#20 can extend Host gates without fighting the composer.
+- **Namespaced scripts:** Host helpers live under `tools/quality/<pack>/` (js-ts, dart, kotlin-android). Shared-layer scripts stay at `tools/quality/` (`run-secret-scan.sh`, `install-betterleaks.sh`).
+- **Top-level `tools/quality/gate.sh`:** generated whenever a bash-gate Host (dart, kotlin-android) is selected. Thin dispatcher: runs each selected Host's gate in selection order (`pnpm gate:fast`/`pnpm gate` for js-ts; `./tools/quality/<pack>/gate.sh` otherwise). Keep it thin — Host gates own step logic and the failure summary (see Host gate contract).
 - **Agent hooks (opt-in `--agent-hooks`):** generated owned Placements `.claude/settings.json` + `tools/quality/agent-hooks.sh` for Claude Code. PostToolUse on `Edit|Write` checks the changed file only (per-Host by extension). Stop calls the **top-level** `gate fast` contract (`./tools/quality/gate.sh fast` or `pnpm gate:fast` when js-ts alone) and exits 2 on failure so the agent is blocked with the output. Composed once for the whole Host selection; retained on audit/upgrade when the Lock file lists `.claude/settings.json`. Documented in `SKILL.md` and the composed `AGENTS.quality.md` section.
 - **Single Host:** composed `lefthook.yml` / `.editorconfig` / `Makefile` / `AGENTS.quality.md` equal that Host's template. Several Hosts: one of each, generated.
 - **Hooks:** lefthook Hosts (dart, kotlin-android) always get a composed `lefthook.yml` (one shared secrets command, per-Host `format-<pack>` commands, pre-push → top-level `gate.sh full`). **Decision:** when js-ts is co-selected with a lefthook Host, lefthook owns hooks (adds `lint-staged`); husky files are not placed and the js-ts wiring probe expects lefthook. js-ts alone keeps husky.

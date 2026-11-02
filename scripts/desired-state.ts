@@ -230,11 +230,10 @@ export function desiredState(
 	let packageJson: DesiredPackageJson | null = null;
 	if (hasJsTsHost) {
 		if (gateFragments.length > 0 && scripts["gate:fast"]) {
+			// Extra args become Host-gate steps (run-all-then-summarize; see REFERENCE).
 			scripts = {
 				...scripts,
-				"gate:fast": `${scripts["gate:fast"]} && ${gateFragments
-					.map((f) => `pnpm ${f}`)
-					.join(" && ")}`,
+				"gate:fast": `${scripts["gate:fast"]} ${gateFragments.join(" ")}`,
 			};
 		}
 		packageJson = {
