@@ -1,7 +1,7 @@
 /**
  * Read-only conformance + drift report vs Desired state.
  *
- * Usage: pnpm audit -- --target /path/to/repo [--packs a,b] [--python]
+ * Usage: pnpm audit -- --target /path/to/repo [--packs a,b] [--python] [--agent-hooks]
  */
 
 import { existsSync } from "node:fs";
@@ -11,6 +11,7 @@ import {
 	isFileGap,
 	PACKS,
 	refuseCollisions,
+	resolveAgentHooks,
 	resolvePacks,
 	resolveTarget,
 	sourceLabel,
@@ -121,7 +122,8 @@ function main(): void {
 	}
 
 	const packs = resolvePacks(target, argv);
-	const state = desiredState(target, packs);
+	const agentHooks = resolveAgentHooks(target, argv);
+	const state = desiredState(target, packs, { agentHooks });
 	refuseCollisions(state);
 	const report = diffAgainst(target, state);
 

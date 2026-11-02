@@ -162,10 +162,11 @@ Every Host gate (`tools/quality/<pack>/gate.sh`, or `pnpm gate:fast` / `pnpm gat
 
 ### Local gate + hooks composition
 
-Kit code: `scripts/packs/local.ts` (`composeGateSh`, `composeLefthook`, `composeEditorconfig`, `composeAgentsQuality`, `composeMakefile`, `composedLocalPlacements`).
+Kit code: `scripts/packs/local.ts` (`composeGateSh`, `composeLefthook`, `composeEditorconfig`, `composeAgentsQuality`, `composeMakefile`, `composeAgentHooksSettings`, `composeAgentHooksSh`, `composedLocalPlacements`).
 
 - **Namespaced scripts:** Host helpers live under `tools/quality/<pack>/` (js-ts, dart, kotlin-android). Shared-layer scripts stay at `tools/quality/` (`run-secret-scan.sh`, `install-betterleaks.sh`).
 - **Top-level `tools/quality/gate.sh`:** generated whenever a bash-gate Host (dart, kotlin-android) is selected. Thin dispatcher: runs each selected Host's gate in selection order (`pnpm gate:fast`/`pnpm gate` for js-ts; `./tools/quality/<pack>/gate.sh` otherwise). Keep it thin — Host gates own step logic and the failure summary (see Host gate contract).
+- **Agent hooks (opt-in `--agent-hooks`):** generated owned Placements `.claude/settings.json` + `tools/quality/agent-hooks.sh` for Claude Code. PostToolUse on `Edit|Write` checks the changed file only (per-Host by extension). Stop calls the **top-level** `gate fast` contract (`./tools/quality/gate.sh fast` or `pnpm gate:fast` when js-ts alone) and exits 2 on failure so the agent is blocked with the output. Composed once for the whole Host selection; retained on audit/upgrade when the Lock file lists `.claude/settings.json`. Documented in `SKILL.md` and the composed `AGENTS.quality.md` section.
 - **Single Host:** composed `lefthook.yml` / `.editorconfig` / `Makefile` / `AGENTS.quality.md` equal that Host's template. Several Hosts: one of each, generated.
 - **Hooks:** lefthook Hosts (dart, kotlin-android) always get a composed `lefthook.yml` (one shared secrets command, per-Host `format-<pack>` commands, pre-push → top-level `gate.sh full`). **Decision:** when js-ts is co-selected with a lefthook Host, lefthook owns hooks (adds `lint-staged`); husky files are not placed and the js-ts wiring probe expects lefthook. js-ts alone keeps husky.
 - **`.editorconfig`:** first Host wins on duplicate section headers (including `[*]`); later Hosts contribute only new sections.

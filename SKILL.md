@@ -30,6 +30,7 @@ pnpm apply -- --target ~/mycode/<repo> --packs js-ts,python
 pnpm apply -- --target ~/mycode/<repo> --packs dart
 pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
 pnpm apply -- --target ~/mycode/<repo> --python   # force-add python Fragment
+pnpm apply -- --target ~/mycode/<repo> --agent-hooks   # opt-in Claude Code DoD hooks
 pnpm run upgrade -- --target ~/mycode/<repo> --dry-run   # `pnpm run`: bare `pnpm upgrade` is a pnpm builtin
 ```
 
@@ -54,6 +55,15 @@ pnpm run upgrade -- --target ~/mycode/<repo> --dry-run   # `pnpm run`: bare `pnp
 ## Hosts vs after-apply
 
 Each Pack owns its post-apply steps: the `## Post-apply` list in its `MODULE.md`. `apply` prints exactly that list per selected Pack under "Next"; do not restate the steps elsewhere.
+
+## Agent hooks (opt-in)
+
+Pass `--agent-hooks` on apply to place Claude Code project hooks that enforce the Definition of Done (see composed `AGENTS.quality.md`):
+
+- **PostToolUse** (`Edit|Write`): format/lint **only the edited file**, routed by extension to each selected Host (Biome for js-ts; `run-format.sh --fix <file>` for dart / kotlin-android).
+- **Stop**: runs the **top-level** `gate fast` (`./tools/quality/gate.sh fast` when a bash-gate Host is selected, else `pnpm gate:fast`) — never a Host-namespaced `tools/quality/<pack>/gate.sh`. A failing gate exits 2 so Claude Code blocks finishing and surfaces the failure output.
+
+Files: `.claude/settings.json` + `tools/quality/agent-hooks.sh` (owned, composed once for the whole Host selection). Audit/upgrade keep the opt-in when the Lock file already records `.claude/settings.json` (or pass `--agent-hooks` again). Cursor / other agents are out of scope for this Placement.
 
 ## Packs
 
