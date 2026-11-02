@@ -25,10 +25,10 @@ Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Con
 ## apply / audit semantics
 
 - Both refuse colliding Pack selections (exit `2`, nothing written) — see Desired state above.
-- **apply** builds Desired state, copies missing placement files only (never overwrites), sets executable bit when the placement asks for it, and merges missing `package.json` scripts/devDeps/`lint-staged`/`engines` from Desired state. Policy flags like `--force-scripts` stay in the apply adapter.
+- **apply** builds Desired state, copies missing placement files only (never overwrites), sets executable bit when the placement asks for it, writes the Lock file (see below), and merges missing `package.json` scripts/devDeps/`lint-staged`/`engines` from Desired state. Policy flags like `--force-scripts` stay in the apply adapter.
 - **Next steps:** each Pack's Contribution carries `nextSteps`, read from the numbered list under `## Post-apply` in `languages/<pack>/MODULE.md` (one line per step). apply prints a "Next" block per selected Pack that declares steps, in Pack order, and nothing else. A Fragment prints its own block whether or not its Host is selected (audit already warns about orphan Fragments). Stub Packs (rust) declare none.
 - **audit** builds the same Desired state, diffs the Target via `diffAgainst` (mode ignored), labels packs as host/fragment, warns on orphan Fragments, groups file findings by Placement kind, and exits non-zero on gaps.
-- Template updates: audit shows drift on **owned** files only; humans re-copy deliberately (no auto-overwrite). Drift playbook (keep / merge / replace) lives in `SKILL.md`.
+- Template updates: audit shows drift on **owned** files only, split by the Lock file into **stale** and **customized**; humans re-copy deliberately (no auto-overwrite). Drift playbook (keep / merge / replace) lives in `SKILL.md`.
 - Packs: detect from target, or `--packs a,b`. `--python` adds the `python` pack. Python detect ignores helper-script dirs (`tool`, `tools`, `scripts`, …).
 
 ### Placement kinds
@@ -37,7 +37,7 @@ Each Pack adapter declares a kind per template path (`scripts/packs/placements.t
 
 | Kind | audit statuses (gap in bold) | apply |
 | --- | --- | --- |
-| owned | match, **drift**, **missing** | copy if missing |
+| owned | current, **stale**, **customized**, **drift**, **missing** (see Lock file) | copy if missing; record hash |
 | seed | present, **missing**, **invalid** | copy if missing |
 | merge-into | merged, **unmerged** | copy the fragment if missing, unless its destination is already merged |
 
@@ -45,6 +45,36 @@ Each Pack adapter declares a kind per template path (`scripts/packs/placements.t
 - **Merge-into markers**: a destination counts as merged when, for every marker, some line (leading whitespace ignored) starts with it. A missing destination is unmerged. Markers are headings or keys, never values, so Targets can tune merged values (e.g. `qualityKit.minLineCoverage=80`). A test asserts each fragment contains its own markers.
 - **The fragment file itself is not audited.** Delete it after merging; apply will not copy it back while the destination stays merged.
 - **Self-merge**: when a Target usually has its own copy of a file (`pyproject.toml`, `Makefile`, `pnpm-workspace.yaml`, `.npmrc`), the destination is the placed path. apply still copies it into a Target that lacks it; otherwise the kit lines must be merged in by hand.
+
+### Lock file
+
+apply writes `.quality-kit.lock.json` at the Target root on every run. Commit it with the Target. Kit code: `scripts/lock-file.ts`.
+
+```json
+{
+	"version": 1,
+	"kitRevision": "04cd6938a51e8bfc338991257876d07f07f61fe8",
+	"files": {
+		"config/detekt/detekt.yml": "<sha256 hex>"
+	}
+}
+```
+
+- `version`: always `1`. Any other value, or a file that does not parse, counts as unreadable.
+- `kitRevision`: `git rev-parse HEAD` of the kit checkout at the most recent apply; `null` when the kit is not a git checkout. Informational: per-file hashes, not the revision, decide audit statuses.
+- `files`: owned Placement `targetRel` (package-scoped paths included, e.g. `app/analysis_options.yaml`) → sha256 hex of the content the kit last wrote there, after CRLF→LF normalization. Keys sorted. Seed and merge-into Placements are never recorded.
+- **Recording rule** (apply): for each owned Placement in this run's Desired state whose Target copy equals the current template, set its hash. Every other entry is kept as it was, including entries for Placements outside this run's selection. So a file apply copies is recorded; a file that already matched is recorded; a stale or customized file keeps its old hash; a file the Target brought itself (differing from the template at its first apply) is never recorded. An unreadable lock file is replaced.
+
+audit judges each owned file in this order:
+
+| Status | Meaning | Gap |
+| --- | --- | --- |
+| current | equals the template | no |
+| stale | differs from the template, equals its recorded hash: untouched since apply, the kit moved on; safe to update | yes |
+| customized | differs from both the template and its recorded hash: edited in the Target since apply | yes |
+| drift | differs from the template, no recorded hash (no lock file, or a file the kit never wrote) | yes |
+
+All three non-current states are gaps: an owned file must match the template, and the lock file only says why it does not. When the lock file is missing or unreadable, audit still runs and prints a `## Lock file` hint to re-run apply. Re-running apply on a pre-lock Target records only the files that currently match; the ones already differing stay `drift` until reconciled by hand (Drift playbook).
 
 ## CI / hooks
 
