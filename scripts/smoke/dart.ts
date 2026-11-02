@@ -6,7 +6,7 @@ import type { SmokeRecipe } from "./types";
 
 /** flutter create greenfield + dart Post-apply. */
 export const dartSmoke: SmokeRecipe = {
-	tools: ["flutter", "dart", "betterleaks", "lefthook", "git"],
+	tools: ["flutter", "dart", "betterleaks", "osv-scanner", "lefthook", "git"],
 	scaffold(target) {
 		const name = basename(target).replace(/[^a-z0-9_]/g, "_");
 		const projectName = /^[a-z]/.test(name) ? name : `smoke_${name}`;

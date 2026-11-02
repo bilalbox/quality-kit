@@ -10,7 +10,7 @@ type Pkg = {
 
 /** Vite vanilla-ts greenfield + js-ts Post-apply. */
 export const jsTsSmoke: SmokeRecipe = {
-	tools: ["pnpm", "betterleaks", "git"],
+	tools: ["pnpm", "betterleaks", "osv-scanner", "git"],
 	scaffold(target) {
 		sh(dirname(target), [
 			"pnpm",

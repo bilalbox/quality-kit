@@ -341,7 +341,7 @@ include(":app")
 }
 
 export const kotlinAndroidSmoke: SmokeRecipe = {
-	tools: ["java", "betterleaks", "lefthook", "git"],
+	tools: ["java", "betterleaks", "osv-scanner", "lefthook", "git"],
 	scaffold: scaffoldComposeApp,
 	wire: wireKotlin,
 	gate: [["./tools/quality/gate.sh", "full"]],
