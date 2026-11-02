@@ -30,10 +30,9 @@ function runCli(
 	return { status: res.status, output: `${res.stdout}${res.stderr}` };
 }
 
+/** Non-CI paths that still collide across Hosts (#9 will compose the rest). */
 const HOST_SHARED_PATHS = [
 	".editorconfig",
-	".github/actions/quality-gate/action.yml",
-	".github/workflows/ci.yml",
 	"AGENTS.quality.md",
 ];
 

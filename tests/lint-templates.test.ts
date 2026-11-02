@@ -150,3 +150,64 @@ jobs:
 	assert.equal(status, 1);
 	assert.match(output, /^\.github\/workflows\/ci\.yml:/m);
 });
+
+const HOST_CI = (pack: string, gate: string) => `name: CI
+on:
+  pull_request:
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/${gate}
+`;
+
+const GATE_ACTION = `name: Quality gate
+description: Gate
+runs:
+  using: composite
+  steps:
+    - run: echo gate
+      shell: bash
+`;
+
+test("lint-templates: composed multi-Host workflows are checked", needs("actionlint"), () => {
+	const gateWithMode = `name: Quality gate
+description: Gate
+inputs:
+  mode:
+    description: Mode
+    required: false
+runs:
+  using: composite
+  steps:
+    - run: echo gate
+      shell: bash
+`;
+	const root = kitFixture({
+		"languages/js-ts/templates/.github/workflows/ci.yml": HOST_CI(
+			"js-ts",
+			"js-ts-quality-gate",
+		),
+		"languages/js-ts/templates/.github/actions/js-ts-quality-gate/action.yml":
+			GATE_ACTION,
+		"languages/dart/templates/.github/workflows/ci.yml": `name: CI
+on:
+  pull_request:
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/dart-quality-gate
+        with:
+          flavour: strict
+`,
+		"languages/dart/templates/.github/actions/dart-quality-gate/action.yml":
+			gateWithMode,
+	});
+	const { status, output } = lintTemplates(root);
+	assert.equal(status, 1, output);
+	assert.match(output, /composed:js-ts\+dart\//);
+	assert.match(output, /input "flavour" is not defined/);
+});

@@ -5,7 +5,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { desiredState } from "../scripts/desired-state";
-import { kitRoot, languagesRoot, templatePath } from "../scripts/kit-fs";
+import {
+	kitRoot,
+	languagesRoot,
+	placementContent,
+	templatePath,
+} from "../scripts/kit-fs";
 import type { PackId } from "../scripts/packs";
 
 function tempTarget(): string {
@@ -116,15 +121,13 @@ for (const host of HOSTS) {
 			(p) => p.targetRel === ".github/workflows/ci.yml",
 		);
 		assert.match(
-			readFileSync(templatePath(ci!), "utf8"),
+			placementContent(ci!) ?? "",
 			/uses: \.\/\.github\/actions\/setup-betterleaks\n/,
 		);
 		const ownDownloads = state.rootPlacements.filter(
 			(p) =>
 				!p.shared &&
-				readFileSync(templatePath(p), "utf8").includes(
-					"betterleaks/releases/download",
-				),
+				(placementContent(p) ?? "").includes("betterleaks/releases/download"),
 		);
 		assert.deepEqual(
 			ownDownloads.map((p) => p.targetRel),
