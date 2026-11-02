@@ -55,9 +55,11 @@ Everything not listed is **owned** (audit reports drift).
 
 ## Post-apply
 
+`apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.
+
 1. Adjust `rev-dep.config.json` entry points / `moduleBoundaries`.
 2. If `pnpm-workspace.yaml` already existed, merge `allowBuilds.esbuild`.
-3. Install Betterleaks v1 on the host (see Secrets above).
+3. Install Betterleaks v1 on the host (see Secrets).
 4. `pnpm install`.
 5. Seed complexity: `pnpm lint:complexity -- --update`.
 6. Seed rev-dep: `pnpm lint:graph -- --update-snapshot` (creates `.rev-dep.*.json`; do not hand-write).

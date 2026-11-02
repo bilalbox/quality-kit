@@ -52,6 +52,8 @@ Everything not listed is **owned** (audit reports drift), including each package
 
 ## Post-apply
 
+`apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.
+
 1. Set `quality-kit.dart.json` `roots` (and `flutterEnv` if the repo has one). Root Flutter apps usually keep `["."]`.
 2. Install Betterleaks v1.9.0+ and lefthook on the host; run `lefthook install`.
 3. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.

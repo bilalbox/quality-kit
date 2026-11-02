@@ -24,7 +24,11 @@ export type DesiredState = {
 	packagePlacements: readonly Placement[];
 	/** Present when a Host that owns package.json (js-ts) is selected. */
 	packageJson: DesiredPackageJson | null;
+	/** Post-apply steps per selected Pack that declares any, in Pack order. */
+	nextSteps: readonly PackNextSteps[];
 };
+
+export type PackNextSteps = { pack: PackId; steps: readonly string[] };
 
 /** Per-kind file status: owned compares bytes, seed checks presence, merge-into checks the dest. */
 export type FileStatus =
@@ -106,11 +110,15 @@ export function desiredState(
 	let enginesNode: string | undefined;
 	const gateFragments: string[] = [];
 	let hasJsTsHost = false;
+	const nextSteps: PackNextSteps[] = [];
 
 	for (const id of packs) {
 		const contrib = PACKS[id].contribute(target, packs);
 		firstWinsPlacements(rootPlacements, contrib.rootPlacements);
 		firstWinsPlacements(packagePlacements, contrib.packagePlacements);
+		if (contrib.nextSteps.length > 0) {
+			nextSteps.push({ pack: id, steps: contrib.nextSteps });
+		}
 
 		const pj = contrib.packageJson;
 		if (!pj) continue;
@@ -148,6 +156,7 @@ export function desiredState(
 		rootPlacements,
 		packagePlacements,
 		packageJson,
+		nextSteps,
 	};
 }
 

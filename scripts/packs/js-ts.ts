@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
 import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
+import { postApplySteps } from "./post-apply";
 import type { Contribution, Pack } from "./types";
 
 const ROOT_FILES: Record<string, FileKind> = {
@@ -87,6 +88,7 @@ export const jsTsPack: Pack = {
 				lintStaged,
 				enginesNode: ">=24.0.0 <25",
 			},
+			nextSteps: postApplySteps("js-ts"),
 		};
 	},
 };

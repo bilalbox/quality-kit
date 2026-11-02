@@ -52,9 +52,7 @@ pnpm apply -- --target ~/mycode/<repo> --python   # force-add python Fragment
 
 ## Hosts vs after-apply
 
-- **js-ts Host:** tune entry points → `pnpm install` → seed baselines → merge `AGENTS.quality.md` into `AGENTS.md` → `pnpm gate`.
-- **dart Host:** set `quality-kit.dart.json` roots → install Betterleaks + lefthook → `lefthook install` → merge `AGENTS.quality.md` → `./tools/quality/gate.sh full`.
-- **kotlin-android Host:** wire `includeBuild("build-logic/quality")` + `quality-kit.root` + `quality-kit.android` per module → merge `gradle.quality.properties` and `AGENTS.quality.md` → `./tools/quality/doctor.sh` → `lefthook install` → `run-format.sh --fix` → `screenshots.sh record` → `./tools/quality/gate.sh full`.
+Each Pack owns its post-apply steps: the `## Post-apply` list in its `MODULE.md`. `apply` prints exactly that list per selected Pack under "Next"; do not restate the steps elsewhere.
 
 ## Packs
 
@@ -97,7 +95,7 @@ Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge**
 1. Prefer a clean working tree; work on a branch. If WIP must stay, isolate quality-gate files in the adopt commit.
 2. Resolve packs (detect or `--packs`). Read each pack `MODULE.md`.
 3. `pnpm apply -- --target <repo>`. Never overwrites existing files.
-4. Follow pack post-apply steps (MODULE + apply “Next” output).
+4. Follow each pack's post-apply steps (apply “Next” output = MODULE `## Post-apply`).
 5. Clear first-pass gate failures (format, analyze, secrets, deps, tests). If the repo has an adoption checklist issue, tick it; otherwise MODULE post-apply + green gate is enough.
 6. Merge `AGENTS.quality.md` into `AGENTS.md`.
 7. Done when the Host gate is green (`pnpm gate` or `./tools/quality/gate.sh full`).
@@ -108,8 +106,7 @@ Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge**
 pnpm run audit -- --target ~/mycode/<repo> --packs kotlin-android
 # branch, then:
 pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
-# 3 Gradle lines → merge gradle.quality.properties + AGENTS → doctor.sh → lefthook install
-# → run-format.sh --fix → screenshots.sh record → gate.sh full
+# then follow the printed "Next" steps (languages/kotlin-android/MODULE.md Post-apply)
 ```
 
 #### Dart / Flutter happy path
@@ -118,7 +115,7 @@ pnpm apply -- --target ~/mycode/<repo> --packs kotlin-android
 pnpm run audit -- --target ~/mycode/<repo> --packs dart
 # branch, then:
 pnpm apply -- --target ~/mycode/<repo> --packs dart
-# roots → Betterleaks/lefthook → lefthook install → merge AGENTS → gate.sh full
+# then follow the printed "Next" steps (languages/dart/MODULE.md Post-apply)
 ```
 
 ### New (greenfield)

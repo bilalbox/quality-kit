@@ -29,5 +29,7 @@ Fragment Pack onto a `js-ts` Host: contributes `package.scripts.json` (`lint:py`
 
 ## Post-apply
 
+`apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.
+
 1. Refine `tach.toml` modules.
 2. `uvx vulture@2.16 --make-whitelist` and commit the whitelist.

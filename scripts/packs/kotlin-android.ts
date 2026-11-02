@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readText } from "../kit-fs";
 import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
+import { postApplySteps } from "./post-apply";
 import type { Contribution, Pack } from "./types";
 
 const ROOT_FILES: Record<string, FileKind> = {
@@ -73,6 +74,7 @@ export const kotlinAndroidPack: Pack = {
 		return {
 			rootPlacements: placeFiles("kotlin-android", ROOT_FILES),
 			packagePlacements: [],
+			nextSteps: postApplySteps("kotlin-android"),
 		};
 	},
 };
