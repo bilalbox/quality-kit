@@ -165,3 +165,46 @@ test("shared Betterleaks config has no project-specific rules", () => {
 	assert.doesNotMatch(toml, /\[\[rules\]\]/);
 	assert.doesNotMatch(toml, /retell/i);
 });
+
+/** Records argv and exits 0 so CI-range tests never need a real scanner. */
+function stubBetterleaks(logFile: string): string {
+	const dir = mkdtempSync(join(tmpdir(), "quality-kit-bl-"));
+	writeFileSync(
+		join(dir, "betterleaks"),
+		`#!/usr/bin/env bash
+if [[ "\${1:-}" == version ]]; then echo 1.9.0; exit 0; fi
+printf '%s\\n' "\$*" >>"${logFile}"
+exit 0
+`,
+		{ mode: 0o755 },
+	);
+	return dir;
+}
+
+test("secret scan: CI scans origin/<GITHUB_BASE_REF>..HEAD, not a hard-coded main", () => {
+	const target = appliedTarget("js-ts");
+	initGit(target);
+	git(target, "checkout", "-q", "-b", "develop");
+	git(target, "add", "-A");
+	git(target, "commit", "-q", "-m", "base");
+	git(target, "checkout", "-q", "-b", "feature");
+	writeFileSync(join(target, "feature.txt"), "x\n");
+	git(target, "add", "feature.txt");
+	git(target, "commit", "-q", "-m", "tip");
+	// Remote-tracking name the wrapper will resolve (PR base is not always "main").
+	git(target, "update-ref", "refs/remotes/origin/develop", "develop");
+
+	const logFile = join(target, "betterleaks-args.log");
+	const stub = stubBetterleaks(logFile);
+	const { status, output } = scan(target, {
+		env: {
+			CI: "true",
+			GITHUB_BASE_REF: "develop",
+			PATH: `${stub}:${process.env.PATH}`,
+		},
+	});
+	assert.equal(status, 0, output);
+	const args = readFileSync(logFile, "utf8");
+	assert.match(args, /--log-opts=origin\/develop\.\.HEAD/);
+	assert.doesNotMatch(args, /origin\/main/);
+});

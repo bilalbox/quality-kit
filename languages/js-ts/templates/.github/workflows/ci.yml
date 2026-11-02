@@ -20,6 +20,8 @@ jobs:
       HUSKY: "0"
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
