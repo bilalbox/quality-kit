@@ -93,6 +93,13 @@ Baselines (legacy only; never for new code): `<module>/detekt-baseline.xml` (`./
 - detekt is pinned to **2.0.0-alpha.6**: compose-rules 0.6.3+ requires it for Kotlin 2.4 syntax (detekt 1.23.x stops at Kotlin 2.0).
 - Compose BOM 2026.09+ (Compose 1.12) needs `compileSdk` 37.
 
+## Placement kinds
+
+Everything not listed is **owned** (audit reports drift), including `config/detekt/detekt.yml` and `config/lint/lint.xml`.
+
+- **seed:** `.betterleaksignore`
+- **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `gradle.quality.properties` → `gradle.properties` (all four `qualityKit.*` keys; values may be tuned); `Makefile` → itself (`gate-fast:` and `gate:` targets)
+
 ## Post-apply
 
 `apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.

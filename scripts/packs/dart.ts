@@ -1,34 +1,39 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
+import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import type { Contribution, Pack, Placement } from "./types";
 import { SKIP_DIRS, walkFiles } from "./walk";
 
-const ROOT_COPY_PATHS = [
-	"quality-kit.dart.json",
-	"lefthook.yml",
-	".editorconfig",
-	".betterleaks.toml",
-	".betterleaksignore",
-	"Makefile",
-	"AGENTS.quality.md",
-	".github/workflows/ci.yml",
-	".github/actions/setup-flutter/action.yml",
-	".github/actions/quality-gate/action.yml",
-	"tools/quality/lib.sh",
-	"tools/quality/gate.sh",
-	"tools/quality/run-secret-scan.sh",
-	"tools/quality/run-format.sh",
-	"tools/quality/run-analyze.sh",
-	"tools/quality/run-deps.sh",
-	"tools/quality/run-test.sh",
-] as const;
+const ROOT_FILES: Record<string, FileKind> = {
+	"quality-kit.dart.json": "seed",
+	"lefthook.yml": "owned",
+	".editorconfig": "owned",
+	".betterleaks.toml": "owned",
+	".betterleaksignore": "seed",
+	Makefile: { dest: "Makefile", markers: ["gate-fast:", "gate:"] },
+	"AGENTS.quality.md": AGENTS_MD,
+	".github/workflows/ci.yml": "owned",
+	".github/actions/setup-flutter/action.yml": "owned",
+	".github/actions/quality-gate/action.yml": "owned",
+	"tools/quality/lib.sh": "owned",
+	"tools/quality/gate.sh": "owned",
+	"tools/quality/run-secret-scan.sh": "owned",
+	"tools/quality/run-format.sh": "owned",
+	"tools/quality/run-analyze.sh": "owned",
+	"tools/quality/run-deps.sh": "owned",
+	"tools/quality/run-test.sh": "owned",
+};
 
-const PACKAGE_COPY_PATHS = [
-	"analysis_options.yaml",
-	"dart_dependency_validator.yaml",
-] as const;
+/** Templated under package/flutter/ or package/dart/, picked per root. */
+const VARIANT_PACKAGE_FILES: Record<string, FileKind> = {
+	"analysis_options.yaml": "owned",
+};
+
+const PACKAGE_FILES: Record<string, FileKind> = {
+	"dart_dependency_validator.yaml": "seed",
+};
 
 /**
  * Package dirs that contain pubspec.yaml.
@@ -76,15 +81,6 @@ export function resolveDartRoots(target: string): string[] {
 	return depth2.sort();
 }
 
-function rootPlacements(): Placement[] {
-	return ROOT_COPY_PATHS.map((rel) => ({
-		pack: "dart" as const,
-		templateRel: rel,
-		targetRel: rel,
-		executable: rel.endsWith(".sh") ? true : undefined,
-	}));
-}
-
 /** Same check as `quality_has_flutter` in templates/tools/quality/lib.sh. */
 function rootHasFlutter(target: string, root: string): boolean {
 	const pubspec = join(target, root, "pubspec.yaml");
@@ -93,22 +89,19 @@ function rootHasFlutter(target: string, root: string): boolean {
 }
 
 function packagePlacements(target: string): Placement[] {
-	const out: Placement[] = [];
-	for (const root of resolveDartRoots(target)) {
+	return resolveDartRoots(target).flatMap((root) => {
 		const variant = rootHasFlutter(target, root) ? "flutter" : "dart";
-		for (const rel of PACKAGE_COPY_PATHS) {
-			const templateRel =
-				rel === "analysis_options.yaml"
-					? join("package", variant, rel)
-					: join("package", rel);
-			out.push({
-				pack: "dart",
-				templateRel,
-				targetRel: root === "." ? rel : join(root, rel),
-			});
-		}
-	}
-	return out;
+		return [
+			...placeFiles("dart", VARIANT_PACKAGE_FILES, {
+				templateDir: join("package", variant),
+				targetDir: root,
+			}),
+			...placeFiles("dart", PACKAGE_FILES, {
+				templateDir: "package",
+				targetDir: root,
+			}),
+		];
+	});
 }
 
 export const dartPack: Pack = {
@@ -119,7 +112,7 @@ export const dartPack: Pack = {
 	},
 	contribute(target: string, _selected: readonly string[]): Contribution {
 		return {
-			rootPlacements: rootPlacements(),
+			rootPlacements: placeFiles("dart", ROOT_FILES),
 			packagePlacements: packagePlacements(target),
 			// no packageJson — dart Host does not own package.json merges
 			nextSteps: postApplySteps("dart"),

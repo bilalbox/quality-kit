@@ -66,9 +66,13 @@ Before pack-specific steps, **read** each selected pack's module:
 
 ## Drift playbook
 
-`apply` never overwrites existing files. Audit **drift** means Target content ≠ template.
+`apply` never overwrites existing files. Audit groups files by Placement kind (see `GLOSSARY.md`):
 
-For each drifted path, pick one deliberately:
+- **owned** — **drift** means Target content ≠ template. Use the steps below.
+- **seed** — tune freely; only **missing** or **invalid** (JSON no longer parses) is a gap.
+- **merge-into** — **unmerged** means the destination lacks the kit's markers (e.g. `AGENTS.md` has no `## Definition of Done (Mandatory Gate)` section). Merge the fragment in; you may then delete the fragment file.
+
+For each drifted owned path, pick one deliberately:
 
 1. **Keep** — Target policy wins; leave as-is (audit will keep reporting drift).
 2. **Merge** — fold useful template rules into the existing file by hand.
@@ -83,7 +87,7 @@ Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge**
 ### Audit
 
 1. `pnpm run audit -- --target <repo>` (read-only).
-2. Report packs (with host/fragment roles), missing/drifted files, script gaps (js-ts), orphan-Fragment warnings.
+2. Report packs (with host/fragment roles), file gaps by Placement kind (owned missing/drift, seed missing/invalid, merge-into unmerged), script gaps (js-ts), orphan-Fragment warnings.
 3. Done when the report lists every gap; do not modify the Target.
 
 ### Adopt (existing repo)

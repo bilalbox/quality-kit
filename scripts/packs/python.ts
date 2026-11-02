@@ -1,23 +1,19 @@
 import { existsSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
+import { type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
-import type { Contribution, Pack, Placement } from "./types";
+import type { Contribution, Pack } from "./types";
 import { PYTHON_HELPER_DIRS, walkFiles } from "./walk";
 
-const COPY_PATHS = [
-	"pyproject.toml",
-	"tach.toml",
-	"vulture_whitelist.py",
-] as const;
-
-function rootPlacements(): Placement[] {
-	return COPY_PATHS.map((rel) => ({
-		pack: "python" as const,
-		templateRel: rel,
-		targetRel: rel,
-	}));
-}
+const ROOT_FILES: Record<string, FileKind> = {
+	"pyproject.toml": {
+		dest: "pyproject.toml",
+		markers: ["[tool.ruff]", "[tool.basedpyright]", "[tool.vulture]"],
+	},
+	"tach.toml": "seed",
+	"vulture_whitelist.py": "seed",
+};
 
 /** True when a path segment is a known helper-script directory. */
 function underPythonHelperDir(target: string, filePath: string): boolean {
@@ -51,7 +47,7 @@ export const pythonPack: Pack = {
 		) as Record<string, string>;
 
 		return {
-			rootPlacements: rootPlacements(),
+			rootPlacements: placeFiles("python", ROOT_FILES),
 			packagePlacements: [],
 			packageJson: {
 				scripts,

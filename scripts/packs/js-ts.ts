@@ -1,54 +1,49 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
+import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
-import type { Contribution, Pack, Placement } from "./types";
+import type { Contribution, Pack } from "./types";
 
-const COPY_PATHS = [
-	"biome.json",
-	"biome.complexity.json",
-	"tsconfig.base.json",
-	"rev-dep.config.json",
-	".editorconfig",
-	".betterleaks.toml",
-	".betterleaksignore",
-	".npmrc",
-	".nvmrc",
-	".gitignore",
-	"pnpm-workspace.yaml",
-	".husky/pre-commit",
-	".husky/pre-push",
-	".github/workflows/ci.yml",
-	".github/actions/setup-pnpm/action.yml",
-	".github/actions/quality-gate/action.yml",
-	"scripts/ratchets/compare.ts",
-	"scripts/ratchets/run-tool.ts",
-	"scripts/ratchets/run-complexity.ts",
-	"scripts/run-rev-dep.ts",
-	"scripts/run-secret-scan.ts",
-	"baselines/complexity.json",
-	"tests/ratchets/ratchet-contract.test.sh",
-	"tests/ratchets/fixtures/baseline-green.json",
-	"tests/ratchets/fixtures/baseline-scored.json",
-	"tests/ratchets/fixtures/baseline-stale.json",
-	"tests/ratchets/fixtures/findings-green.json",
-	"tests/ratchets/fixtures/findings-novel.json",
-	"tests/ratchets/fixtures/findings-regression.json",
-	"tests/ratchets/fixtures/findings-stale.json",
-	"AGENTS.quality.md",
-] as const;
+const ROOT_FILES: Record<string, FileKind> = {
+	"biome.json": "owned",
+	"biome.complexity.json": "seed",
+	"tsconfig.base.json": "owned",
+	"rev-dep.config.json": "seed",
+	".editorconfig": "owned",
+	".betterleaks.toml": "owned",
+	".betterleaksignore": "seed",
+	".npmrc": { dest: ".npmrc", markers: ["engine-strict=true"] },
+	".nvmrc": "owned",
+	".gitignore": "seed",
+	"pnpm-workspace.yaml": {
+		dest: "pnpm-workspace.yaml",
+		markers: ["esbuild: true"],
+	},
+	".husky/pre-commit": "owned",
+	".husky/pre-push": "owned",
+	".github/workflows/ci.yml": "owned",
+	".github/actions/setup-pnpm/action.yml": "owned",
+	".github/actions/quality-gate/action.yml": "owned",
+	"scripts/ratchets/compare.ts": "owned",
+	"scripts/ratchets/run-tool.ts": "owned",
+	"scripts/ratchets/run-complexity.ts": "owned",
+	"scripts/run-rev-dep.ts": "owned",
+	"scripts/run-secret-scan.ts": "owned",
+	"baselines/complexity.json": "seed",
+	"tests/ratchets/ratchet-contract.test.sh": "owned",
+	"tests/ratchets/fixtures/baseline-green.json": "owned",
+	"tests/ratchets/fixtures/baseline-scored.json": "owned",
+	"tests/ratchets/fixtures/baseline-stale.json": "owned",
+	"tests/ratchets/fixtures/findings-green.json": "owned",
+	"tests/ratchets/fixtures/findings-novel.json": "owned",
+	"tests/ratchets/fixtures/findings-regression.json": "owned",
+	"tests/ratchets/fixtures/findings-stale.json": "owned",
+	"AGENTS.quality.md": AGENTS_MD,
+};
 
 function manifest(name: string): string {
 	return join(packTemplatesRoot("js-ts"), name);
-}
-
-function rootPlacements(): Placement[] {
-	return COPY_PATHS.map((rel) => ({
-		pack: "js-ts" as const,
-		templateRel: rel,
-		targetRel: rel,
-		executable: rel.endsWith(".sh") ? true : undefined,
-	}));
 }
 
 export const jsTsPack: Pack = {
@@ -85,7 +80,7 @@ export const jsTsPack: Pack = {
 		) as Record<string, string[]>;
 
 		return {
-			rootPlacements: rootPlacements(),
+			rootPlacements: placeFiles("js-ts", ROOT_FILES),
 			packagePlacements: [],
 			packageJson: {
 				scripts,

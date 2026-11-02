@@ -24,6 +24,17 @@ _Avoid_: plan, projection, conformance checklist, expected layout
 What one selected Pack adds toward Desired state (root placements, optional package-scoped placements, optional package.json pieces).
 _Avoid_: delta, patch, fragment (reserved for Fragment Pack)
 
+**Placement**:
+One template file mapped to a path in the Target, contributed by a Pack. Every Placement has a Placement kind.
+_Avoid_: copy path, template entry
+
+**Placement kind**:
+How audit judges a Placement. One of three:
+- **owned**: kit-owned; the Target copy must match the template, so drift is meaningful.
+- **seed**: copied once, then the Target owns it; audit checks presence (and that JSON seeds parse), never content.
+- **merge-into**: the kit's content must appear in a destination file (`AGENTS.quality.md` → `AGENTS.md`); audit checks the destination for the kit's markers. The destination may be the placed path itself when a Target usually brings its own file (`pyproject.toml`, `Makefile`).
+_Avoid_: file type, mode, policy
+
 **Target**:
 The repository path that apply mutates or audit inspects.
 _Avoid_: project, repo (when meaning the path under `--target`)

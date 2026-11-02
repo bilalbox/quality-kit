@@ -1,34 +1,43 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readText } from "../kit-fs";
+import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
-import type { Contribution, Pack, Placement } from "./types";
+import type { Contribution, Pack } from "./types";
 
-const ROOT_COPY_PATHS = [
-	"lefthook.yml",
-	".editorconfig",
-	".betterleaks.toml",
-	".betterleaksignore",
-	"Makefile",
-	"AGENTS.quality.md",
-	"gradle.quality.properties",
-	".github/workflows/ci.yml",
-	".github/actions/setup-android/action.yml",
-	".github/actions/quality-gate/action.yml",
-	"config/detekt/detekt.yml",
-	"config/lint/lint.xml",
-	"build-logic/quality/settings.gradle.kts",
-	"build-logic/quality/build.gradle.kts",
-	"build-logic/quality/gradle/libs.versions.toml",
-	"build-logic/quality/src/main/kotlin/QualityKitRootPlugin.kt",
-	"build-logic/quality/src/main/kotlin/QualityKitAndroidPlugin.kt",
-	"tools/quality/lib.sh",
-	"tools/quality/gate.sh",
-	"tools/quality/run-format.sh",
-	"tools/quality/run-secret-scan.sh",
-	"tools/quality/screenshots.sh",
-	"tools/quality/doctor.sh",
-] as const;
+const ROOT_FILES: Record<string, FileKind> = {
+	"lefthook.yml": "owned",
+	".editorconfig": "owned",
+	".betterleaks.toml": "owned",
+	".betterleaksignore": "seed",
+	Makefile: { dest: "Makefile", markers: ["gate-fast:", "gate:"] },
+	"AGENTS.quality.md": AGENTS_MD,
+	"gradle.quality.properties": {
+		dest: "gradle.properties",
+		markers: [
+			"qualityKit.variant",
+			"qualityKit.minLineCoverage",
+			"qualityKit.allWarningsAsErrors",
+			"qualityKit.addTestDependencies",
+		],
+	},
+	".github/workflows/ci.yml": "owned",
+	".github/actions/setup-android/action.yml": "owned",
+	".github/actions/quality-gate/action.yml": "owned",
+	"config/detekt/detekt.yml": "owned",
+	"config/lint/lint.xml": "owned",
+	"build-logic/quality/settings.gradle.kts": "owned",
+	"build-logic/quality/build.gradle.kts": "owned",
+	"build-logic/quality/gradle/libs.versions.toml": "owned",
+	"build-logic/quality/src/main/kotlin/QualityKitRootPlugin.kt": "owned",
+	"build-logic/quality/src/main/kotlin/QualityKitAndroidPlugin.kt": "owned",
+	"tools/quality/lib.sh": "owned",
+	"tools/quality/gate.sh": "owned",
+	"tools/quality/run-format.sh": "owned",
+	"tools/quality/run-secret-scan.sh": "owned",
+	"tools/quality/screenshots.sh": "owned",
+	"tools/quality/doctor.sh": "owned",
+};
 
 /** Root build files that name the Android Gradle Plugin in Gradle Android projects. */
 const ANDROID_SIGNAL_FILES = [
@@ -57,22 +66,13 @@ export function detectKotlinAndroid(target: string): boolean {
 	});
 }
 
-function rootPlacements(): Placement[] {
-	return ROOT_COPY_PATHS.map((rel) => ({
-		pack: "kotlin-android" as const,
-		templateRel: rel,
-		targetRel: rel,
-		executable: rel.endsWith(".sh") ? true : undefined,
-	}));
-}
-
 export const kotlinAndroidPack: Pack = {
 	id: "kotlin-android",
 	kind: "host",
 	detect: detectKotlinAndroid,
 	contribute(_target: string, _selected: readonly string[]): Contribution {
 		return {
-			rootPlacements: rootPlacements(),
+			rootPlacements: placeFiles("kotlin-android", ROOT_FILES),
 			packagePlacements: [],
 			nextSteps: postApplySteps("kotlin-android"),
 		};

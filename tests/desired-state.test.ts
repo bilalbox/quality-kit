@@ -199,6 +199,6 @@ test("diffAgainst: missing files and scripts", () => {
 
 	const state = desiredState(target, ["js-ts"]);
 	const report = diffAgainst(target, state);
-	assert.ok(report.files.some((f) => f.kind === "missing"));
+	assert.ok(report.files.some((f) => f.status === "missing"));
 	assert.ok(report.scripts.some((s) => s.kind === "missing"));
 });

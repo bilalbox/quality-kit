@@ -22,15 +22,19 @@ export {
 	type Pack,
 	type PackId,
 	type PackKind,
+	type Placement,
+	type PlacementKind,
 } from "./packs";
 
 export {
 	desiredState,
 	diffAgainst,
+	isFileGap,
+	missingMarkers,
 	type DesiredState,
 	type DiffReport,
-	type DriftKind,
 	type FileFinding,
+	type FileStatus,
 	type PlacementCollision,
 } from "./desired-state";
 

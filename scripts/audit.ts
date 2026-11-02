@@ -8,11 +8,14 @@ import { existsSync } from "node:fs";
 import {
 	desiredState,
 	diffAgainst,
+	isFileGap,
 	PACKS,
 	refuseCollisions,
 	resolvePacks,
 	resolveTarget,
+	type FileFinding,
 	type PackId,
+	type PlacementKind,
 } from "./lib";
 
 /** Host that currently absorbs python Fragment package.json / gate pieces. */
@@ -49,6 +52,36 @@ function warnOrphanFragments(packs: readonly PackId[]): void {
 	console.log("");
 }
 
+const PLACEMENT_KINDS: readonly PlacementKind[] = [
+	"owned",
+	"seed",
+	"merge-into",
+];
+
+const KIND_NOTES: Record<PlacementKind, string> = {
+	owned: "kit-owned; content must match the template",
+	seed: "copied once, then Target-owned; presence (and JSON parse) only",
+	"merge-into": "kit content must appear in the destination file",
+};
+
+function printKindGroup(
+	kind: PlacementKind,
+	findings: readonly FileFinding[],
+): void {
+	const counts = new Map<string, number>();
+	for (const f of findings) counts.set(f.status, (counts.get(f.status) ?? 0) + 1);
+	console.log("");
+	console.log(`### ${kind} (${findings.length}) — ${KIND_NOTES[kind]}`);
+	console.log(
+		`- ${[...counts].map(([status, n]) => `${status}: ${n}`).join(", ")}`,
+	);
+	for (const f of findings.filter(isFileGap)) {
+		const path = f.dest && f.dest !== f.path ? `${f.path} → ${f.dest}` : f.path;
+		const detail = f.detail ? ` (${f.detail})` : "";
+		console.log(`  ${f.status.padEnd(8)} [${f.pack}] ${path}${detail}`);
+	}
+}
+
 function main(): void {
 	const argv = process.argv.slice(2);
 	const target = resolveTarget(argv);
@@ -68,22 +101,13 @@ function main(): void {
 
 	warnOrphanFragments(packs);
 
-	const byKind = {
-		missing: report.files.filter((r) => r.kind === "missing"),
-		match: report.files.filter((r) => r.kind === "match"),
-		drift: report.files.filter((r) => r.kind === "drift"),
-	};
-
 	console.log(`## Files (${report.files.length})`);
-	console.log(`- match: ${byKind.match.length}`);
-	console.log(`- missing: ${byKind.missing.length}`);
-	console.log(`- drift: ${byKind.drift.length}`);
-	for (const r of byKind.missing)
-		console.log(`  missing  [${r.pack}] ${r.path}`);
-	for (const r of byKind.drift)
-		console.log(`  drift    [${r.pack}] ${r.path}`);
 	if (report.files.length === 0) {
 		console.log("  (no templates for selected packs — stub or empty)");
+	}
+	for (const kind of PLACEMENT_KINDS) {
+		const findings = report.files.filter((f) => f.kind === kind);
+		if (findings.length > 0) printKindGroup(kind, findings);
 	}
 
 	if (state.packageJson) {
@@ -137,7 +161,7 @@ function main(): void {
 		);
 	}
 
-	const gaps = byKind.missing.length + byKind.drift.length;
+	const gaps = report.files.filter(isFileGap).length;
 	const scriptGaps = report.scripts.filter((s) => s.kind !== "match").length;
 	process.exit(gaps + scriptGaps > 0 ? 1 : 0);
 }

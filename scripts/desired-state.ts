@@ -1,7 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { normalize, packTemplatesRoot, readText } from "./kit-fs";
-import { PACKS, resolveDartRoots, type PackId, type Placement } from "./packs";
+import {
+	PACKS,
+	resolveDartRoots,
+	type MergeInto,
+	type PackId,
+	type Placement,
+	type PlacementKind,
+} from "./packs";
 
 export type DesiredPackageJson = {
 	scripts: Record<string, string>;
@@ -32,13 +39,39 @@ export type DesiredState = {
 
 export type PackNextSteps = { pack: PackId; steps: readonly string[] };
 
-export type DriftKind = "missing" | "match" | "drift" | "present-custom";
+/** Per-kind file status: owned compares bytes, seed checks presence, merge-into checks the dest. */
+export type FileStatus =
+	| "missing"
+	| "match"
+	| "drift"
+	| "present-custom"
+	| "present"
+	| "invalid"
+	| "merged"
+	| "unmerged";
 
 export type FileFinding = {
 	path: string;
 	pack: PackId;
-	kind: DriftKind;
+	kind: PlacementKind;
+	status: FileStatus;
+	/** merge-into: the Target file the content must land in. */
+	dest?: string;
+	/** Why a seed is invalid or a merge-into is unmerged. */
+	detail?: string;
 };
+
+const FILE_GAPS: ReadonlySet<FileStatus> = new Set([
+	"missing",
+	"drift",
+	"invalid",
+	"unmerged",
+]);
+
+/** True when the finding should fail audit. */
+export function isFileGap(finding: FileFinding): boolean {
+	return FILE_GAPS.has(finding.status);
+}
 
 export type ScriptFinding = {
 	name: string;
@@ -182,39 +215,76 @@ export function desiredState(
 	};
 }
 
+/** Markers of a merge-into Placement that its dest lacks (all of them when dest is missing). */
+export function missingMarkers(target: string, merge: MergeInto): string[] {
+	const destPath = join(target, merge.dest);
+	if (!existsSync(destPath)) return [...merge.markers];
+	const lines = normalize(readText(destPath))
+		.split("\n")
+		.map((l) => l.trimStart());
+	return merge.markers.filter((m) => !lines.some((l) => l.startsWith(m)));
+}
+
+function compareOwned(targetPath: string, templatePath: string): FileStatus {
+	if (!existsSync(templatePath)) return "present-custom";
+	const a = normalize(readText(templatePath));
+	const b = normalize(readText(targetPath));
+	return a === b ? "match" : "drift";
+}
+
+function seedParseError(targetPath: string): string | undefined {
+	if (!targetPath.endsWith(".json")) return undefined;
+	try {
+		JSON.parse(readText(targetPath));
+		return undefined;
+	} catch (err) {
+		return `not valid JSON: ${(err as Error).message}`;
+	}
+}
+
 function comparePlacement(
 	targetRoot: string,
 	placement: Placement,
 ): FileFinding {
+	const base = {
+		path: placement.targetRel,
+		pack: placement.pack,
+		kind: placement.kind,
+	};
+
+	if (placement.kind === "merge-into") {
+		const { dest } = placement.mergeInto;
+		if (!existsSync(join(targetRoot, dest))) {
+			return { ...base, status: "unmerged", dest, detail: `${dest} missing` };
+		}
+		const absent = missingMarkers(targetRoot, placement.mergeInto);
+		if (absent.length === 0) return { ...base, status: "merged", dest };
+		return {
+			...base,
+			status: "unmerged",
+			dest,
+			detail: `${dest} lacks ${absent.join(", ")}`,
+		};
+	}
+
+	const targetPath = join(targetRoot, placement.targetRel);
+	if (!existsSync(targetPath)) return { ...base, status: "missing" };
+
+	if (placement.kind === "seed") {
+		const detail = seedParseError(targetPath);
+		return detail
+			? { ...base, status: "invalid", detail }
+			: { ...base, status: "present" };
+	}
+
 	const templatePath = join(
 		packTemplatesRoot(placement.pack),
 		placement.templateRel,
 	);
-	const targetPath = join(targetRoot, placement.targetRel);
-	if (!existsSync(targetPath)) {
-		return {
-			path: placement.targetRel,
-			pack: placement.pack,
-			kind: "missing",
-		};
-	}
-	if (!existsSync(templatePath)) {
-		return {
-			path: placement.targetRel,
-			pack: placement.pack,
-			kind: "present-custom",
-		};
-	}
-	const a = normalize(readText(templatePath));
-	const b = normalize(readText(targetPath));
-	return {
-		path: placement.targetRel,
-		pack: placement.pack,
-		kind: a === b ? "match" : "drift",
-	};
+	return { ...base, status: compareOwned(targetPath, templatePath) };
 }
 
-/** Diff Target against Desired state (content/presence only; ignores file mode). */
+/** Diff Target against Desired state, judging each Placement by its kind (ignores file mode). */
 export function diffAgainst(
 	target: string,
 	state: DesiredState,
