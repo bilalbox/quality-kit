@@ -95,7 +95,9 @@ Baselines (legacy only; never for new code): `<module>/detekt-baseline.xml` (`./
 
 ## Post-apply
 
-1. Wire `settings.gradle.kts`, the root build, and each Android module (see Wiring).
+`apply` prints this list as its "Next" output, so it is the only copy of these steps. Keep each step on one line.
+
+1. Wire the build (see Wiring): `settings.gradle.kts` `pluginManagement { includeBuild("build-logic/quality") }`; root `build.gradle.kts` `plugins { id("quality-kit.root") }`; each Android module `plugins { id("quality-kit.android") }` after `com.android.*`.
 2. Merge `gradle.quality.properties` → `gradle.properties`; merge `AGENTS.quality.md` → `AGENTS.md`.
 3. `./tools/quality/doctor.sh`; install Betterleaks v1.9.0+ and lefthook; `lefthook install`.
 4. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.

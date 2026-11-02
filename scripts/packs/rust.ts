@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { postApplySteps } from "./post-apply";
 import type { Contribution, Pack } from "./types";
 
 export const rustPack: Pack = {
@@ -12,6 +13,7 @@ export const rustPack: Pack = {
 		return {
 			rootPlacements: [],
 			packagePlacements: [],
+			nextSteps: postApplySteps("rust"),
 		};
 	},
 };
