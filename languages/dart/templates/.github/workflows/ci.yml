@@ -23,4 +23,4 @@ jobs:
       - uses: ./.github/actions/setup-betterleaks
       - uses: ./.github/actions/setup-osv-scanner
       - uses: ./.github/actions/setup-flutter
-      - uses: ./.github/actions/quality-gate
+      - uses: ./.github/actions/dart-quality-gate

@@ -28,4 +28,4 @@ jobs:
       - uses: ./.github/actions/setup-betterleaks
       - uses: ./.github/actions/setup-osv-scanner
       - uses: ./.github/actions/setup-pnpm
-      - uses: ./.github/actions/quality-gate
+      - uses: ./.github/actions/js-ts-quality-gate

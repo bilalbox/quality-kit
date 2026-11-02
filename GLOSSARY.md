@@ -29,18 +29,22 @@ What one selected Pack adds toward Desired state (root placements, optional pack
 _Avoid_: delta, patch, fragment (reserved for Fragment Pack)
 
 **Placement**:
-One template file mapped to a path in the Target, contributed by a Pack. Every Placement has a Placement kind.
+One template file (or generated content) mapped to a path in the Target, contributed by a Pack. Every Placement has a Placement kind.
 _Avoid_: copy path, template entry
 
 **Placement kind**:
 How audit judges a Placement. One of three:
-- **owned**: kit-owned; the Target copy must match the template, so drift is meaningful. The Lock file splits drift into stale vs customized.
+- **owned**: kit-owned; the Target copy must match the Desired content (template file or generated `content`), so drift is meaningful. The Lock file splits drift into stale vs customized.
 - **seed**: copied once, then the Target owns it; audit checks presence (and that JSON seeds parse), never content.
 - **merge-into**: the kit's content must appear in a destination file (`AGENTS.quality.md` → `AGENTS.md`); audit checks the destination for the kit's markers. The destination may be the placed path itself when a Target usually brings its own file (`pyproject.toml`, `Makefile`).
 _Avoid_: file type, mode, policy
 
+**Generated Placement**:
+An owned Placement whose Desired content is computed at Desired-state time (`content` string) rather than read from a template file. Today: the composed `.github/workflows/ci.yml` for selected Host Packs.
+_Avoid_: virtual placement, synthetic template
+
 **Lock file**:
-`.quality-kit.lock.json` at the Target root, written by apply and upgrade: the kit revision of the most recent run and a hash of each **owned** Placement as the kit last wrote it. Audit uses it to tell an owned file that is **stale** (untouched since apply; the kit template moved on, so it is safe to update) from one that is **customized** (edited in the Target since apply). An owned file equal to the template is **current**.
+`.quality-kit.lock.json` at the Target root, written by apply and upgrade: the kit revision of the most recent run and a hash of each **owned** Placement as the kit last wrote it. Audit uses it to tell an owned file that is **stale** (untouched since apply; the kit Desired content moved on, so it is safe to update) from one that is **customized** (edited in the Target since apply). An owned file equal to the Desired content is **current**.
 _Avoid_: lockfile (reserved for package-manager lockfiles), manifest, state file
 
 **Wiring probe**:

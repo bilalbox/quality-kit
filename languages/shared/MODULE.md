@@ -48,7 +48,7 @@ Betterleaks takes one config file. `[extend]` cannot combine `useDefault = true`
 
 ### Install
 
-- **CI**: each Host `ci.yml` checks out with `fetch-depth: 0`, then runs `./.github/actions/setup-betterleaks`. It runs `install-betterleaks.sh` and adds `~/.local/bin` to `PATH`. The Host `setup-*` actions no longer install Betterleaks.
+- **CI**: each Host's workflow job (single-Host template or a job inside the composed multi-Host workflow) checks out with `fetch-depth: 0`, then runs `./.github/actions/setup-betterleaks`. It runs `install-betterleaks.sh` and adds `~/.local/bin` to `PATH`. The Host `setup-*` actions no longer install Betterleaks.
 - **Linux (local)**: `./tools/quality/install-betterleaks.sh [DEST]` (default `~/.local/bin`).
 - **macOS**: `brew install --cask betterleaks/tap/betterleaks@1` (gives `betterleaks-v1`).
 

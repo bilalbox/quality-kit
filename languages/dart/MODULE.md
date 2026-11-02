@@ -81,12 +81,18 @@ Wrapper, install and CI step come from the Shared layer: see [languages/shared/M
 
 Pin **5.1.0** (`dart pub global activate dependency_validator 5.1.0`). Config per package: `dart_dependency_validator.yaml`. `ignore` lists only packages that are never imported (codegen/launcher tooling, asset-only `cupertino_icons`). Never ignore runtime deps such as `freezed_annotation` or `json_annotation`: if one is reported unused, remove it from `pubspec.yaml`. Packages referenced from `analysis_options.yaml` (`lints`, `flutter_lints`) are detected as used.
 
+## CI
+
+- Gate action: `.github/actions/dart-quality-gate/` (namespaced for multi-Host Targets).
+- Workflow template `templates/.github/workflows/ci.yml` is a composition input; Desired state places a generated `.github/workflows/ci.yml` (see REFERENCE.md "CI composition").
+
 ## Placement kinds
 
 Everything not listed is **owned** (audit reports drift), including each package's `analysis_options.yaml`. Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
 - **seed:** `quality-kit.dart.json`, each package's `dart_dependency_validator.yaml`
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `Makefile` → itself (`gate-fast:` and `gate:` targets)
+- **generated (owned):** Target `.github/workflows/ci.yml` (composed when multiple Hosts are selected).
 
 ## Wiring probes
 
