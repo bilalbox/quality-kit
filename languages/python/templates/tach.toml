@@ -1,5 +1,6 @@
 # Seed with `uvx tach@0.35.3 init` then refine modules/interfaces.
 # forbid_circular_dependencies is the Python analogue of rev-dep cycles.
+# For a `uv init` src layout, set source_roots = ["src"] and path = "<package>".
 
 exact = true
 forbid_circular_dependencies = true

@@ -1,0 +1,14 @@
+# python additions to the shared .betterleaks.toml (appended by
+# tools/quality/run-secret-scan.sh). Tables only: no top-level keys.
+
+[[allowlists]]
+description = "python: uv / venv / caches"
+paths = [
+  '''(?i)(?:^|/)\.venv/''',
+  '''(?i)(?:^|/)venv/''',
+  '''(?i)(?:^|/)\.uv/''',
+  '''(?i)(?:^|/)\.pytest_cache/''',
+  '''(?i)(?:^|/)\.ruff_cache/''',
+  '''(?i)(?:^|/)\.mypy_cache/''',
+  '''(?i)(?:^|/)__pycache__/'''
+]

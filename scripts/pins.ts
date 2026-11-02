@@ -57,6 +57,7 @@ export type Pins = {
 		"flutter-action": string;
 		"pnpm-action-setup": string;
 		"setup-node": string;
+		"setup-uv": string;
 		cache: string;
 		checkout: string;
 	};
@@ -474,6 +475,12 @@ function sitesFor(pins: Pins): Site[] {
 			expected: a["setup-node"],
 			label: "js-ts setup-node",
 		},
+		{
+			file: "languages/python/templates/.github/actions/setup-uv/action.yml",
+			pattern: /astral-sh\/setup-uv@(v\d+)/,
+			expected: a["setup-uv"],
+			label: "python setup-uv",
+		},
 	];
 }
 
@@ -613,6 +620,11 @@ function scanRules(pins: Pins): { label: string; pattern: RegExp; expected: stri
 		{
 			label: "uvx basedpyright",
 			pattern: /uvx basedpyright@([\d.]+)/g,
+			expected: py.basedpyright,
+		},
+		{
+			label: "uv run basedpyright",
+			pattern: /basedpyright==([\d.]+)/g,
 			expected: py.basedpyright,
 		},
 		{
