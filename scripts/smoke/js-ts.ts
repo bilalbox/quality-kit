@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { editJson, mergeAgentsMd, sh } from "./run";
-import type { SmokeRecipe } from "./types";
+import type { HostSmoke } from "./types";
 
 type Pkg = {
 	scripts?: Record<string, string>;
@@ -9,7 +9,7 @@ type Pkg = {
 };
 
 /** Vite vanilla-ts greenfield + js-ts Post-apply. */
-export const jsTsSmoke: SmokeRecipe = {
+export const jsTsSmoke: HostSmoke = {
 	tools: ["pnpm", "betterleaks", "osv-scanner", "git"],
 	scaffold(target) {
 		sh(dirname(target), [
