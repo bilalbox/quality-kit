@@ -133,7 +133,7 @@ pnpm apply -- --target ~/mycode/<repo> --packs dart
 
 1. Create the app (`pnpm create vite`, `flutter create`, an Android Studio / AGP Compose template, or equivalent).
 2. Same as Adopt steps 2–7.
-3. js-ts: set `biome.complexity.json` `maxAllowedComplexity` to **15** (template default is 25 for legacy) — see js-ts module. kotlin-android: set `qualityKit.minLineCoverage=80` (template default 0 for legacy).
+3. js-ts: set `biome.complexity.json` `maxAllowedComplexity` to **15** (template default is 25 for legacy), and add `"exactOptionalPropertyTypes": true` to the Target's own `tsconfig.json` (not to the owned `tsconfig.base.json`) — see js-ts module. kotlin-android: set `qualityKit.minLineCoverage=80` (template default 0 for legacy).
 4. Done when the pack gate is green.
 
 ## Reference

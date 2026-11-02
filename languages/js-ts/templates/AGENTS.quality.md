@@ -6,7 +6,7 @@ Before considering any code change or task done (even when not pushing), **run `
 
 Do not declare completion with only piecemeal checks (`biome`, bare `tsc --noEmit`, or a single lint script). `pnpm gate:fast` bundles:
 
-1. `lint` (Biome format + lint; fails on any error, warning or info not in `baselines/biome-diagnostics.json`)
+1. `lint` (Biome format + lint, including type-aware rules for floating/misused promises, `any` returns and non-exhaustive switches; fails on any error, warning or info not in `baselines/biome-diagnostics.json`). Await or return every promise; for deliberate fire-and-forget write `void promise` or attach `.catch(...)`.
 2. `lint:secrets` (`betterleaks` — secrets, tokens, API key leaks)
 3. `lint:graph` (`rev-dep` — cycles, orphans, unused exports/deps, duplicates)
 4. `lint:complexity` (Biome cognitive-complexity shrink-only ratchet)

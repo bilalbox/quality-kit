@@ -27,6 +27,12 @@
 			"correctness": {
 				"noUnusedImports": { "level": "on", "fix": "safe" }
 			},
+			"nursery": {
+				"noFloatingPromises": "error",
+				"noMisusedPromises": "error",
+				"noUnsafeReturn": "error",
+				"useExhaustiveSwitchCases": "error"
+			},
 			"style": {
 				"noNonNullAssertion": "off",
 				"useTemplate": { "level": "on", "fix": "safe" }
