@@ -76,29 +76,28 @@ test("compose: Stop uses top-level gate fast (not a Host-namespaced gate)", () =
 });
 
 test("compose: post-edit routes changed files to each selected Host only", () => {
-	const multi = composeAgentHooksSh([
-		"js-ts",
-		"python",
-		"dart",
-		"kotlin-android",
-	]);
+	const multi = composeAgentHooksSh(["js-ts", "dart", "kotlin-android"]);
 	assert.match(multi, /biome check --write/);
-	assert.match(multi, /tools\/quality\/python\/run-format\.sh"?\s+--fix/);
 	assert.match(multi, /tools\/quality\/dart\/run-format\.sh"?\s+--fix/);
 	assert.match(
 		multi,
 		/tools\/quality\/kotlin-android\/run-format\.sh"?\s+--fix/,
 	);
+	// python + js-ts is Fragment mode — no Host .py branch on that selection.
+	assert.doesNotMatch(multi, /tools\/quality\/python\/run-format/);
 
 	const dartOnly = composeAgentHooksSh(["dart"]);
 	assert.doesNotMatch(dartOnly, /biome check/);
 	assert.doesNotMatch(dartOnly, /kotlin-android/);
 	assert.match(dartOnly, /tools\/quality\/dart\/run-format\.sh"?\s+--fix/);
 
-	const pythonOnly = composeAgentHooksSh(["python"]);
-	assert.match(pythonOnly, /\.py\)/);
-	assert.match(pythonOnly, /tools\/quality\/python\/run-format\.sh"?\s+--fix/);
-	assert.doesNotMatch(pythonOnly, /biome check/);
+	const pythonHost = composeAgentHooksSh(["python", "dart"]);
+	assert.match(pythonHost, /\.py\)/);
+	assert.match(
+		pythonHost,
+		/tools\/quality\/python\/run-format\.sh"?\s+--fix/,
+	);
+	assert.match(pythonHost, /tools\/quality\/dart\/run-format\.sh"?\s+--fix/);
 });
 
 test("desiredState: agent hooks Placements absent by default, present when opted in", () => {
