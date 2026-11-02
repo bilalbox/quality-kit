@@ -11,6 +11,13 @@
 			"linux_arm64": "1d39116e0a58dc94574715e2aa12a2dbd5062f193eee3fec011fef6ba06bd13b"
 		}
 	},
+	"osvScanner": {
+		"version": "2.7.0",
+		"sha256": {
+			"linux_amd64": "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b",
+			"linux_arm64": "4061ef4c021ed3c47f203b818f337e351336cc5cd67c0274fc36bd1dfc728dd7"
+		}
+	},
 	"shellcheck": {
 		"version": "0.11.0",
 		"sha256": "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"

@@ -3,16 +3,17 @@ SHELL := /bin/bash
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 QUALITY := $(ROOT)/tools/quality
 
-.PHONY: gate gate-fast format analyze deps secrets test help
+.PHONY: gate gate-fast format analyze deps secrets vulns test help
 
 help:
 	@echo "Targets:"
 	@echo "  make gate-fast  format + analyze + secrets + deps"
-	@echo "  make gate       gate-fast + flutter test"
+	@echo "  make gate       gate-fast + osv-scanner + flutter test"
 	@echo "  make format     dart format --set-exit-if-changed"
 	@echo "  make analyze    flutter/dart analyze --fatal-infos"
 	@echo "  make deps       dependency_validator"
 	@echo "  make secrets    Betterleaks scan"
+	@echo "  make vulns      osv-scanner lockfile scan"
 	@echo "  make test       flutter/dart test"
 
 gate-fast:
@@ -32,6 +33,9 @@ deps:
 
 secrets:
 	@$(QUALITY)/run-secret-scan.sh
+
+vulns:
+	@$(QUALITY)/run-vuln-scan.sh
 
 test:
 	@$(QUALITY)/run-test.sh
