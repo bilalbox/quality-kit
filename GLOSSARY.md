@@ -40,8 +40,12 @@ How audit judges a Placement. One of three:
 _Avoid_: file type, mode, policy
 
 **Generated Placement**:
-An owned Placement whose Desired content is computed at Desired-state time (`content` string) rather than read from a template file. Today: the composed `.github/workflows/ci.yml` for selected Host Packs.
+An owned Placement whose Desired content is computed at Desired-state time (`content` string) rather than read from a template file. Today: the composed `.github/workflows/ci.yml`, top-level `tools/quality/gate.sh`, `lefthook.yml`, `.editorconfig`, `AGENTS.quality.md`, and `Makefile` for selected Host Packs.
 _Avoid_: virtual placement, synthetic template
+
+**Namespaced Host scripts**:
+Each Host Pack's bash gate helpers live under `tools/quality/<pack>/` so multiple Hosts coexist. Shared-layer scripts stay at `tools/quality/` (`run-secret-scan.sh`, `install-betterleaks.sh`). The composed top-level `tools/quality/gate.sh` dispatches to every selected Host.
+_Avoid_: pack scripts dir, quality subfolder
 
 **Lock file**:
 `.quality-kit.lock.json` at the Target root, written by apply and upgrade: the kit revision of the most recent run and a hash of each **owned** Placement as the kit last wrote it. Audit uses it to tell an owned file that is **stale** (untouched since apply; the kit Desired content moved on, so it is safe to update) from one that is **customized** (edited in the Target since apply). An owned file equal to the Desired content is **current**.
