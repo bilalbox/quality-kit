@@ -73,7 +73,7 @@ export function composeGateSh(
 		"#!/usr/bin/env bash",
 		"# quality-kit composed gate — runs each selected Host's gate.",
 		"# Usage: ./tools/quality/gate.sh [fast|full]",
-		"# Keep this entrypoint thin: Host gates own step logic (#15 may summarize).",
+		"# Keep this entrypoint thin: each Host gate runs all steps then summarizes.",
 		"set -euo pipefail",
 		"",
 		'mode="${1:-full}"',
