@@ -41,7 +41,7 @@ CI installs the binary in `setup-flutter`.
 
 ## dependency_validator
 
-Pin **5.1.0** (`dart pub global activate dependency_validator 5.1.0`). Config per package: `dart_dependency_validator.yaml`. Tune `ignore` for tooling packages (`flutter_lints`, `flutter_launcher_icons`, …).
+Pin **5.1.0** (`dart pub global activate dependency_validator 5.1.0`). Config per package: `dart_dependency_validator.yaml`. `ignore` lists only packages that are never imported (codegen/launcher tooling, asset-only `cupertino_icons`). Never ignore runtime deps such as `freezed_annotation` or `json_annotation`: if one is reported unused, remove it from `pubspec.yaml`. Packages referenced from `analysis_options.yaml` (`lints`, `flutter_lints`) are detected as used.
 
 ## Post-apply
 

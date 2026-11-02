@@ -164,6 +164,17 @@ test("dart: CI pins an exact Flutter version that MODULE.md documents", () => {
 	assert.match(moduleDoc, new RegExp(`^\\| Flutter \\| ${pin.replaceAll(".", "\\.")}\\b`, "m"));
 });
 
+test("dart: dependency_validator ignores tooling, never runtime deps", () => {
+	const yaml = readText(
+		join(packTemplatesRoot("dart"), "package", "dart_dependency_validator.yaml"),
+	);
+	const ignored = [...yaml.matchAll(/^\s+- (\S+)$/gm)].map((m) => m[1]);
+	assert.ok(ignored.includes("cupertino_icons"), "flutter create default");
+	for (const runtime of ["freezed_annotation", "json_annotation"]) {
+		assert.ok(!ignored.includes(runtime), `${runtime} is a runtime dep`);
+	}
+});
+
 test("dart: every package placement has a template file", () => {
 	const target = flutterAppAndDartPackage();
 	for (const p of desiredState(target, ["dart"]).packagePlacements) {
