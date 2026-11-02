@@ -8,7 +8,7 @@ pre-commit:
     # Checks staged content only; must never rewrite or re-stage files.
     format:
       glob: "*.dart"
-      run: ./tools/quality/run-format.sh --staged
+      run: ./tools/quality/dart/run-format.sh --staged
 
 pre-push:
   commands:

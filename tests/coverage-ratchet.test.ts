@@ -74,15 +74,15 @@ for (const host of HOSTS) {
 		assert.ok(rels.has("tools/quality/run-coverage-ratchet.sh"), "runner");
 		assert.ok(rels.has("tools/quality/ratchets/compare.py"), "compare");
 		assert.ok(
-			[...rels].some((r) => r.startsWith("tools/quality/collect-coverage.")),
-			"namespaced Host collector",
+			rels.has(`tools/quality/${host}/collect-coverage.sh`),
+			"Host collector beside namespaced gate scripts",
 		);
 	});
 }
 
-test("coverage-ratchet: python Host extension point is collect-coverage.python.sh", () => {
-	// #17 adds tools/quality/collect-coverage.python.sh; the shared runner globs
-	// collect-coverage*.sh when --findings is omitted.
+test("coverage-ratchet: python Host extension point is tools/quality/python/collect-coverage.sh", () => {
+	// #17 adds tools/quality/python/collect-coverage.sh; the shared runner globs
+	// tools/quality/*/collect-coverage.sh when --findings is omitted.
 	const runner = join(
 		languagesRoot,
 		"shared/templates/tools/quality/run-coverage-ratchet.sh",
@@ -90,6 +90,6 @@ test("coverage-ratchet: python Host extension point is collect-coverage.python.s
 	const text = spawnSync("bash", ["-c", `sed -n '1,20p' "${runner}"`], {
 		encoding: "utf8",
 	}).stdout;
-	assert.match(text, /collect-coverage\.\*\.sh|collect-coverage\.python/);
+	assert.match(text, /tools\/quality\/\*\/collect-coverage\.sh/);
 	assert.match(text, /#17|python/i);
 });

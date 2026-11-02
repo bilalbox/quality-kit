@@ -65,7 +65,7 @@ Betterleaks takes one config file. `[extend]` cannot combine `useDefault = true`
 
 ## Coverage ratchet
 
-Shared runner: `tools/quality/run-coverage-ratchet.sh` → Host `collect-coverage.<pack>.sh` → `ratchets/compare.py` against `baselines/coverage.json`. Contract and floor defaults: REFERENCE.md "Coverage ratchet". js-ts / dart / kotlin-android each place a namespaced collector; python Host (#17) adds `collect-coverage.python.sh`.
+Shared runner: `tools/quality/run-coverage-ratchet.sh` → Host `tools/quality/<pack>/collect-coverage.sh` → `ratchets/compare.py` against `baselines/coverage.json`. Contract and floor defaults: REFERENCE.md "Coverage ratchet". js-ts / dart / kotlin-android each place a collector beside their namespaced gate scripts; python Host (#17) adds `tools/quality/python/collect-coverage.sh`.
 
 ## Dependency vulns (osv-scanner)
 

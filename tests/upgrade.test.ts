@@ -93,7 +93,7 @@ test("upgrade replaces a stale shared-layer file from the shared templates", () 
 
 test("upgrade leaves an updated shell script executable", () => {
 	const target = appliedFromOlderKit();
-	const gate = "tools/quality/gate.sh";
+	const gate = "tools/quality/kotlin-android/gate.sh";
 	writeFileSync(join(target, gate), "#!/usr/bin/env bash\n");
 	chmodSync(join(target, gate), 0o644);
 	const lock = JSON.parse(read(target, LOCK)) as { files: Record<string, string> };

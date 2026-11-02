@@ -100,7 +100,7 @@ Common kotlin-android case: an existing `config/detekt/detekt.yml` — **merge**
 4. Follow each pack's post-apply steps (apply “Next” output = MODULE `## Post-apply`).
 5. Clear first-pass gate failures (format, analyze, secrets, deps, tests). If the repo has an adoption checklist issue, tick it; otherwise MODULE post-apply + green gate is enough.
 6. Merge `AGENTS.quality.md` into `AGENTS.md`.
-7. Done when the Host gate is green (`pnpm gate` or `./tools/quality/gate.sh full`).
+7. Done when the Host gate is green (`pnpm gate` or `./tools/quality/gate.sh full`). Multi-Host Targets use the composed top-level `./tools/quality/gate.sh` (dispatches to each Host); see REFERENCE.md "Local gate + hooks composition".
 
 #### Kotlin / Android (Jetpack Compose) happy path
 

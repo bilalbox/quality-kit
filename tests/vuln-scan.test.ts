@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
+	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	readdirSync,
@@ -153,13 +154,14 @@ for (const host of HOSTS) {
 			readFileSync(templatePath(ci!), "utf8"),
 			/uses: \.\/\.github\/actions\/setup-osv-scanner\n/,
 		);
-		const ownDownloads = state.rootPlacements.filter(
-			(p) =>
-				!p.shared &&
-				readFileSync(templatePath(p), "utf8").includes(
-					"osv-scanner/releases/download",
-				),
-		);
+		const ownDownloads = state.rootPlacements.filter((p) => {
+			if (p.shared || p.content !== undefined) return false;
+			const path = templatePath(p);
+			return (
+				existsSync(path) &&
+				readFileSync(path, "utf8").includes("osv-scanner/releases/download")
+			);
+		});
 		assert.deepEqual(
 			ownDownloads.map((p) => p.targetRel),
 			[],
@@ -175,14 +177,23 @@ test("vuln scan: js-ts full gate invokes the shared vuln wrapper", () => {
 		),
 	) as Record<string, string>;
 	assert.match(scripts["lint:vulns"] ?? "", /run-vuln-scan\.sh/);
-	assert.match(scripts.gate ?? "", /lint:vulns/);
+	assert.match(scripts.gate ?? "", /js-ts\/gate\.sh full/);
+	assert.match(scripts["gate:fast"] ?? "", /js-ts\/gate\.sh fast/);
+	const gate = readFileSync(
+		join(languagesRoot, "js-ts/templates/tools/quality/js-ts/gate.sh"),
+		"utf8",
+	);
+	assert.match(
+		gate,
+		/\[\[ "\$\{mode\}" == "full" \]\][\s\S]*step vulns pnpm lint:vulns/,
+	);
 	assert.doesNotMatch(scripts["gate:fast"] ?? "", /lint:vulns/);
 });
 
 for (const host of ["dart", "kotlin-android"] as const) {
 	test(`vuln scan: ${host} full gate invokes the shared vuln wrapper`, () => {
 		const gate = readFileSync(
-			join(languagesRoot, `${host}/templates/tools/quality/gate.sh`),
+			join(languagesRoot, `${host}/templates/tools/quality/${host}/gate.sh`),
 			"utf8",
 		);
 		assert.match(gate, /run-vuln-scan\.sh/);

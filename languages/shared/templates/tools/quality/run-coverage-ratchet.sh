@@ -4,13 +4,12 @@
 # Usage: ./tools/quality/run-coverage-ratchet.sh [--update] [--findings PATH]
 #
 # Without --findings, runs every Host collector matching
-#   tools/quality/collect-coverage.sh
-#   tools/quality/collect-coverage.<pack>.sh
+#   tools/quality/*/collect-coverage.sh
 # Each collector prints findings JSON on stdout; results are merged by id.
-# Python Host (#17): add tools/quality/collect-coverage.python.sh with the same shape.
+# Python Host (#17): add tools/quality/python/collect-coverage.sh with the same shape.
 #
 # Convention for multi-Host local gate composition (#9): keep invoking this script
-# by path; Hosts only add/rename collect-coverage*.sh.
+# by path; Hosts only add tools/quality/<pack>/collect-coverage.sh.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,20 +54,17 @@ if [[ -n "${findings_path}" ]]; then
 	cp "${findings_path}" "${out}"
 else
 	mapfile -t collectors < <(
-		{
-			[[ -f tools/quality/collect-coverage.sh ]] && printf '%s\n' tools/quality/collect-coverage.sh
-			# shellcheck disable=SC2012 # intentional glob listing of Host collectors
-			ls tools/quality/collect-coverage.*.sh 2>/dev/null || true
-		} | sort -u
+		# shellcheck disable=SC2012 # intentional glob listing of Host collectors
+		ls tools/quality/*/collect-coverage.sh 2>/dev/null | sort -u || true
 	)
 	if [[ ${#collectors[@]} -eq 0 ]]; then
-		echo "error: no coverage collector at tools/quality/collect-coverage*.sh" >&2
-		echo "  Host Packs place collect-coverage.<pack>.sh; python Host adds one in #17." >&2
+		echo "error: no coverage collector at tools/quality/*/collect-coverage.sh" >&2
+		echo "  Host Packs place collect-coverage.sh under tools/quality/<pack>/; python Host adds one in #17." >&2
 		exit 2
 	fi
 	merged='{"findings":[]}'
 	for c in "${collectors[@]}"; do
-		part="${tmpdir}/part-$(basename "${c}").json"
+		part="${tmpdir}/part-$(basename "$(dirname "${c}")").json"
 		bash "${c}" >"${part}"
 		merged="$(
 			python3 - "${merged}" "${part}" <<'PY'

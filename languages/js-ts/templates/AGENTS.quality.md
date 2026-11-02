@@ -13,7 +13,7 @@ Do not declare completion with only piecemeal checks (`biome`, bare `tsc --noEmi
 5. `typecheck` (`tsc -b`)
 6. `lint:py` when the repo has Python (`ruff`, `basedpyright`, `tach`, `vulture`)
 
-`pnpm gate` = `pnpm gate:fast && pnpm lint:vulns && pnpm lint:coverage` (CI and pre-push). `lint:vulns` runs osv-scanner over lockfiles; acknowledge a finding only with an `id` + `reason` in `osv-scanner.toml`. `lint:coverage` runs tests under c8 and the Shared coverage ratchet (`baselines/coverage.json`; coverage must not drop; greenfield floor defaults to 80).
+`pnpm gate` = full Host gate (`tools/quality/js-ts/gate.sh full`: fast steps + osv-scanner + `pnpm lint:coverage`; CI and pre-push). The gate runs every step even after a failure and ends with `# gate:… FAILED: …` listing step names. `lint:coverage` runs tests under c8 and the Shared coverage ratchet (`baselines/coverage.json`; coverage must not drop; greenfield floor defaults to 80). Acknowledge a vuln finding only with an `id` + `reason` in `osv-scanner.toml`.
 
 **Never silence a diagnostic to get a pass:** no `biome-ignore` comments, no turning a rule off or down in `biome.json`, no baseline `--update` to absorb new findings. Fix the code. Baselines only shrink.
 

@@ -1,19 +1,16 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { readText } from "../kit-fs";
-import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
+import { type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
 import type { Contribution, Pack, WiringProbe } from "./types";
 import { listFiles } from "./walk";
 import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
+/** Host scripts under tools/quality/kotlin-android/; shared root files are composed (see local.ts). */
 const ROOT_FILES: Record<string, FileKind> = {
-	"lefthook.yml": "owned",
-	".editorconfig": "owned",
 	".betterleaks.d/kotlin-android.toml": "owned",
-	Makefile: { dest: "Makefile", markers: ["gate-fast:", "gate:"] },
-	"AGENTS.quality.md": AGENTS_MD,
 	"gradle.quality.properties": {
 		dest: "gradle.properties",
 		markers: [
@@ -32,12 +29,12 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"build-logic/quality/gradle/libs.versions.toml": "owned",
 	"build-logic/quality/src/main/kotlin/QualityKitRootPlugin.kt": "owned",
 	"build-logic/quality/src/main/kotlin/QualityKitAndroidPlugin.kt": "owned",
-	"tools/quality/lib.sh": "owned",
-	"tools/quality/gate.sh": "owned",
-	"tools/quality/run-format.sh": "owned",
-	"tools/quality/collect-coverage.kotlin-android.sh": "owned",
-	"tools/quality/screenshots.sh": "owned",
-	"tools/quality/doctor.sh": "owned",
+	"tools/quality/kotlin-android/lib.sh": "owned",
+	"tools/quality/kotlin-android/gate.sh": "owned",
+	"tools/quality/kotlin-android/run-format.sh": "owned",
+	"tools/quality/kotlin-android/screenshots.sh": "owned",
+	"tools/quality/kotlin-android/doctor.sh": "owned",
+	"tools/quality/kotlin-android/collect-coverage.sh": "owned",
 };
 
 /** Root build files that name the Android Gradle Plugin in Gradle Android projects. */

@@ -1,29 +1,26 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { packTemplatesRoot, readText } from "../kit-fs";
-import { AGENTS_MD, type FileKind, placeFiles } from "./placements";
+import { type FileKind, placeFiles } from "./placements";
 import { postApplySteps } from "./post-apply";
 import { sharedPlacements } from "./shared";
 import type { Contribution, Pack, Placement } from "./types";
 import { SKIP_DIRS, walkFiles } from "./walk";
 import { hooksInstalledProbe, LEFTHOOK } from "./wiring";
 
+/** Host scripts under tools/quality/dart/; shared root files are composed (see local.ts). */
 const ROOT_FILES: Record<string, FileKind> = {
 	"quality-kit.dart.json": "seed",
-	"lefthook.yml": "owned",
-	".editorconfig": "owned",
 	".betterleaks.d/dart.toml": "owned",
-	Makefile: { dest: "Makefile", markers: ["gate-fast:", "gate:"] },
-	"AGENTS.quality.md": AGENTS_MD,
 	".github/actions/setup-flutter/action.yml": "owned",
 	".github/actions/dart-quality-gate/action.yml": "owned",
-	"tools/quality/lib.sh": "owned",
-	"tools/quality/gate.sh": "owned",
-	"tools/quality/run-format.sh": "owned",
-	"tools/quality/run-analyze.sh": "owned",
-	"tools/quality/run-deps.sh": "owned",
-	"tools/quality/run-test.sh": "owned",
-	"tools/quality/collect-coverage.dart.sh": "owned",
+	"tools/quality/dart/lib.sh": "owned",
+	"tools/quality/dart/gate.sh": "owned",
+	"tools/quality/dart/run-format.sh": "owned",
+	"tools/quality/dart/run-analyze.sh": "owned",
+	"tools/quality/dart/run-deps.sh": "owned",
+	"tools/quality/dart/run-test.sh": "owned",
+	"tools/quality/dart/collect-coverage.sh": "owned",
 };
 
 /** Templated under package/flutter/ or package/dart/, picked per root. */
