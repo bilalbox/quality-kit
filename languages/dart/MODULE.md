@@ -64,7 +64,7 @@ Strict modes usually surface many findings in an existing codebase, and `--fatal
 2. `dart fix --apply` for the auto-fixable lint findings.
 3. Fix strict-mode findings by hand: add explicit type arguments (`<String, Object?>{}`, `List<int>`), cast decoded JSON (`jsonDecode(s) as Map<String, Object?>`), annotate parameters and return types.
 4. If a root cannot be fixed in one change, set only the offending mode to `false` (or the offending rule to `false`) in that root's `analysis_options.yaml` with a `# TODO(quality-kit): re-enable <mode> — <issue link>` comment, and re-enable it root by root. Prefer this over scattering `// ignore:` comments. Never relax the config for new packages.
-5. `audit` reports the relaxed file as drift; that is intended (**Keep** in the Drift playbook) until the mode is back on.
+5. `audit` reports the relaxed file as customized; that is intended (**Keep** in the Drift playbook) until the mode is back on.
 
 ## Secrets (Betterleaks)
 
@@ -109,4 +109,4 @@ Helper `tool/*.py` scripts do not require the python pack; adopt with `--packs d
 | lefthook | latest stable release binary |
 | Flutter | 3.47.9 (Dart 3.13.7) — `flutter-version` in `.github/actions/setup-flutter/action.yml` |
 
-Bump Flutter deliberately: change `flutter-version`, run `./tools/quality/gate.sh full` locally on the same version, commit. A Target whose `pubspec.yaml` `environment.sdk` needs a newer Dart must raise the pin in its copy of the action (`audit` then reports drift on purpose).
+Bump Flutter deliberately: change `flutter-version`, run `./tools/quality/gate.sh full` locally on the same version, commit. A Target whose `pubspec.yaml` `environment.sdk` needs a newer Dart must raise the pin in its copy of the action (`audit` then reports it customized on purpose).

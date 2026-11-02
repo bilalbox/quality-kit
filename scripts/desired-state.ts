@@ -1,6 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { normalize, packTemplatesRoot, readText } from "./kit-fs";
+import {
+	contentHash,
+	normalize,
+	packTemplatesRoot,
+	readText,
+} from "./kit-fs";
+import { readLock, type LockRead } from "./lock-file";
 import {
 	PACKS,
 	resolveDartRoots,
@@ -39,10 +45,15 @@ export type DesiredState = {
 
 export type PackNextSteps = { pack: PackId; steps: readonly string[] };
 
-/** Per-kind file status: owned compares bytes, seed checks presence, merge-into checks the dest. */
+/**
+ * Per-kind file status: owned compares content (and the lock file's recorded hash),
+ * seed checks presence, merge-into checks the dest.
+ */
 export type FileStatus =
 	| "missing"
-	| "match"
+	| "current"
+	| "stale"
+	| "customized"
 	| "drift"
 	| "present-custom"
 	| "present"
@@ -63,6 +74,8 @@ export type FileFinding = {
 
 const FILE_GAPS: ReadonlySet<FileStatus> = new Set([
 	"missing",
+	"stale",
+	"customized",
 	"drift",
 	"invalid",
 	"unmerged",
@@ -81,6 +94,8 @@ export type ScriptFinding = {
 };
 
 export type DiffReport = {
+	/** Whether the Target's lock file could be read; owned files only get stale/customized when present. */
+	lock: LockRead["state"];
 	files: FileFinding[];
 	scripts: ScriptFinding[];
 	devDependencies: {
@@ -225,11 +240,17 @@ export function missingMarkers(target: string, merge: MergeInto): string[] {
 	return merge.markers.filter((m) => !lines.some((l) => l.startsWith(m)));
 }
 
-function compareOwned(targetPath: string, templatePath: string): FileStatus {
+/** Owned: current, else stale/customized against the lock's recorded hash, else drift (no hash). */
+function compareOwned(
+	targetPath: string,
+	templatePath: string,
+	recorded: string | undefined,
+): FileStatus {
 	if (!existsSync(templatePath)) return "present-custom";
-	const a = normalize(readText(templatePath));
-	const b = normalize(readText(targetPath));
-	return a === b ? "match" : "drift";
+	const target = contentHash(readText(targetPath));
+	if (target === contentHash(readText(templatePath))) return "current";
+	if (recorded === undefined) return "drift";
+	return target === recorded ? "stale" : "customized";
 }
 
 function seedParseError(targetPath: string): string | undefined {
@@ -245,6 +266,7 @@ function seedParseError(targetPath: string): string | undefined {
 function comparePlacement(
 	targetRoot: string,
 	placement: Placement,
+	recorded: Readonly<Record<string, string>>,
 ): FileFinding {
 	const base = {
 		path: placement.targetRel,
@@ -281,18 +303,33 @@ function comparePlacement(
 		packTemplatesRoot(placement.pack),
 		placement.templateRel,
 	);
-	return { ...base, status: compareOwned(targetPath, templatePath) };
+	const status = compareOwned(
+		targetPath,
+		templatePath,
+		recorded[placement.targetRel],
+	);
+	return OWNED_DETAIL[status]
+		? { ...base, status, detail: OWNED_DETAIL[status] }
+		: { ...base, status };
 }
+
+const OWNED_DETAIL: Partial<Record<FileStatus, string>> = {
+	stale: "unchanged since apply; the kit template moved on",
+	customized: "edited since apply",
+	drift: "no hash in lock file",
+};
 
 /** Diff Target against Desired state, judging each Placement by its kind (ignores file mode). */
 export function diffAgainst(
 	target: string,
 	state: DesiredState,
 ): DiffReport {
+	const lock = readLock(target);
+	const recorded = lock.state === "present" ? lock.lock.files : {};
 	const files: FileFinding[] = [
-		...state.rootPlacements.map((p) => comparePlacement(target, p)),
-		...state.packagePlacements.map((p) => comparePlacement(target, p)),
-	];
+		...state.rootPlacements,
+		...state.packagePlacements,
+	].map((p) => comparePlacement(target, p, recorded));
 
 	const pkgPath = join(target, "package.json");
 	const pkg = existsSync(pkgPath)
@@ -356,6 +393,7 @@ export function diffAgainst(
 	}
 
 	return {
+		lock: lock.state,
 		files,
 		scripts,
 		devDependencies,

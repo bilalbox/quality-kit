@@ -13,10 +13,12 @@ import {
 	refuseCollisions,
 	resolvePacks,
 	resolveTarget,
+	type DiffReport,
 	type FileFinding,
 	type PackId,
 	type PlacementKind,
 } from "./lib";
+import { LOCK_FILE } from "./lock-file";
 
 /** Host that currently absorbs python Fragment package.json / gate pieces. */
 const PYTHON_HOST: PackId = "js-ts";
@@ -59,7 +61,7 @@ const PLACEMENT_KINDS: readonly PlacementKind[] = [
 ];
 
 const KIND_NOTES: Record<PlacementKind, string> = {
-	owned: "kit-owned; content must match the template",
+	owned: "kit-owned; content must match the template (current)",
 	seed: "copied once, then Target-owned; presence (and JSON parse) only",
 	"merge-into": "kit content must appear in the destination file",
 };
@@ -78,8 +80,20 @@ function printKindGroup(
 	for (const f of findings.filter(isFileGap)) {
 		const path = f.dest && f.dest !== f.path ? `${f.path} → ${f.dest}` : f.path;
 		const detail = f.detail ? ` (${f.detail})` : "";
-		console.log(`  ${f.status.padEnd(8)} [${f.pack}] ${path}${detail}`);
+		console.log(`  ${f.status.padEnd(10)} [${f.pack}] ${path}${detail}`);
 	}
+}
+
+/** Without a readable lock file, owned files that differ are plain drift: say how to fix that. */
+function hintLock(report: DiffReport): void {
+	if (report.lock === "present") return;
+	if (!report.files.some((f) => f.kind === "owned")) return;
+	const problem = report.lock === "missing" ? "missing" : "unreadable";
+	console.log("## Lock file");
+	console.log(
+		`  ${LOCK_FILE} ${problem}: owned drift cannot be split into stale (kit moved on) vs customized; re-run apply to record what the kit wrote.`,
+	);
+	console.log("");
 }
 
 function main(): void {
@@ -100,6 +114,7 @@ function main(): void {
 	console.log("");
 
 	warnOrphanFragments(packs);
+	hintLock(report);
 
 	console.log(`## Files (${report.files.length})`);
 	if (report.files.length === 0) {

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
 	existsSync,
 	mkdirSync,
@@ -21,6 +22,11 @@ export function readText(path: string): string {
 
 export function normalize(text: string): string {
 	return text.replace(/\r\n/g, "\n");
+}
+
+/** sha256 hex of text after CRLF→LF normalization (lock file hashes). */
+export function contentHash(text: string): string {
+	return createHash("sha256").update(normalize(text)).digest("hex");
 }
 
 export function ensureDir(path: string): void {
