@@ -2,6 +2,8 @@
 
 Detect: `package.json` at target root. Templates: `languages/js-ts/templates/`.
 
+`pnpm gate:fast` / `pnpm gate` invoke `tools/quality/js-ts/gate.sh`, which runs every step then summarizes failures (REFERENCE.md Host gate contract). Fragment Pack scripts are extra args on `gate:fast`, not a trailing `&&` chain.
+
 ## Tools
 
 | Concern | Tool | Notes |

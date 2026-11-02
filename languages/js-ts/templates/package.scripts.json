@@ -6,8 +6,8 @@
 	"lint:vulns": "bash tools/quality/run-vuln-scan.sh",
 	"lint:graph": "tsx scripts/run-rev-dep.ts",
 	"lint:complexity": "tsx scripts/ratchets/run-complexity.ts",
-	"gate:fast": "pnpm lint && pnpm lint:secrets && pnpm lint:graph && pnpm lint:complexity && pnpm typecheck",
-	"gate": "pnpm gate:fast && pnpm lint:vulns && pnpm test",
+	"gate:fast": "bash tools/quality/js-ts/gate.sh fast",
+	"gate": "bash tools/quality/js-ts/gate.sh full",
 	"test:ratchets": "bash tests/ratchets/ratchet-contract.test.sh",
 	"prepare": "husky"
 }
