@@ -35,6 +35,7 @@ const ROOT_FILES: Record<string, FileKind> = {
 	"tools/quality/lib.sh": "owned",
 	"tools/quality/gate.sh": "owned",
 	"tools/quality/run-format.sh": "owned",
+	"tools/quality/collect-coverage.kotlin-android.sh": "owned",
 	"tools/quality/screenshots.sh": "owned",
 	"tools/quality/doctor.sh": "owned",
 };

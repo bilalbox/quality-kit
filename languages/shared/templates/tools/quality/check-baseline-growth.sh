@@ -65,6 +65,7 @@ mapfile -t candidates < <(
 		printf '%s\n' \
 			baselines/complexity.json \
 			baselines/biome-diagnostics.json \
+			baselines/coverage.json \
 			.rev-dep.baseline.json \
 			.rev-dep.duplicates.json \
 			.betterleaksignore \
@@ -120,6 +121,12 @@ def ratchet_rows(text: str) -> dict[str, float]:
     return out
 
 
+def ratchet_worse_when(text: str) -> str:
+    data = json.loads(text)
+    w = data.get("worseWhen", "higher")
+    return w if w in ("higher", "lower") else "higher"
+
+
 def rev_dep_baseline_rows(text: str) -> set[str]:
     data = json.loads(text)
     rows: set[str] = set()
@@ -173,7 +180,7 @@ def osv_rows(text: str) -> set[str]:
 
 def classify(path: str) -> str:
     name = Path(path).name
-    if name in ("complexity.json", "biome-diagnostics.json"):
+    if name in ("complexity.json", "biome-diagnostics.json", "coverage.json"):
         return "ratchet"
     if name == ".rev-dep.baseline.json":
         return "rev-dep-baseline"
@@ -220,7 +227,6 @@ for path in paths:
         # deleted on HEAD → shrink
         continue
     if base_text is None:
-        base_set: set[str] | dict[str, float] = {} if kind != "ratchet" else {}
         head_rows = extract(kind, head_text)
         if kind == "ratchet":
             assert isinstance(head_rows, dict)
@@ -236,11 +242,15 @@ for path in paths:
     base_rows = extract(kind, base_text)
     if kind == "ratchet":
         assert isinstance(head_rows, dict) and isinstance(base_rows, dict)
+        # Coverage (worseWhen=lower): a *decrease* is growth (mirrors score rise).
+        direction = ratchet_worse_when(head_text)
         grown = []
         for i, s in head_rows.items():
             if i not in base_rows:
                 grown.append(f"{i} (score={s})")
-            elif s > base_rows[i]:
+            elif direction == "lower" and s < base_rows[i]:
+                grown.append(f"{i} (score {base_rows[i]} → {s})")
+            elif direction != "lower" and s > base_rows[i]:
                 grown.append(f"{i} (score {base_rows[i]} → {s})")
         grown.sort()
     else:

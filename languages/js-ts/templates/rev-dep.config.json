@@ -8,7 +8,7 @@
 		"**/.git/**",
 		"**/.wrangler/**",
 		"**/baselines/**",
-		"**/tests/ratchets/fixtures/**"
+		"**/tools/quality/ratchets/fixtures/**"
 	],
 	"nodeModulesResolution": {
 		"resolutionType": "entry-package",

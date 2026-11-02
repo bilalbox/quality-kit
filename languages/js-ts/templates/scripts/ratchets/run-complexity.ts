@@ -11,8 +11,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Finding } from "./compare";
-import { runRatchetTool } from "./run-tool";
+import type { Finding } from "../../tools/quality/ratchets/compare";
+import { runRatchetTool } from "../../tools/quality/ratchets/run-tool";
 
 /** Roots walked for biome-ignore bans and passed to biome check. */
 const COMPLEXITY_ROOTS = ["src"];

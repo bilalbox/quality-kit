@@ -24,7 +24,8 @@ echo "# gate:${mode}"
 
 if [[ "${mode}" == "full" ]]; then
 	"${SCRIPT_DIR}/run-vuln-scan.sh"
-	"${SCRIPT_DIR}/run-test.sh"
+	# Coverage collector runs tests (flutter test --coverage); replaces bare run-test.sh.
+	"${SCRIPT_DIR}/run-coverage-ratchet.sh"
 fi
 
 echo "# gate:${mode} ok"

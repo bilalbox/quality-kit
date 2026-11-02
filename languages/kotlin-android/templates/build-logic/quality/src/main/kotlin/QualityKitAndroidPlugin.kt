@@ -17,7 +17,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
  *
  * Gradle properties (root `gradle.properties` or `-P`):
  * - `qualityKit.variant` (default `debug`)
- * - `qualityKit.minLineCoverage` (default `0` = no Kover rule)
+ * - `qualityKit.minLineCoverage` (legacy; coverage ratchet uses baselines/coverage.json)
  * - `qualityKit.allWarningsAsErrors` (default `true`)
  * - `qualityKit.addTestDependencies` (default `true`): Roborazzi / Robolectric / preview scanner
  */
@@ -80,12 +80,13 @@ private fun Project.configureAndroidModule() {
         }
     tasks.register(QualityKitTasks.FULL) {
         group = QualityKitTasks.GROUP
-        description = "quality-kit full gate: fast + lint + unit/screenshot tests + coverage"
+        description =
+            "quality-kit full gate: fast + lint + unit/screenshot tests + Kover XML report"
         dependsOn(
             fast,
             "lint$variantTask",
             "verifyRoborazzi$variantTask",
-            "koverVerify$variantTask",
+            "koverXmlReport$variantTask",
         )
     }
 }
@@ -135,8 +136,8 @@ private fun Project.configureDetekt() {
 }
 
 private fun Project.configureKover(variant: String) {
-    val minLine =
-        providers.gradleProperty("qualityKit.minLineCoverage").map(String::toInt).getOrElse(0)
+    // Line-coverage floor / ratchet lives in baselines/coverage.json (Shared layer).
+    // qualityKit.minLineCoverage is retained only as a merge-into marker for existing Targets.
     extensions.configure(KoverProjectExtension::class.java) {
         reports {
             filters {
@@ -145,11 +146,8 @@ private fun Project.configureKover(variant: String) {
                     classes("*.BuildConfig", "*.ComposableSingletons*", "*_Factory", "*_Factory$*")
                 }
             }
-            variant(variant) {
-                verify {
-                    if (minLine > 0) rule { minBound(minLine) }
-                }
-            }
+            // XML report task koverXmlReport<Variant> — consumed by collect-coverage.sh
+            variant(variant) {}
         }
     }
 }

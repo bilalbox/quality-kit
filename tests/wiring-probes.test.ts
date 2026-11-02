@@ -169,7 +169,7 @@ test("wiring: js-ts Target with lefthook-style hooks but no husky hooksPath is u
 	);
 });
 
-test("wiring: js-ts Target without a test script is unwired (gate runs pnpm test)", () => {
+test("wiring: js-ts Target without a test script is unwired (coverage gate runs tests)", () => {
 	const target = wiredJsTsTarget();
 	write(target, "package.json", JSON.stringify({ name: "x", scripts: {} }));
 
