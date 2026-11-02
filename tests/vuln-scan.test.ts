@@ -124,6 +124,21 @@ empty=
 	);
 }
 
+/** Plant a uv.lock that pins known-vulnerable urllib3 (static; no `uv` required). */
+function plantVulnerableUv(target: string): void {
+	write(
+		target,
+		"uv.lock",
+		`version = 1
+
+[[package]]
+name = "urllib3"
+version = "1.26.4"
+source = { registry = "https://pypi.org/simple" }
+`,
+	);
+}
+
 for (const host of HOSTS) {
 	test(`vuln scan: ${host} places the osv-scanner files from the shared layer`, () => {
 		const state = desiredState(mkdtempSync(join(tmpdir(), "quality-kit-")), [host]);
@@ -236,6 +251,16 @@ test(
 	() => {
 		const target = appliedTarget("kotlin-android");
 		plantVulnerableGradle(target);
+		assert.equal(scan(target).status, 1);
+	},
+);
+
+test(
+	"vuln scan: a known-vulnerable uv.lock fails the shared wrapper",
+	needsOsvOnline(),
+	() => {
+		const target = appliedTarget("python");
+		plantVulnerableUv(target);
 		assert.equal(scan(target).status, 1);
 	},
 );
