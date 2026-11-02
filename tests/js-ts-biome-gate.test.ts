@@ -92,59 +92,91 @@ test("js-ts gate: pnpm fix then lint passes with zero Biome diagnostics", () => 
 
 test("js-ts gate: generated pnpm-lock.yaml is not a Biome diagnostic", () => {
 	const target = adoptedTarget();
-	copyFileSync(
-		join(kitRoot, "pnpm-lock.yaml"),
-		join(target, "pnpm-lock.yaml"),
-	);
+	copyFileSync(join(kitRoot, "pnpm-lock.yaml"), join(target, "pnpm-lock.yaml"));
 
 	const lint = pnpm(target, ["lint"]);
 
 	assert.equal(lint.status, 0, lint.output);
 });
 
+function withTsconfig(target: string): string {
+	writeFileSync(
+		join(target, "tsconfig.json"),
+		'{\n\t"extends": "./tsconfig.base.json",\n\t"include": ["src"]\n}\n',
+	);
+	return target;
+}
+
+const FLOATING_PROMISE = [
+	"async function save(): Promise<void> {}",
+	"export function onClick(): void {",
+	"\tsave();",
+	"}",
+	"",
+].join("\n");
+
+const MISUSED_PROMISE = [
+	"async function save(id: string): Promise<void> {",
+	"\tawait Promise.resolve(id);",
+	"}",
+	"export function saveAll(ids: string[]): void {",
+	"\tids.forEach(async (id) => {",
+	"\t\tawait save(id);",
+	"\t});",
+	"}",
+	"",
+].join("\n");
+
 test("js-ts gate: a floating promise in src/ fails gate:fast", () => {
 	const target = adoptedTarget();
-	writeFileSync(
-		join(target, "src/a.ts"),
-		[
-			"async function save(): Promise<void> {}",
-			"export function onClick(): void {",
-			"\tsave();",
-			"}",
-			"",
-		].join("\n"),
-	);
+	writeFileSync(join(target, "src/a.ts"), FLOATING_PROMISE);
 
 	const gate = pnpm(target, ["gate:fast"]);
 
 	assert.notEqual(gate.status, 0, gate.output);
-	assert.match(gate.output, /src\/a\.ts:3:\d+ +lint\/nursery\/noFloatingPromises/);
+	assert.match(
+		gate.output,
+		/src\/a\.ts:3:\d+ +lint\/nursery\/noFloatingPromises/,
+	);
 });
 
 test("js-ts gate: a promise passed where a void callback is expected fails gate:fast", () => {
 	const target = adoptedTarget();
-	writeFileSync(
-		join(target, "src/a.ts"),
-		[
-			"async function save(id: string): Promise<void> {",
-			"\tawait Promise.resolve(id);",
-			"}",
-			"export function saveAll(ids: string[]): void {",
-			"\tids.forEach(async (id) => {",
-			"\t\tawait save(id);",
-			"\t});",
-			"}",
-			"",
-		].join("\n"),
-	);
+	writeFileSync(join(target, "src/a.ts"), MISUSED_PROMISE);
 
 	const gate = pnpm(target, ["gate:fast"]);
 
 	assert.notEqual(gate.status, 0, gate.output);
-	assert.match(gate.output, /src\/a\.ts:5:\d+ +lint\/nursery\/noMisusedPromises/);
+	assert.match(
+		gate.output,
+		/src\/a\.ts:5:\d+ +lint\/nursery\/noMisusedPromises/,
+	);
 });
 
-const TYPE_AWARE_CASES: Array<{ rule: string; line: number; source: string[] }> = [
+test("js-ts gate: promise findings come from Biome alone; typecheck accepts the same code", () => {
+	const target = withTsconfig(adoptedTarget());
+	writeFileSync(join(target, "src/floating.ts"), FLOATING_PROMISE);
+	writeFileSync(join(target, "src/misused.ts"), MISUSED_PROMISE);
+
+	const typecheck = pnpm(target, ["typecheck"]);
+	const lint = pnpm(target, ["lint"]);
+
+	assert.equal(typecheck.status, 0, typecheck.output);
+	assert.equal(
+		lint.output.match(/ lint\/nursery\/noFloatingPromises /g)?.length,
+		1,
+	);
+	assert.equal(
+		lint.output.match(/ lint\/nursery\/noMisusedPromises /g)?.length,
+		1,
+	);
+});
+
+const TYPE_AWARE_CASES: Array<{
+	rule: string;
+	line: number;
+	source: string[];
+}> = [
 	{
 		rule: "noUnsafeReturn",
 		line: 2,
@@ -184,6 +216,31 @@ for (const { rule, line, source } of TYPE_AWARE_CASES) {
 		);
 	});
 }
+
+test("js-ts typecheck: overriding a method without `override` fails", () => {
+	const target = withTsconfig(adoptedTarget());
+	writeFileSync(
+		join(target, "src/a.ts"),
+		[
+			"export class Base {",
+			"\tname(): string {",
+			'\t\treturn "base";',
+			"\t}",
+			"}",
+			"export class Child extends Base {",
+			"\tname(): string {",
+			'\t\treturn "child";',
+			"\t}",
+			"}",
+			"",
+		].join("\n"),
+	);
+
+	const typecheck = pnpm(target, ["typecheck"]);
+
+	assert.notEqual(typecheck.status, 0, typecheck.output);
+	assert.match(typecheck.output, /src\/a\.ts\(7,\d+\): error TS4114/);
+});
 
 const LEGACY_SOURCE = [
 	"export function legacy(a: any, b: any) {",
@@ -270,5 +327,8 @@ test("js-ts legacy adopt: floating promises baseline per file and cannot grow", 
 		[{ id: "src/legacy.ts|lint/nursery/noFloatingPromises", score: 1 }],
 	);
 	assert.notEqual(grown.status, 0, grown.output);
-	assert.match(grown.output, /src\/legacy\.ts\|lint\/nursery\/noFloatingPromises/);
+	assert.match(
+		grown.output,
+		/src\/legacy\.ts\|lint\/nursery\/noFloatingPromises/,
+	);
 });
