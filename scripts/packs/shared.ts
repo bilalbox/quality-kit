@@ -6,8 +6,10 @@ const SHARED_FILES: Record<string, FileKind> = {
 	".betterleaks.toml": "owned",
 	".betterleaksignore": "seed",
 	".github/actions/setup-betterleaks/action.yml": "owned",
+	".github/actions/check-baseline-growth/action.yml": "owned",
 	"tools/quality/install-betterleaks.sh": "owned",
 	"tools/quality/run-secret-scan.sh": "owned",
+	"tools/quality/check-baseline-growth.sh": "owned",
 };
 
 /** The shared layer as Placements contributed by `host`. */
