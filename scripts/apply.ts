@@ -11,6 +11,7 @@ import {
 	copyIfMissing,
 	desiredState,
 	packTemplatesRoot,
+	refuseCollisions,
 	resolvePacks,
 	resolveTarget,
 	type DesiredState,
@@ -97,6 +98,7 @@ function main(): void {
 
 	const packs = resolvePacks(target, argv);
 	const state = desiredState(target, packs);
+	refuseCollisions(state);
 	const placements = [...state.rootPlacements, ...state.packagePlacements];
 
 	console.log(`# quality-kit apply → ${target}`);

@@ -17,12 +17,14 @@ Finding ID shape is pack-specific (see js-ts module for complexity IDs). Dart pa
 
 Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Contribution**. Those merge into one **Desired state** for the **Target**: root file placements, optional package-scoped placements (dart), and optional `package.json` expectations (js-ts Host, plus Fragment script/gate pieces).
 
-- Overlapping target paths: **first-wins** by Pack selection order (detect order, or `--packs` order).
+- Overlapping target paths between different Packs are a **collision** unless both templates have identical content (after CRLF→LF normalization). Identical overlaps stay **first-wins** by Pack selection order (detect order, or `--packs` order); the file is placed once and labelled with the first Pack.
+- Collisions land in `DesiredState.collisions` (`{ targetRel, packs }`, Packs in selection order) across root and package-scoped placements. **apply** and **audit** refuse a selection with any collision: they exit `2` before writing or diffing anything and list every colliding path with the Packs involved. Today every Host pair collides (js-ts + dart, js-ts + kotlin-android, dart + kotlin-android), including when detection picks two Hosts; pick one with `--packs`. Host + Fragment (js-ts + python) does not collide. This is an interim guard until multi-Host composition lands; later work relaxes it per path.
 - Fragment without Host (e.g. `--packs python`): file placements still apply; `package.json` expectations only when the js-ts Host is selected. **audit** prints a warning when `python` is selected without `js-ts`.
 - Kit code: `scripts/desired-state.ts` (`desiredState`, `diffAgainst`); Pack adapters in `scripts/packs/`.
 
 ## apply / audit semantics
 
+- Both refuse colliding Pack selections (exit `2`, nothing written) — see Desired state above.
 - **apply** builds Desired state, copies missing placement files only (never overwrites), sets executable bit when the placement asks for it, and merges missing `package.json` scripts/devDeps/`lint-staged`/`engines` from Desired state. Policy flags like `--force-scripts` stay in the apply adapter.
 - **Next steps:** each Pack's Contribution carries `nextSteps`, read from the numbered list under `## Post-apply` in `languages/<pack>/MODULE.md` (one line per step). apply prints a "Next" block per selected Pack that declares steps, in Pack order, and nothing else. A Fragment prints its own block whether or not its Host is selected (audit already warns about orphan Fragments). Stub Packs (rust) declare none.
 - **audit** builds the same Desired state, diffs the Target via `diffAgainst` (content/presence; mode ignored), labels packs as host/fragment, warns on orphan Fragments, and exits non-zero on gaps.
