@@ -4,8 +4,8 @@ import { join } from "node:path";
 import {
 	contentHash,
 	kitRoot,
+	placementContent,
 	readText,
-	templatePath,
 } from "./kit-fs";
 import type { Placement } from "./packs";
 
@@ -68,10 +68,10 @@ export function recordOwned(
 	for (const p of placements) {
 		if (p.kind !== "owned") continue;
 		const targetPath = join(target, p.targetRel);
-		const template = templatePath(p);
-		if (!existsSync(targetPath) || !existsSync(template)) continue;
+		const desired = placementContent(p);
+		if (!existsSync(targetPath) || desired === null) continue;
 		const written = contentHash(readText(targetPath));
-		if (written === contentHash(readText(template))) {
+		if (written === contentHash(desired)) {
 			files[p.targetRel] = written;
 		}
 	}

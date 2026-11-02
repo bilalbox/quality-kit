@@ -16,13 +16,21 @@ export type MergeInto = {
 
 type PlacementBase = {
 	pack: PackId;
-	/** Relpath under languages/<pack>/templates/, or languages/shared/templates/ when `shared`. */
+	/**
+	 * Relpath under languages/<pack>/templates/, or languages/shared/templates/ when `shared`.
+	 * For a generated Placement (`content` set) this is a label only (still used by lock keys via targetRel).
+	 */
 	templateRel: string;
 	/** From the shared layer every Host composes; placed once however many Hosts are selected. */
 	shared?: true;
 	/** Relpath under the Target root. */
 	targetRel: string;
 	executable?: boolean;
+	/**
+	 * When set, Desired content is this string (generated Placement) instead of the
+	 * template file at templateRel. Used for the composed multi-Host CI workflow.
+	 */
+	content?: string;
 };
 
 /** One template → Target path mapping contributed by a Pack. */

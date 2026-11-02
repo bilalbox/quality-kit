@@ -93,11 +93,17 @@ Baselines (legacy only; never for new code): `<module>/detekt-baseline.xml` (`./
 - detekt is pinned to **2.0.0-alpha.6**: compose-rules 0.6.3+ requires it for Kotlin 2.4 syntax (detekt 1.23.x stops at Kotlin 2.0).
 - Compose BOM 2026.09+ (Compose 1.12) needs `compileSdk` 37.
 
+## CI
+
+- Gate action: `.github/actions/kotlin-android-quality-gate/` (namespaced for multi-Host Targets; screenshot-diff upload stays in this action).
+- Workflow template `templates/.github/workflows/ci.yml` is a composition input; Desired state places a generated `.github/workflows/ci.yml` (see REFERENCE.md "CI composition").
+
 ## Placement kinds
 
 Everything not listed is **owned** (audit reports drift), including `config/detekt/detekt.yml` and `config/lint/lint.xml`. Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `gradle.quality.properties` → `gradle.properties` (all four `qualityKit.*` keys; values may be tuned); `Makefile` → itself (`gate-fast:` and `gate:` targets)
+- **generated (owned):** Target `.github/workflows/ci.yml` (composed when multiple Hosts are selected).
 
 ## Wiring probes
 

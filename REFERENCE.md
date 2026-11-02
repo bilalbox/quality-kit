@@ -19,7 +19,7 @@ Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Con
 
 - Every Host Pack also contributes the **Shared layer** (`languages/shared/`, see its MODULE.md): shared Placements resolve their template from `languages/shared/templates/` and are placed once however many Hosts are selected, labelled `[shared]` by apply and audit. Shared paths never collide.
 - Overlapping target paths between different Packs are a **collision** unless both templates have identical content (after CRLF→LF normalization). Identical overlaps stay **first-wins** by Pack selection order (detect order, or `--packs` order); the file is placed once and labelled with the first Pack.
-- Collisions land in `DesiredState.collisions` (`{ targetRel, packs }`, Packs in selection order) across root and package-scoped placements. **apply** and **audit** refuse a selection with any collision: they exit `2` before writing or diffing anything and list every colliding path with the Packs involved. Today every Host pair collides (js-ts + dart, js-ts + kotlin-android, dart + kotlin-android), including when detection picks two Hosts; pick one with `--packs`. Host + Fragment (js-ts + python) does not collide. This is an interim guard until multi-Host composition lands; later work relaxes it per path.
+- Collisions land in `DesiredState.collisions` (`{ targetRel, packs }`, Packs in selection order) across root and package-scoped placements. **apply** and **audit** refuse a selection with any collision: they exit `2` before writing or diffing anything and list every colliding path with the Packs involved. Host pairs still collide on non-CI paths (`.editorconfig`, `AGENTS.quality.md`, and for dart+kotlin also hooks/Makefile/gate scripts); CI no longer collides (see CI composition below). Host + Fragment (js-ts + python) does not collide. Remaining overlaps are cleared by multi-Host local-gate composition (#9).
 - Fragment without Host (e.g. `--packs python`): file placements still apply; `package.json` expectations only when the js-ts Host is selected. **audit** prints a warning when `python` is selected without `js-ts`.
 - Kit code: `scripts/desired-state.ts` (`desiredState`, `diffAgainst`); Pack adapters in `scripts/packs/`.
 
@@ -42,6 +42,7 @@ Each Pack adapter declares a kind per template path (`scripts/packs/placements.t
 | seed | present, **missing**, **invalid** | copy if missing |
 | merge-into | merged, **unmerged** | copy the fragment if missing, unless its destination is already merged |
 
+- **Generated Placements:** an owned Placement may carry a `content` string instead of reading a template file (today: the composed `.github/workflows/ci.yml`). apply writes that string; audit and the Lock file hash it the same way as template bytes. `templateRel` remains a label (the Host composition input path).
 - **Seeds parse** only when they are JSON (`*.json`). YAML/TOML/Python seeds are checked for presence only: the kit has no parser dependencies.
 - **Merge-into markers**: a destination counts as merged when, for every marker, some line (leading whitespace ignored) starts with it. A missing destination is unmerged. Markers are headings or keys, never values, so Targets can tune merged values (e.g. `qualityKit.minLineCoverage=80`). A test asserts each fragment contains its own markers.
 - **The fragment file itself is not audited.** Delete it after merging; apply will not copy it back while the destination stays merged.
@@ -100,6 +101,14 @@ All three non-current states are gaps: an owned file must match the template, an
 
 ## CI / hooks
 
+### CI composition
+
+- Each Host Pack ships a **namespaced** quality-gate composite action at `.github/actions/<pack>-quality-gate/` (Host-specific steps stay in that action.yml). Setup actions stay Pack-specific (`setup-pnpm`, `setup-flutter`, `setup-android`).
+- Each Host keeps a single-job workflow template at `languages/<pack>/templates/.github/workflows/ci.yml` with job id `ci`. That file is a **composition input**, not a Placement: Desired state always adds one generated owned Placement for `.github/workflows/ci.yml` via `scripts/packs/ci.ts` `composeCiWorkflow`.
+- **One Host:** the generated workflow equals that Host's template (job name `ci`). **Several Hosts:** one workflow whose jobs are those Hosts' `ci` bodies renamed to the Pack id (selection order); each job keeps its own checkout / setup-betterleaks / setup / gate steps so Host-specific edits merge cleanly.
+- The composed Placement is labelled with the first CI Host in selection order. Lock / audit / upgrade treat it like any other owned file (hash of generated content).
+- Decision: multi-Host CI is **one workflow, one job per Host** (not one shared job), so concurrent Host CI edits stay isolated and failures are attributed per Pack.
+
 Principles:
 
 - pre-commit: fast staged checks (Betterleaks `git --staged` + format). A hook never commits unstaged hunks: js-ts relies on lint-staged's stash; dart / kotlin-android check the staged blobs only and fail with the fix command (see their MODULE.md "Pre-commit format")
@@ -122,7 +131,7 @@ The kit's own `.github/workflows/ci.yml` runs on every PR (and on pushes to `mai
 `pnpm lint:templates` (`scripts/lint-templates.ts`) exits 1 on any finding and 2 when a linter is missing:
 
 - **shellcheck** at default severity (style and info included) with `-x -P SCRIPTDIR` on every `*.sh` under `languages/*/templates` (Packs and the Shared layer). Husky hooks (`.husky/*`, no shebang) are linted with `-s sh`.
-- **actionlint** on the kit's own workflows, and on each Pack's template workflows inside a throwaway `git init` copy of the Shared layer's and that Pack's `.github`, so `uses: ./.github/actions/…` resolves to the composite actions a Target gets (input names checked). actionlint silently skips a local action it cannot find. actionlint also shellchecks workflow `run:` steps.
+- **actionlint** on the kit's own workflows, on each Pack's template workflows inside a throwaway `git init` copy of the Shared layer's and that Pack's `.github`, and on every multi-Host **composed** workflow (pairs and all three) with each selected Host's actions present, so `uses: ./.github/actions/…` resolves to the composite actions a Target gets (input names checked). actionlint silently skips a local action it cannot find. actionlint also shellchecks workflow `run:` steps.
 - Not covered: shell in composite action `run:` steps (neither tool lints it). Extract to a script under the Pack's templates to get coverage.
 - Pins: shellcheck 0.11.0 and actionlint 1.7.12 (see `pins.json`), downloaded in CI and checked against sha256 pinned in the workflow (ubuntu's preinstalled shellcheck is older). Bump version and hash in `pins.json` and the workflow together.
 - Findings are fixed, not suppressed. If a suppression is unavoidable, use an inline `# shellcheck disable=SCxxxx # <reason>` on the line, never a file- or CLI-wide exclusion.

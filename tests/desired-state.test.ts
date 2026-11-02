@@ -109,10 +109,11 @@ test("desiredState: kotlin-android places build-logic and executable scripts", (
 	);
 });
 
-test("every Pack placement has a template file", () => {
+test("every Pack placement has a template file (or generated content)", () => {
 	for (const id of PACK_IDS) {
 		const state = desiredState(tempTarget(), [id]);
 		for (const p of state.rootPlacements) {
+			if (p.content !== undefined) continue;
 			const src = templatePath(p);
 			assert.ok(existsSync(src), `${id}: missing template ${p.templateRel}`);
 		}

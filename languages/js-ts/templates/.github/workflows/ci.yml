@@ -27,4 +27,4 @@ jobs:
           enable-cache: true
       - uses: ./.github/actions/setup-betterleaks
       - uses: ./.github/actions/setup-pnpm
-      - uses: ./.github/actions/quality-gate
+      - uses: ./.github/actions/js-ts-quality-gate

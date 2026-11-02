@@ -3,6 +3,7 @@ import { join } from "node:path";
 import {
 	contentHash,
 	normalize,
+	placementContent,
 	readText,
 	relToKit,
 	templatePath,
@@ -18,6 +19,7 @@ import {
 	type WiringGap,
 	type WiringProbe,
 } from "./packs";
+import { composedCiPlacement } from "./packs/ci";
 
 export type DesiredPackageJson = {
 	scripts: Record<string, string>;
@@ -129,14 +131,9 @@ export type DiffReport = {
 	wiring: WiringFinding[];
 };
 
-function templateText(p: Placement): string | null {
-	const path = templatePath(p);
-	return existsSync(path) ? normalize(readText(path)) : null;
-}
-
 function sameContent(a: Placement, b: Placement): boolean {
-	const textA = templateText(a);
-	return textA !== null && textA === templateText(b);
+	const textA = placementContent(a);
+	return textA !== null && textA === placementContent(b);
 }
 
 /**
@@ -241,6 +238,11 @@ export function desiredState(
 		};
 	}
 
+	const ci = composedCiPlacement(packs);
+	if (ci) {
+		mergePlacements(claimed, collisions, rootPlacements, [ci]);
+	}
+
 	return {
 		packs,
 		rootPlacements,
@@ -265,12 +267,12 @@ export function missingMarkers(target: string, merge: MergeInto): string[] {
 /** Owned: current, else stale/customized against the lock's recorded hash, else drift (no hash). */
 function compareOwned(
 	targetPath: string,
-	templatePath: string,
+	desired: string | null,
 	recorded: string | undefined,
 ): FileStatus {
-	if (!existsSync(templatePath)) return "present-custom";
+	if (desired === null) return "present-custom";
 	const target = contentHash(readText(targetPath));
-	if (target === contentHash(readText(templatePath))) return "current";
+	if (target === contentHash(desired)) return "current";
 	if (recorded === undefined) return "drift";
 	return target === recorded ? "stale" : "customized";
 }
@@ -327,7 +329,7 @@ function comparePlacement(
 
 	const status = compareOwned(
 		targetPath,
-		template,
+		placementContent(placement),
 		recorded[placement.targetRel],
 	);
 	return OWNED_DETAIL[status]

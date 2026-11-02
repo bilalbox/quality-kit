@@ -22,4 +22,4 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-betterleaks
       - uses: ./.github/actions/setup-flutter
-      - uses: ./.github/actions/quality-gate
+      - uses: ./.github/actions/dart-quality-gate
