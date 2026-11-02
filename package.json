@@ -6,6 +6,7 @@
 	"scripts": {
 		"audit": "tsx scripts/audit.ts",
 		"apply": "tsx scripts/apply.ts",
+		"upgrade": "tsx scripts/upgrade.ts",
 		"lint:templates": "tsx scripts/lint-templates.ts",
 		"test": "tsx --test tests/**/*.test.ts"
 	},

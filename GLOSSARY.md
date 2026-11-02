@@ -36,7 +36,7 @@ How audit judges a Placement. One of three:
 _Avoid_: file type, mode, policy
 
 **Lock file**:
-`.quality-kit.lock.json` at the Target root, written by apply: the kit revision of the most recent apply and a hash of each **owned** Placement as the kit last wrote it. Audit uses it to tell an owned file that is **stale** (untouched since apply; the kit template moved on, so it is safe to update) from one that is **customized** (edited in the Target since apply). An owned file equal to the template is **current**.
+`.quality-kit.lock.json` at the Target root, written by apply and upgrade: the kit revision of the most recent run and a hash of each **owned** Placement as the kit last wrote it. Audit uses it to tell an owned file that is **stale** (untouched since apply; the kit template moved on, so it is safe to update) from one that is **customized** (edited in the Target since apply). An owned file equal to the template is **current**.
 _Avoid_: lockfile (reserved for package-manager lockfiles), manifest, state file
 
 **Wiring probe**:
