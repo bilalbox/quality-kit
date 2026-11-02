@@ -2,7 +2,7 @@
  * Idempotent copy-in of quality-kit templates by language pack.
  * Builds Desired state, then writes missing files / merges package.json.
  *
- * Usage: pnpm apply -- --target /path/to/repo [--packs a,b] [--python] [--force-scripts]
+ * Usage: pnpm apply -- --target /path/to/repo [--packs a,b] [--python] [--force-scripts] [--agent-hooks]
  */
 
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -13,6 +13,7 @@ import {
 	ensureDir,
 	missingMarkers,
 	refuseCollisions,
+	resolveAgentHooks,
 	resolvePacks,
 	resolveTarget,
 	sourceLabel,
@@ -130,7 +131,8 @@ function main(): void {
 	}
 
 	const packs = resolvePacks(target, argv);
-	const state = desiredState(target, packs);
+	const agentHooks = resolveAgentHooks(target, argv);
+	const state = desiredState(target, packs, { agentHooks });
 	refuseCollisions(state);
 	const placements = [...state.rootPlacements, ...state.packagePlacements];
 

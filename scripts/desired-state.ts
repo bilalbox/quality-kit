@@ -20,7 +20,12 @@ import {
 	type WiringProbe,
 } from "./packs";
 import { composedCiPlacement } from "./packs/ci";
-import { composedLocalPlacements } from "./packs/local";
+import {
+	composedLocalPlacements,
+	type ComposeLocalPlacementsOpts,
+} from "./packs/local";
+
+export type DesiredStateOpts = ComposeLocalPlacementsOpts;
 
 export type DesiredPackageJson = {
 	scripts: Record<string, string>;
@@ -174,6 +179,7 @@ function mergePlacements(
 export function desiredState(
 	target: string,
 	packs: readonly PackId[],
+	opts: DesiredStateOpts = {},
 ): DesiredState {
 	const rootPlacements: Placement[] = [];
 	const packagePlacements: Placement[] = [];
@@ -247,7 +253,7 @@ export function desiredState(
 		claimed,
 		collisions,
 		rootPlacements,
-		composedLocalPlacements(packs),
+		composedLocalPlacements(packs, opts),
 	);
 
 	return {
