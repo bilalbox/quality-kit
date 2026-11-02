@@ -9,6 +9,7 @@ import {
 	desiredState,
 	diffAgainst,
 	PACKS,
+	refuseCollisions,
 	resolvePacks,
 	resolveTarget,
 	type PackId,
@@ -58,6 +59,7 @@ function main(): void {
 
 	const packs = resolvePacks(target, argv);
 	const state = desiredState(target, packs);
+	refuseCollisions(state);
 	const report = diffAgainst(target, state);
 
 	console.log(`# quality-kit audit: ${target}`);

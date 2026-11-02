@@ -1,12 +1,33 @@
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { desiredState } from "../scripts/desired-state";
+import { kitRoot } from "../scripts/kit-fs";
 
 function tempTarget(): string {
 	return mkdtempSync(join(tmpdir(), "quality-kit-"));
+}
+
+function runCli(
+	script: "apply" | "audit",
+	target: string,
+	packs: string,
+): { status: number | null; output: string } {
+	const res = spawnSync(
+		join(kitRoot, "node_modules", ".bin", "tsx"),
+		[
+			join(kitRoot, "scripts", `${script}.ts`),
+			"--target",
+			target,
+			"--packs",
+			packs,
+		],
+		{ encoding: "utf8" },
+	);
+	return { status: res.status, output: `${res.stdout}${res.stderr}` };
 }
 
 const HOST_SHARED_PATHS = [
@@ -92,4 +113,46 @@ test("collisions: none for a single Host or Host + Fragment", () => {
 		const state = desiredState(tempTarget(), packs);
 		assert.deepEqual(state.collisions, [], packs.join(","));
 	}
+});
+
+function assertListsCollisions(output: string, packs: string): void {
+	for (const path of HOST_SHARED_PATHS) {
+		assert.ok(
+			output.includes(`  ${path}  (${packs.replace(",", ", ")})`),
+			`${path} not listed in:\n${output}`,
+		);
+	}
+}
+
+for (const packs of [
+	"js-ts,dart",
+	"dart,kotlin-android",
+	"js-ts,kotlin-android",
+]) {
+	test(`apply: --packs ${packs} refuses, lists collisions, writes nothing`, () => {
+		const target = tempTarget();
+		writeFileSync(join(target, "package.json"), "{}\n");
+		const { status, output } = runCli("apply", target, packs);
+		assert.equal(status, 2);
+		assertListsCollisions(output, packs);
+		assert.deepEqual(readdirSync(target), ["package.json"]);
+	});
+
+	test(`audit: --packs ${packs} refuses and lists collisions`, () => {
+		const { status, output } = runCli("audit", tempTarget(), packs);
+		assert.equal(status, 2);
+		assertListsCollisions(output, packs);
+	});
+}
+
+test("apply + audit: js-ts + python still apply cleanly", () => {
+	const target = tempTarget();
+	writeFileSync(join(target, "package.json"), "{}\n");
+	const applied = runCli("apply", target, "js-ts,python");
+	assert.equal(applied.status, 0, applied.output);
+	assert.ok(readdirSync(target).includes("biome.json"));
+	assert.ok(readdirSync(target).includes("pyproject.toml"));
+	const audited = runCli("audit", target, "js-ts,python");
+	assert.doesNotMatch(audited.output, /Refusing/);
+	assert.match(audited.output, /- match: \d+/);
 });
