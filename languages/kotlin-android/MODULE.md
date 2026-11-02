@@ -2,7 +2,7 @@
 
 Detect: root `settings.gradle(.kts)` plus an Android Gradle Plugin reference (`com.android.application|library` or `com.android.tools.build:gradle`) in a root build file, settings, or `gradle/libs.versions.toml`. Root-only, so Flutter / React Native `android/` builds never match. Templates: `languages/kotlin-android/templates/`.
 
-Standalone Host for Jetpack Compose apps and libraries: `tools/quality/*.sh`, lefthook, GitHub Actions, and an included Gradle build (`build-logic/quality`) that owns every Gradle-side tool and pin.
+Standalone Host for Jetpack Compose apps and libraries: `tools/quality/kotlin-android/*.sh`, lefthook, GitHub Actions, and an included Gradle build (`build-logic/quality`) that owns every Gradle-side tool and pin. Multi-Host Targets share a composed top-level `tools/quality/gate.sh`, `lefthook.yml`, `.editorconfig`, `Makefile`, and `AGENTS.quality.md` (see REFERENCE.md "Local gate + hooks composition").
 
 ## Tools
 
@@ -19,9 +19,9 @@ Standalone Host for Jetpack Compose apps and libraries: `tools/quality/*.sh`, le
 | Coverage | **Kover** line floor (`qualityKit.minLineCoverage`) | full |
 | Dependencies | **dependency-analysis** `buildHealth`, all advice fatal | full |
 | Hooks | **lefthook** | pre-commit: secrets + format check of staged content (see Pre-commit format); pre-push: full |
-| Orchestration | `tools/quality/gate.sh` → `./gradlew -q --continue qualityFast|qualityFull` | — |
+| Orchestration | `tools/quality/kotlin-android/gate.sh` (top-level `tools/quality/gate.sh` dispatches) → `./gradlew -q --continue qualityFast|qualityFull` | — |
 
-`gate.sh` runs every step even after a failure and ends with a summary: failing steps, `*_compare.png` diff images to open, and previews that have no golden yet.
+`tools/quality/kotlin-android/gate.sh` runs every step even after a failure and ends with a summary: failing steps, `*_compare.png` diff images to open, and previews that have no golden yet.
 
 ## Pre-commit format
 
@@ -30,7 +30,7 @@ Standalone Host for Jetpack Compose apps and libraries: `tools/quality/*.sh`, le
 A misformatted staged file fails the hook and prints the fix command:
 
 ```text
-fix: ./tools/quality/run-format.sh --fix app/src/main/kotlin/A.kt && git add app/src/main/kotlin/A.kt
+fix: ./tools/quality/kotlin-android/run-format.sh --fix app/src/main/kotlin/A.kt && git add app/src/main/kotlin/A.kt
 ```
 
 Files that also have unstaged changes get `git add -p <file>` instead, so only the formatted hunks are re-staged. lefthook hides unstaged hunks while the hook runs; the script reads lefthook's `info/lefthook-unstaged.patch` to still spot them.
@@ -74,14 +74,14 @@ Baselines (legacy only; never for new code): `<module>/detekt-baseline.xml` (`./
 ## Screenshots
 
 - Goldens: `<module>/src/test/screenshots/*.png`, committed to git.
-- `./tools/quality/screenshots.sh record` re-records and prunes goldens for deleted previews.
+- `./tools/quality/kotlin-android/screenshots.sh record` re-records and prunes goldens for deleted previews.
 - `compare` writes `build/outputs/roborazzi/*_compare.png` (Reference | Diff | New) without failing; `verify` is what the full gate runs.
 - Preview tests run on Robolectric SDK 36 at `Pixel5` qualifiers, so the output does not depend on the module's `targetSdk`.
 - Rendering is deterministic per OS/arch. Record goldens on Linux x86_64 (CI or WSL/container), not macOS, or CI will report diffs.
 
 ## Headless environments
 
-- `./tools/quality/doctor.sh` checks the JDK (17+, 21 recommended), Android SDK + licenses, `compileSdk` platforms, tools, and Gradle wiring, and prints a fix command for each failure.
+- `./tools/quality/kotlin-android/doctor.sh` checks the JDK (17+, 21 recommended), Android SDK + licenses, `compileSdk` platforms, tools, and Gradle wiring, and prints a fix command for each failure.
 - Test JVMs get `java.awt.headless=true` (Roborazzi draws diff labels with AWT) and `--add-opens java.base/jdk.internal.access` (Robolectric SDK 36 on JDK 17+).
 - `LD_LIBRARY_PATH` entries under `…/emulator/` are stripped for test JVMs: the emulator's bundled Qt `libfreetype` breaks AWT font loading (`X11FontManager` / `FT_Get_Transform`).
 - Robolectric downloads `android-all-instrumented` jars (~200 MB per SDK) into `~/.m2/repository/org/robolectric` on first run. Sandboxes without network need that directory pre-seeded; CI caches it.
@@ -103,8 +103,8 @@ Baselines (legacy only; never for new code): `<module>/detekt-baseline.xml` (`./
 
 Everything not listed is **owned** (audit reports drift), including `config/detekt/detekt.yml` and `config/lint/lint.xml`. Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
-- **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `gradle.quality.properties` → `gradle.properties` (all four `qualityKit.*` keys; values may be tuned); `Makefile` → itself (`gate-fast:` and `gate:` targets)
-- **generated (owned):** Target `.github/workflows/ci.yml` (composed when multiple Hosts are selected).
+- **merge-into:** composed `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `gradle.quality.properties` → `gradle.properties` (all four `qualityKit.*` keys; values may be tuned); composed `Makefile` → itself (`gate-fast:` and `gate:` targets)
+- **generated (owned):** Target `.github/workflows/ci.yml`, top-level `tools/quality/gate.sh`, `lefthook.yml`, `.editorconfig` (and the merge-into fragments above).
 
 ## Wiring probes
 
@@ -121,10 +121,10 @@ audit checks the Wiring section was done (see REFERENCE.md "Wiring probes"):
 
 1. Wire the build (see Wiring): `settings.gradle.kts` `pluginManagement { includeBuild("build-logic/quality") }`; root `build.gradle.kts` `plugins { id("quality-kit.root") }`; each Android module `plugins { id("quality-kit.android") }` after `com.android.*`.
 2. Merge `gradle.quality.properties` → `gradle.properties`; merge `AGENTS.quality.md` → `AGENTS.md`.
-3. `./tools/quality/doctor.sh`; install Betterleaks v1.9.0+ and osv-scanner (see languages/shared/MODULE.md) and lefthook; `lefthook install`.
-4. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.
-5. `./tools/quality/run-format.sh --fix` (one formatting commit), then `./tools/quality/screenshots.sh record` and inspect the goldens.
-6. `./tools/quality/gate.sh full`; fix findings, or baseline legacy detekt / Lint findings deliberately.
+3. `./tools/quality/kotlin-android/doctor.sh`; install Betterleaks v1.9.0+ and osv-scanner (see languages/shared/MODULE.md) and lefthook; `lefthook install`.
+4. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh` (composed top-level dispatcher).
+5. `./tools/quality/kotlin-android/run-format.sh --fix` (one formatting commit), then `./tools/quality/kotlin-android/screenshots.sh record` and inspect the goldens.
+6. `./tools/quality/gate.sh full` (runs `./tools/quality/kotlin-android/gate.sh full`); fix findings, or baseline legacy detekt / Lint findings deliberately.
 
 ## Pins
 

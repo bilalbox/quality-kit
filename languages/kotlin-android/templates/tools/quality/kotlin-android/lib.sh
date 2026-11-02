@@ -5,7 +5,7 @@
 set -euo pipefail
 
 QUALITY_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${QUALITY_LIB_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${QUALITY_LIB_DIR}/../../.." && pwd)"
 KTFMT_VERSION="${KTFMT_VERSION:-0.65}"
 KTFMT_RELEASES="https://github.com/Kotlin/ktfmt/releases/download/v${KTFMT_VERSION}"
 
@@ -76,7 +76,7 @@ quality_staged_format_failure() {
 	echo "format: staged content is not formatted:" >&2
 	printf '  %s\n' "$@" >&2
 	local fix
-	fix="./tools/quality/run-format.sh --fix $(quality_quote "$@")"
+	fix="./tools/quality/kotlin-android/run-format.sh --fix $(quality_quote "$@")"
 	if ((${#whole[@]} > 0)); then
 		fix+=" && git add $(quality_quote "${whole[@]}")"
 	fi

@@ -4,7 +4,7 @@ Before considering any code change or task done (even when not pushing), **alway
 
 Do not declare completion with only piecemeal checks (`flutter analyze` alone, format alone, or a single test file). `gate.sh fast` bundles:
 
-1. `dart format --set-exit-if-changed` (per package root) — fix with `./tools/quality/run-format.sh --fix`
+1. `dart format --set-exit-if-changed` (per package root) — fix with `./tools/quality/dart/run-format.sh --fix`
 2. `flutter analyze --fatal-infos` (or `dart analyze`)
 3. Betterleaks secret scan
 4. `dependency_validator` (missing / unused / mis-promoted deps)

@@ -18,7 +18,7 @@ runs:
       run: |
         set -euo pipefail
         # shellcheck source=/dev/null
-        source ./tools/quality/lib.sh
+        source ./tools/quality/dart/lib.sh
         while IFS= read -r root; do
           echo "==> pub get [${root}]"
           if quality_has_flutter "${root}"; then

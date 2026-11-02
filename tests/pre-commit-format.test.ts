@@ -82,14 +82,24 @@ function write(target: string, rel: string, contents: string) {
  * running the format step, or the Pack's lefthook.yml installed (the secrets
  * command is excluded via LEFTHOOK_EXCLUDE in `git`).
  */
+function chmodTree(dir: string): void {
+	for (const name of readdirSync(dir, { withFileTypes: true })) {
+		const path = join(dir, name.name);
+		if (name.isDirectory()) chmodTree(path);
+		else if (name.name.endsWith(".sh")) chmodSync(path, 0o755);
+	}
+}
+
+function formatScript(pack: FormatPack): string {
+	return `./tools/quality/${pack.id}/run-format.sh`;
+}
+
 function targetRepo(pack: FormatPack, hook: Hook = "plain"): string {
 	const target = mkdtempSync(join(tmpdir(), "quality-kit-"));
 	const templates = packTemplatesRoot(pack.id);
 	const quality = join(target, "tools/quality");
 	cpSync(join(templates, "tools/quality"), quality, { recursive: true });
-	for (const name of readdirSync(quality)) {
-		chmodSync(join(quality, name), 0o755);
-	}
+	chmodTree(quality);
 	git(target, "init", "-q");
 	git(target, "config", "user.email", "kit@example.com");
 	git(target, "config", "user.name", "kit");
@@ -111,7 +121,7 @@ function targetRepo(pack: FormatPack, hook: Hook = "plain"): string {
 	write(
 		target,
 		".git/hooks/pre-commit",
-		"#!/usr/bin/env bash\nexec ./tools/quality/run-format.sh --staged\n",
+		`#!/usr/bin/env bash\nexec ${formatScript(pack)} --staged\n`,
 	);
 	chmodSync(join(target, ".git/hooks/pre-commit"), 0o755);
 	return target;
@@ -170,7 +180,7 @@ for (const pack of [DART, KOTLIN]) {
 		assert.equal(committed(target, pack.file), head);
 		assert.equal(indexed(target, pack.file), bad);
 		assert.equal(readFileSync(join(target, pack.file), "utf8"), bad);
-		const fix = `./tools/quality/run-format.sh --fix ${pack.file} && git add ${pack.file}`;
+		const fix = `${formatScript(pack)} --fix ${pack.file} && git add ${pack.file}`;
 		assert.ok(
 			commit.stderr.includes(fix),
 			`expected "${fix}" in:\n${commit.stderr}`,
@@ -207,7 +217,7 @@ for (const pack of [DART, KOTLIN]) {
 			const output = commit.stdout + commit.stderr;
 			assert.ok(
 				output.includes(
-					`./tools/quality/run-format.sh --fix ${pack.file} && git add -p ${pack.file}`,
+					`${formatScript(pack)} --fix ${pack.file} && git add -p ${pack.file}`,
 				),
 				output,
 			);

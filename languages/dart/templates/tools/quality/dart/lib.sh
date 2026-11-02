@@ -5,7 +5,7 @@
 set -euo pipefail
 
 QUALITY_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${QUALITY_LIB_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${QUALITY_LIB_DIR}/../../.." && pwd)"
 CONFIG_PATH="${REPO_ROOT}/quality-kit.dart.json"
 DEPENDENCY_VALIDATOR_VERSION="${DEPENDENCY_VALIDATOR_VERSION:-5.1.0}"
 
@@ -79,7 +79,7 @@ quality_staged_format_failure() {
 	echo "format: staged content is not formatted:" >&2
 	printf '  %s\n' "$@" >&2
 	local fix
-	fix="./tools/quality/run-format.sh --fix $(quality_quote "$@")"
+	fix="./tools/quality/dart/run-format.sh --fix $(quality_quote "$@")"
 	if ((${#whole[@]} > 0)); then
 		fix+=" && git add $(quality_quote "${whole[@]}")"
 	fi

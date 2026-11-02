@@ -2,7 +2,7 @@
 
 Detect: any `pubspec.yaml` within depth 3 (root app or nested `app/`). Templates: `languages/dart/templates/`.
 
-Standalone host (not composed onto js-ts): Makefile / `tools/quality/*.sh`, lefthook, Flutter CI.
+Standalone host (not composed onto js-ts): Makefile / `tools/quality/dart/*.sh`, lefthook, Flutter CI. Multi-Host Targets share a composed top-level `tools/quality/gate.sh`, `lefthook.yml`, `.editorconfig`, `Makefile`, and `AGENTS.quality.md` (see REFERENCE.md "Local gate + hooks composition").
 
 ## Tools
 
@@ -14,7 +14,7 @@ Standalone host (not composed onto js-ts): Makefile / `tools/quality/*.sh`, left
 | Dependency vulns | **osv-scanner** | From the Shared layer; `gate.sh full` / `make vulns`. |
 | Dependencies | **dependency_validator 5.1.0** | Missing / unused / over-/under-promoted deps. Activated via `dart pub global`. |
 | Hooks | **lefthook** | pre-commit: secrets + format check of staged content (see Pre-commit format); pre-push: full gate. |
-| Orchestration | **`tools/quality/gate.sh`** | `fast` = format + analyze + secrets + deps; `full` = fast + test. |
+| Orchestration | **`tools/quality/dart/gate.sh`** (top-level `tools/quality/gate.sh` dispatches) | `fast` = format + analyze + secrets + deps; `full` = fast + test. |
 
 ## Pre-commit format
 
@@ -23,7 +23,7 @@ Standalone host (not composed onto js-ts): Makefile / `tools/quality/*.sh`, left
 A misformatted staged file fails the hook and prints the fix command:
 
 ```text
-fix: ./tools/quality/run-format.sh --fix lib/a.dart && git add lib/a.dart
+fix: ./tools/quality/dart/run-format.sh --fix lib/a.dart && git add lib/a.dart
 ```
 
 Files that also have unstaged changes get `git add -p <file>` instead, so only the formatted hunks are re-staged. lefthook hides unstaged hunks while the hook runs; the script reads lefthook's `info/lefthook-unstaged.patch` to still spot them.
@@ -42,7 +42,7 @@ Files that also have unstaged changes get `git add -p <file>` instead, so only t
 - **`roots`**: package dirs that contain `pubspec.yaml`. Empty → auto-detect (`.` if root pubspec, else depth-1, else depth-2).
 - **`flutterEnv`**: optional script that wraps Flutter/Dart (e.g. WSL Linux Flutter scrubber). Ignored when missing.
 
-`tools/quality/lib.sh` reads this file with bash only (no python3, jq or node needed). Keep it flat as above: string values must not contain escaped quotes (`\"`).
+`tools/quality/dart/lib.sh` reads this file with bash only (no python3, jq or node needed). Keep it flat as above: string values must not contain escaped quotes (`\"`).
 
 ## Analysis
 
@@ -91,8 +91,8 @@ Pin **5.1.0** (`dart pub global activate dependency_validator 5.1.0`). Config pe
 Everything not listed is **owned** (audit reports drift), including each package's `analysis_options.yaml`. Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
 - **seed:** `quality-kit.dart.json`, each package's `dart_dependency_validator.yaml`
-- **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `Makefile` → itself (`gate-fast:` and `gate:` targets)
-- **generated (owned):** Target `.github/workflows/ci.yml` (composed when multiple Hosts are selected).
+- **merge-into:** composed `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); composed `Makefile` → itself (`gate-fast:` and `gate:` targets)
+- **generated (owned):** Target `.github/workflows/ci.yml`, top-level `tools/quality/gate.sh`, `lefthook.yml`, `.editorconfig` (and the merge-into fragments above).
 
 ## Wiring probes
 
@@ -106,10 +106,10 @@ audit checks (see REFERENCE.md "Wiring probes"):
 
 1. Set `quality-kit.dart.json` `roots` (and `flutterEnv` if the repo has one). Root Flutter apps usually keep `["."]`.
 2. Install Betterleaks v1.9.0+ and osv-scanner (see languages/shared/MODULE.md) and lefthook on the host; run `lefthook install`.
-3. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh`.
+3. If `Makefile` already existed, add `gate` / `gate-fast` targets that call `./tools/quality/gate.sh` (composed top-level dispatcher).
 4. Merge `AGENTS.quality.md` into `AGENTS.md`.
 5. Resolve **drift** deliberately (see skill Drift playbook). A stock `analysis_options.yaml` often drifts from the kit template — prefer **merge** over blind replace, and follow "Adopting on legacy code" in `languages/dart/MODULE.md` for the strict modes.
-6. `./tools/quality/gate.sh full`.
+6. `./tools/quality/gate.sh full` (runs `./tools/quality/dart/gate.sh full`).
 
 Helper `tool/*.py` scripts do not require the python pack; adopt with `--packs dart` unless the repo has a real Python product surface.
 
@@ -125,4 +125,4 @@ Source: kit-root `pins.json` (see REFERENCE.md "Pins"). Literals below must matc
 | lefthook | latest stable release binary |
 | Flutter | 3.47.9 (Dart 3.13.7) — `flutter-version` in `.github/actions/setup-flutter/action.yml` |
 
-Bump Flutter deliberately: change `flutter` / `dartSdk` in `pins.json` and `flutter-version`, run `./tools/quality/gate.sh full` locally on the same version, commit. A Target whose `pubspec.yaml` `environment.sdk` needs a newer Dart must raise the pin in its copy of the action (`audit` then reports it customized on purpose).
+Bump Flutter deliberately: change `flutter` / `dartSdk` in `pins.json` and `flutter-version`, run `./tools/quality/dart/gate.sh full` locally on the same version, commit. A Target whose `pubspec.yaml` `environment.sdk` needs a newer Dart must raise the pin in its copy of the action (`audit` then reports it customized on purpose).

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # quality-kit dart gate.
-# Usage: ./tools/quality/gate.sh [fast|full]
+# Usage: ./tools/quality/dart/gate.sh [fast|full]
 #   fast — format + analyze + secrets + deps
 #   full — fast + test (default for CI / pre-push)
+# Local multi-Host Targets use the composed ./tools/quality/gate.sh instead.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,11 +20,11 @@ esac
 echo "# gate:${mode}"
 "${SCRIPT_DIR}/run-format.sh"
 "${SCRIPT_DIR}/run-analyze.sh"
-"${SCRIPT_DIR}/run-secret-scan.sh"
+"${SCRIPT_DIR}/../run-secret-scan.sh"
 "${SCRIPT_DIR}/run-deps.sh"
 
 if [[ "${mode}" == "full" ]]; then
-	"${SCRIPT_DIR}/run-vuln-scan.sh"
+	"${SCRIPT_DIR}/../run-vuln-scan.sh"
 	"${SCRIPT_DIR}/run-test.sh"
 fi
 

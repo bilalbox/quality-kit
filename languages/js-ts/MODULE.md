@@ -17,7 +17,7 @@ Detect: `package.json` at target root. Templates: `languages/js-ts/templates/`.
 
 Config, wrapper, install and CI step come from the Shared layer: see [languages/shared/MODULE.md](../shared/MODULE.md). Betterleaks is a Go binary on PATH, not an npm dep.
 
-- **Wiring**: `pnpm lint:secrets` = `bash tools/quality/run-secret-scan.sh`. `.husky/pre-commit` runs `pnpm lint:secrets -- --staged` before `lint-staged`; `pnpm gate:fast` runs it over the working tree.
+- **Wiring**: `pnpm lint:secrets` = `bash tools/quality/run-secret-scan.sh`. Alone, `.husky/pre-commit` runs `pnpm lint:secrets -- --staged` before `lint-staged`; `pnpm gate:fast` runs it over the working tree. Co-selected with dart/kotlin-android, composed lefthook owns hooks (shared secrets + `pnpm exec lint-staged`); husky files are not placed.
 - **Pack allowlist** (`.betterleaks.d/js-ts.toml`): `baselines/`, `.rev-dep.*.json`, `.dev.vars*`, `.wrangler/`, plus the `retell-key-prefix` rule for bare `key_[a-f0-9]{28}` literals (built-in Retell rule still needs a nearby `retell` keyword). Test sources are scanned.
 - **v2 later:** CLI/config differ (stdin patch hooks, explicit `--config`, ignore-file model). Revisit when v2.0.0 is stable; keep this pack on 1.x until then.
 
@@ -151,14 +151,15 @@ Source: kit-root `pins.json` (see REFERENCE.md "Pins").
 Everything not listed is **owned** (audit reports drift). Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
 - **seed:** `biome.complexity.json`, `rev-dep.config.json`, `baselines/complexity.json`, `baselines/biome-diagnostics.json`, `.gitignore`
-- **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `pnpm-workspace.yaml` → itself (`esbuild: true`); `.npmrc` → itself (`engine-strict=true`)
+- **merge-into:** composed `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `pnpm-workspace.yaml` → itself (`esbuild: true`); `.npmrc` → itself (`engine-strict=true`)
+- **generated (owned):** `.editorconfig` (and `AGENTS.quality.md`); with a lefthook Host also the composed top-level gate / lefthook / Makefile (see REFERENCE.md "Local gate + hooks composition")
 - **generated (owned):** Target `.github/workflows/ci.yml` from this Host's workflow template when js-ts is the only CI Host, or composed with other Hosts' jobs when several are selected.
 
 ## Wiring probes
 
 audit checks (see REFERENCE.md "Wiring probes"):
 
-- **git hooks installed (husky)**: `core.hooksPath` points under `.husky/` with executable `pre-commit` and `pre-push` (set by `pnpm install` through the `prepare: husky` script).
+- **git hooks installed (husky)**: when js-ts is alone, `core.hooksPath` points under `.husky/` with executable `pre-commit` and `pre-push` (set by `pnpm install` through the `prepare: husky` script). Co-selected with a lefthook Host, the probe expects lefthook instead.
 - **package.json has a test script**: `gate` ends with `pnpm test`. Any non-empty `test` script passes; the kit does not judge its content.
 
 ## Post-apply

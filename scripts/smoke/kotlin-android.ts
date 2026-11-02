@@ -333,11 +333,11 @@ include(":app")
 	appendFragment(target, "gradle.quality.properties", "gradle.properties");
 	mergeAgentsMd(target);
 	sh(target, ["lefthook", "install"]);
-	sh(target, ["./tools/quality/run-format.sh", "--fix"]);
-	sh(target, ["./tools/quality/screenshots.sh", "record"]);
+	sh(target, ["./tools/quality/kotlin-android/run-format.sh", "--fix"]);
+	sh(target, ["./tools/quality/kotlin-android/screenshots.sh", "record"]);
 	// Format again: screenshot record may generate sources under build/ that
 	// are gitignored; sources we commit stay formatted from the first pass.
-	sh(target, ["./tools/quality/run-format.sh", "--fix"]);
+	sh(target, ["./tools/quality/kotlin-android/run-format.sh", "--fix"]);
 }
 
 export const kotlinAndroidSmoke: SmokeRecipe = {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # dart format.
-# Usage: ./tools/quality/run-format.sh [--fix [files…] | --staged]
+# Usage: ./tools/quality/dart/run-format.sh [--fix [files…] | --staged]
 #   (none)   check every package root; exit 1 if anything would change
 #   --fix    format in place: the given repo-relative files, else every root
 #   --staged check the staged content of staged .dart files (pre-commit);
@@ -55,7 +55,7 @@ while IFS= read -r root; do
 	if [[ "${mode}" == "--fix" ]]; then
 		quality_in_root "${root}" dart format . || status=1
 	elif ! quality_in_root "${root}" dart format --output=none --set-exit-if-changed .; then
-		echo "format: run ./tools/quality/run-format.sh --fix" >&2
+		echo "format: run ./tools/quality/dart/run-format.sh --fix" >&2
 		status=1
 	fi
 done < <(quality_dart_roots)

@@ -37,7 +37,7 @@ Selected **Packs** (Host or Fragment — see `GLOSSARY.md`) each produce a **Con
 
 - Every Host Pack also contributes the **Shared layer** (`languages/shared/`, see its MODULE.md): shared Placements resolve their template from `languages/shared/templates/` and are placed once however many Hosts are selected, labelled `[shared]` by apply and audit. Shared paths never collide.
 - Overlapping target paths between different Packs are a **collision** unless both templates have identical content (after CRLF→LF normalization). Identical overlaps stay **first-wins** by Pack selection order (detect order, or `--packs` order); the file is placed once and labelled with the first Pack.
-- Collisions land in `DesiredState.collisions` (`{ targetRel, packs }`, Packs in selection order) across root and package-scoped placements. **apply** and **audit** refuse a selection with any collision: they exit `2` before writing or diffing anything and list every colliding path with the Packs involved. Host pairs still collide on non-CI paths (`.editorconfig`, `AGENTS.quality.md`, and for dart+kotlin also hooks/Makefile/gate scripts); CI no longer collides (see CI composition below). Host + Fragment (js-ts + python) does not collide. Remaining overlaps are cleared by multi-Host local-gate composition (#9).
+- Collisions land in `DesiredState.collisions` (`{ targetRel, packs }`, Packs in selection order) across root and package-scoped placements. **apply** and **audit** refuse a selection with any collision: they exit `2` before writing or diffing anything and list every colliding path with the Packs involved. After CI composition and local-gate composition, **no current Host pair collides**; the guard is a safety net for future Packs. Host + Fragment (js-ts + python) does not collide.
 - Fragment without Host (e.g. `--packs python`): file placements still apply; `package.json` expectations only when the js-ts Host is selected. **audit** prints a warning when `python` is selected without `js-ts`.
 - Kit code: `scripts/desired-state.ts` (`desiredState`, `diffAgainst`); Pack adapters in `scripts/packs/`.
 
@@ -60,7 +60,7 @@ Each Pack adapter declares a kind per template path (`scripts/packs/placements.t
 | seed | present, **missing**, **invalid** | copy if missing |
 | merge-into | merged, **unmerged** | copy the fragment if missing, unless its destination is already merged |
 
-- **Generated Placements:** an owned Placement may carry a `content` string instead of reading a template file (today: the composed `.github/workflows/ci.yml`). apply writes that string; audit and the Lock file hash it the same way as template bytes. `templateRel` remains a label (the Host composition input path).
+- **Generated Placements:** an owned Placement may carry a `content` string instead of reading a template file (today: composed CI workflow, top-level gate, lefthook, `.editorconfig`, `AGENTS.quality.md`, `Makefile`). apply writes that string; audit and the Lock file hash it the same way as template bytes. `templateRel` remains a label (the Host composition input path).
 - **Seeds parse** only when they are JSON (`*.json`). YAML/TOML/Python seeds are checked for presence only: the kit has no parser dependencies.
 - **Merge-into markers**: a destination counts as merged when, for every marker, some line (leading whitespace ignored) starts with it. A missing destination is unmerged. Markers are headings or keys, never values, so Targets can tune merged values (e.g. `qualityKit.minLineCoverage=80`). A test asserts each fragment contains its own markers.
 - **The fragment file itself is not audited.** Delete it after merging; apply will not copy it back while the destination stays merged.
@@ -126,15 +126,28 @@ All three non-current states are gaps: an owned file must match the template, an
 - **One Host:** the generated workflow equals that Host's template (job name `ci`). **Several Hosts:** one workflow whose jobs are those Hosts' `ci` bodies renamed to the Pack id (selection order); each job keeps its own checkout / setup-betterleaks / setup / gate steps so Host-specific edits merge cleanly.
 - The composed Placement is labelled with the first CI Host in selection order. Lock / audit / upgrade treat it like any other owned file (hash of generated content).
 - Decision: multi-Host CI is **one workflow, one job per Host** (not one shared job), so concurrent Host CI edits stay isolated and failures are attributed per Pack.
+- CI quality-gate actions call the **namespaced** Host gate (`./tools/quality/<pack>/gate.sh full`), not the composed top-level gate (so a multi-Host CI job does not run every Host).
+
+### Local gate + hooks composition
+
+Kit code: `scripts/packs/local.ts` (`composeGateSh`, `composeLefthook`, `composeEditorconfig`, `composeAgentsQuality`, `composeMakefile`, `composedLocalPlacements`).
+
+- **Namespaced scripts:** dart / kotlin-android Host helpers live under `tools/quality/<pack>/`. Shared-layer scripts stay at `tools/quality/` (`run-secret-scan.sh`, `install-betterleaks.sh`).
+- **Top-level `tools/quality/gate.sh`:** generated whenever a bash-gate Host (dart, kotlin-android) is selected. Thin dispatcher: runs each selected Host's gate in selection order (`pnpm gate:fast`/`pnpm gate` for js-ts; `./tools/quality/<pack>/gate.sh` otherwise). Keep it thin so #14/#15/#17/#20 can extend Host gates without fighting the composer.
+- **Single Host:** composed `lefthook.yml` / `.editorconfig` / `Makefile` / `AGENTS.quality.md` equal that Host's template. Several Hosts: one of each, generated.
+- **Hooks:** lefthook Hosts (dart, kotlin-android) always get a composed `lefthook.yml` (one shared secrets command, per-Host `format-<pack>` commands, pre-push → top-level `gate.sh full`). **Decision:** when js-ts is co-selected with a lefthook Host, lefthook owns hooks (adds `lint-staged`); husky files are not placed and the js-ts wiring probe expects lefthook. js-ts alone keeps husky.
+- **`.editorconfig`:** first Host wins on duplicate section headers (including `[*]`); later Hosts contribute only new sections.
+- **`AGENTS.quality.md`:** one `## Definition of Done (Mandatory Gate)` heading; multi-Host adds a short top-level-gate intro then a `### <pack>` subsection per Host body.
+- **`Makefile`:** `gate` / `gate-fast` call the top-level gate; multi-Host `format` runs each Host's format script; other Host-only targets are kept under their original names (first Host wins on collisions via the Makefile body scan).
 
 Principles:
 
 - pre-commit: fast staged checks (Betterleaks `git --staged` + format). A hook never commits unstaged hunks: js-ts relies on lint-staged's stash; dart / kotlin-android check the staged blobs only and fail with the fix command (see their MODULE.md "Pre-commit format")
 - pre-push / CI: full gate
 - **every host:** secrets via the Shared layer's `tools/quality/run-secret-scan.sh`; dependency vulns via `tools/quality/run-vuln-scan.sh` on the **full** gate only; CI checks out with `fetch-depth: 0`, runs `./.github/actions/check-baseline-growth` on pull requests (skip with label `allow-baseline-growth`; see Baseline growth above), and installs Betterleaks and osv-scanner with `./.github/actions/setup-betterleaks` and `./.github/actions/setup-osv-scanner` (checksum-pinned) before the Host's own setup action; the secret-scan wrapper scans `origin/$GITHUB_BASE_REF..HEAD` in CI. Ignore policy and offline/severity decisions: `languages/shared/MODULE.md`
-- **js-ts host:** husky + lint-staged; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
-- **dart host:** lefthook; `./tools/quality/gate.sh`; Flutter via `subosito/flutter-action` pinned to an exact `flutter-version` (dart MODULE.md Pins); dependency_validator installed in `setup-flutter`
-- **kotlin-android host:** lefthook; `./tools/quality/gate.sh` over Gradle `qualityFast` / `qualityFull` (from the copied-in `build-logic/quality` included build); JDK 21 + SDK licenses + `setup-gradle` + Robolectric jar cache in `setup-android`; screenshot diffs uploaded as an artifact on failure
+- **js-ts host:** husky + lint-staged when alone; pin Node via `.nvmrc` / `engines`; `engine-strict=true`; `pnpm-workspace.yaml` `allowBuilds.esbuild: true` required for rev-dep's esbuild on pnpm 12
+- **dart host:** lefthook; `./tools/quality/gate.sh` → `./tools/quality/dart/gate.sh`; Flutter via `subosito/flutter-action` pinned to an exact `flutter-version` (dart MODULE.md Pins); dependency_validator installed in `setup-flutter`
+- **kotlin-android host:** lefthook; `./tools/quality/gate.sh` → `./tools/quality/kotlin-android/gate.sh` over Gradle `qualityFast` / `qualityFull` (from the copied-in `build-logic/quality` included build); JDK 21 + SDK licenses + `setup-gradle` + Robolectric jar cache in `setup-android`; screenshot diffs uploaded as an artifact on failure
 
 ## Pins
 

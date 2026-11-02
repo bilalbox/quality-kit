@@ -30,60 +30,20 @@ function runCli(
 	return { status: res.status, output: `${res.stdout}${res.stderr}` };
 }
 
-/** Non-CI paths that still collide across Hosts (#9 will compose the rest). */
-const HOST_SHARED_PATHS = [
-	".editorconfig",
-	"AGENTS.quality.md",
-];
+/** After #9, no Host pair collides; the guard is only a safety net. */
+const HOST_SELECTIONS = [
+	["js-ts", "dart"],
+	["js-ts", "kotlin-android"],
+	["dart", "kotlin-android"],
+	["kotlin-android", "js-ts", "dart"],
+] as const;
 
-test("collisions: js-ts + dart lists every differing shared path", () => {
-	const state = desiredState(tempTarget(), ["js-ts", "dart"]);
-	assert.deepEqual(
-		state.collisions.map((c) => c.targetRel).sort(),
-		HOST_SHARED_PATHS,
-	);
-	for (const c of state.collisions) {
-		assert.deepEqual(c.packs, ["js-ts", "dart"]);
-	}
-});
-
-test("collisions: js-ts + kotlin-android lists every differing shared path", () => {
-	const state = desiredState(tempTarget(), ["js-ts", "kotlin-android"]);
-	assert.deepEqual(
-		state.collisions.map((c) => c.targetRel).sort(),
-		HOST_SHARED_PATHS,
-	);
-	for (const c of state.collisions) {
-		assert.deepEqual(c.packs, ["js-ts", "kotlin-android"]);
-	}
-});
-
-test("collisions: dart + kotlin-android also collide on gate scripts, hooks, Makefile", () => {
-	const state = desiredState(tempTarget(), ["dart", "kotlin-android"]);
-	assert.deepEqual(state.collisions.map((c) => c.targetRel).sort(), [
-		...HOST_SHARED_PATHS,
-		"Makefile",
-		"lefthook.yml",
-		"tools/quality/gate.sh",
-		"tools/quality/lib.sh",
-		"tools/quality/run-format.sh",
-	]);
-	for (const c of state.collisions) {
-		assert.deepEqual(c.packs, ["dart", "kotlin-android"]);
-	}
-});
-
-test("collisions: all three Hosts list every Pack placing a path", () => {
-	const state = desiredState(tempTarget(), ["kotlin-android", "js-ts", "dart"]);
-	assert.deepEqual(
-		state.collisions.find((c) => c.targetRel === ".editorconfig")?.packs,
-		["kotlin-android", "js-ts", "dart"],
-	);
-	assert.deepEqual(
-		state.collisions.find((c) => c.targetRel === "lefthook.yml")?.packs,
-		["kotlin-android", "dart"],
-	);
-});
+for (const packs of HOST_SELECTIONS) {
+	test(`collisions: none for ${packs.join(" + ")}`, () => {
+		const state = desiredState(tempTarget(), [...packs]);
+		assert.deepEqual(state.collisions, []);
+	});
+}
 
 test("collisions: identical-content overlap is placed once, not a collision", () => {
 	const state = desiredState(tempTarget(), ["dart", "js-ts"]);
@@ -112,33 +72,23 @@ test("collisions: none for a single Host or Host + Fragment", () => {
 	}
 });
 
-function assertListsCollisions(output: string, packs: string): void {
-	for (const path of HOST_SHARED_PATHS) {
-		assert.ok(
-			output.includes(`  ${path}  (${packs.replace(",", ", ")})`),
-			`${path} not listed in:\n${output}`,
-		);
-	}
-}
-
 for (const packs of [
 	"js-ts,dart",
 	"dart,kotlin-android",
 	"js-ts,kotlin-android",
 ]) {
-	test(`apply: --packs ${packs} refuses, lists collisions, writes nothing`, () => {
+	test(`apply: --packs ${packs} succeeds (no collisions)`, () => {
 		const target = tempTarget();
 		writeFileSync(join(target, "package.json"), "{}\n");
 		const { status, output } = runCli("apply", target, packs);
-		assert.equal(status, 2);
-		assertListsCollisions(output, packs);
-		assert.deepEqual(readdirSync(target), ["package.json"]);
+		assert.equal(status, 0, output);
+		assert.doesNotMatch(output, /Refusing/);
 	});
 
-	test(`audit: --packs ${packs} refuses and lists collisions`, () => {
+	test(`audit: --packs ${packs} does not refuse for collisions`, () => {
 		const { status, output } = runCli("audit", tempTarget(), packs);
-		assert.equal(status, 2);
-		assertListsCollisions(output, packs);
+		assert.notEqual(status, 2, output);
+		assert.doesNotMatch(output, /Refusing/);
 	});
 }
 
