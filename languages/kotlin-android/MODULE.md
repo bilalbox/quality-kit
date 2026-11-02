@@ -64,10 +64,12 @@ Merge `gradle.quality.properties` into the root `gradle.properties`:
 | Property | Default | Meaning |
 | --- | --- | --- |
 | `org.gradle.configuration-cache` | `true` | All gate plugins are compatible; a warm `gate.sh fast` is ~5 s |
+| `kotlin.compiler.execution.strategy` | `in-process` | Compiles Kotlin inside the Gradle daemon (`-Xmx3g`) instead of spawning a second JVM (also set in `build-logic/quality/gradle.properties`) |
 | `qualityKit.variant` | `debug` | Variant for compile / lint / test / Roborazzi / Kover tasks |
 | `qualityKit.minLineCoverage` | `0` | Legacy merge-into marker only; enforcement is `baselines/coverage.json` (`floor` default **80**) |
 | `qualityKit.allWarningsAsErrors` | `true` | Set `false` temporarily on legacy adopts |
 | `qualityKit.addTestDependencies` | `true` | Adds Roborazzi / Robolectric / preview-scanner / `ui-test-junit4` (via the module's Compose BOM) |
+| `qualityKit.maxTestForks` | `4` (`2` in template) | Cap on parallel unit-test JVMs (each gets a 2 GB heap); `gradle.quality.properties` sets `2` to fit 16 GB RAM |
 
 Baselines (legacy only; never for new code): `<module>/detekt-baseline.xml` (`./gradlew detektBaseline`) and `<module>/lint-baseline.xml` (`./gradlew updateLintBaseline`) are picked up automatically when present.
 
@@ -85,7 +87,7 @@ Baselines (legacy only; never for new code): `<module>/detekt-baseline.xml` (`./
 - Test JVMs get `java.awt.headless=true` (Roborazzi draws diff labels with AWT) and `--add-opens java.base/jdk.internal.access` (Robolectric SDK 36 on JDK 17+).
 - `LD_LIBRARY_PATH` entries under `…/emulator/` are stripped for test JVMs: the emulator's bundled Qt `libfreetype` breaks AWT font loading (`X11FontManager` / `FT_Get_Transform`).
 - Robolectric downloads `android-all-instrumented` jars (~200 MB per SDK) into `~/.m2/repository/org/robolectric` on first run. Sandboxes without network need that directory pre-seeded; CI caches it.
-- Test JVMs: 2 GB heap, forks = min(4, CPUs / 2).
+- Test JVMs: 2 GB heap, forks = min(`qualityKit.maxTestForks`, CPUs / 2) (plugin default 4; `gradle.quality.properties` sets 2).
 
 ## Known upstream gaps
 
@@ -103,7 +105,7 @@ Baselines (legacy only; never for new code): `<module>/detekt-baseline.xml` (`./
 
 Everything not listed is **owned** (audit reports drift), including `config/detekt/detekt.yml` and `config/lint/lint.xml`. Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
-- **merge-into:** composed `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `gradle.quality.properties` → `gradle.properties` (all four `qualityKit.*` keys; values may be tuned); composed `Makefile` → itself (`gate-fast:` and `gate:` targets)
+- **merge-into:** composed `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `gradle.quality.properties` → `gradle.properties` (`kotlin.compiler.execution.strategy` and all five `qualityKit.*` keys; values may be tuned); composed `Makefile` → itself (`gate-fast:` and `gate:` targets)
 - **generated (owned):** Target `.github/workflows/ci.yml`, top-level `tools/quality/gate.sh`, `lefthook.yml`, `.editorconfig` (and the merge-into fragments above).
 
 ## Wiring probes

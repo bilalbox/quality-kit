@@ -103,6 +103,22 @@ test("desiredState: kotlin-android places build-logic and executable scripts", (
 			(p) => p.targetRel === "build-logic/quality/build.gradle.kts",
 		),
 	);
+	assert.equal(
+		state.rootPlacements.find(
+			(p) => p.targetRel === "build-logic/quality/gradle.properties",
+		)?.kind,
+		"owned",
+	);
+	const gradleProps = state.rootPlacements.find(
+		(p) => p.targetRel === "gradle.quality.properties",
+	);
+	assert.equal(gradleProps?.kind, "merge-into");
+	assert.ok(
+		gradleProps.mergeInto.markers.includes(
+			"kotlin.compiler.execution.strategy",
+		),
+	);
+	assert.ok(gradleProps.mergeInto.markers.includes("qualityKit.maxTestForks"));
 	assert.ok(
 		state.rootPlacements.find((p) => p.targetRel === "tools/quality/gate.sh")
 			?.executable,

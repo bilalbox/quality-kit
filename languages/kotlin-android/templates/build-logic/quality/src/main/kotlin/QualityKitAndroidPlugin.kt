@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
  * - `qualityKit.minLineCoverage` (legacy; coverage ratchet uses baselines/coverage.json)
  * - `qualityKit.allWarningsAsErrors` (default `true`)
  * - `qualityKit.addTestDependencies` (default `true`): Roborazzi / Robolectric / preview scanner
+ * - `qualityKit.maxTestForks` (default `4`): cap on parallel unit-test JVMs (each gets a 2g heap)
  */
 class QualityKitAndroidPlugin : Plugin<Project> {
     override fun apply(project: Project) {
@@ -43,7 +44,7 @@ class QualityKitAndroidPlugin : Plugin<Project> {
     }
 }
 
-private const val MAX_TEST_FORKS = 4
+private const val DEFAULT_MAX_TEST_FORKS = 4
 
 private fun Project.flag(name: String, default: Boolean): Boolean =
     providers.gradleProperty(name).map { it.toBoolean() }.getOrElse(default)
@@ -153,7 +154,13 @@ private fun Project.configureKover(variant: String) {
 }
 
 private fun Project.configureTests() {
-    val forks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, MAX_TEST_FORKS)
+    val maxForks =
+        providers
+            .gradleProperty("qualityKit.maxTestForks")
+            .map(String::toInt)
+            .getOrElse(DEFAULT_MAX_TEST_FORKS)
+    val forks =
+        (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, maxForks.coerceAtLeast(1))
     // The emulator's bundled Qt libfreetype shadows the system one and breaks AWT font loading.
     val ldLibraryPath =
         providers.environmentVariable("LD_LIBRARY_PATH").orNull?.split(':')?.filterNot {
@@ -192,7 +199,7 @@ private fun Project.configureRoborazzi() {
                 enable.set(true)
                 packages.set(provider { listOfNotNull(android.namespace) })
                 includePrivatePreviews.set(true)
-                generatedTestClassCount.set(MAX_TEST_FORKS)
+                generatedTestClassCount.set(DEFAULT_MAX_TEST_FORKS)
                 robolectricConfig.set(
                     mapOf(
                         "sdk" to "[${QualityKitVersions.ROBOLECTRIC_SDK}]",
