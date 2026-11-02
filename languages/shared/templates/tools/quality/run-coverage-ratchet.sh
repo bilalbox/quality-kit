@@ -19,6 +19,9 @@ update=0
 findings_path=""
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+	--)
+		shift
+		;;
 	--update)
 		update=1
 		shift
