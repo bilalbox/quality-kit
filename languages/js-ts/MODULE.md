@@ -8,21 +8,16 @@ Detect: `package.json` at target root. Templates: `languages/js-ts/templates/`.
 | --- | --- | --- |
 | Format + lint | **Biome** | Defaults only (tabs, double quotes). One config across repos. Gate fails on any diagnostic; `pnpm fix` applies safe fixes (see Biome diagnostics). |
 | Types | **`tsc -b`** | Extends `tsconfig.base.json` (`strict`, `noUncheckedIndexedAccess`, …). |
-| Secrets / leaks | **Betterleaks v1** | Pre-commit staged guard, `.betterleaks.toml`, `.betterleaksignore`. Pin 1.x until v2 is stable. |
+| Secrets / leaks | **Betterleaks v1** | From the Shared layer: pre-commit staged guard, `gate:fast`, CI. Pin 1.x until v2 is stable. |
 | Graph / dead code / clones | **rev-dep** | Replaces knip, madge, dependency-cruiser, jscpd. Built-in baseline. |
 | Cognitive complexity | **Biome overlay + custom ratchet** | Only remaining custom ratchet; shrink-only + `biome-ignore` ban. |
 
 ## Secrets (Betterleaks)
 
-- **Install (host):** Betterleaks is a Go binary on PATH (not an npm dep). Prefer v1.9.0+.
-  - macOS: `brew install --cask betterleaks/tap/betterleaks@1` → `betterleaks-v1`
-  - Linux: release tarball from https://github.com/betterleaks/betterleaks/releases/tag/v1.9.0
-  - CI: `setup-pnpm` composite action installs the pinned linux binary
-- **Pre-commit**: `.husky/pre-commit` runs `pnpm lint:secrets -- --staged` before `lint-staged` (`betterleaks git --staged`).
-- **Fast gate**: `pnpm gate:fast` → `pnpm lint:secrets` → `betterleaks dir .` (working tree + untracked).
-- **CI**: `CI=true` → `betterleaks git --log-opts=origin/main..HEAD` (fallback: full `git` history). Offline detection only (no `--validation`).
-- **Config**: `.betterleaks.toml` extends defaults (`useDefault = true`), allowlists test/fixture paths, and adds `retell-key-prefix` for bare `key_[a-f0-9]{28}` literals (built-in Retell rule still needs a nearby `retell` keyword).
-- **Baselines**: `.betterleaksignore` holds fingerprints of acknowledged legacy leaks or fixtures.
+Config, wrapper, install and CI step come from the Shared layer: see [languages/shared/MODULE.md](../shared/MODULE.md). Betterleaks is a Go binary on PATH, not an npm dep.
+
+- **Wiring**: `pnpm lint:secrets` = `bash tools/quality/run-secret-scan.sh`. `.husky/pre-commit` runs `pnpm lint:secrets -- --staged` before `lint-staged`; `pnpm gate:fast` runs it over the working tree.
+- **Pack allowlist** (`.betterleaks.d/js-ts.toml`): `*.test.(ts|js|py)`, `baselines/`, `.rev-dep.*.json`, `.dev.vars*`, `.wrangler/`, plus the `retell-key-prefix` rule for bare `key_[a-f0-9]{28}` literals (built-in Retell rule still needs a nearby `retell` keyword).
 - **v2 later:** CLI/config differ (stdin patch hooks, explicit `--config`, ignore-file model). Revisit when v2.0.0 is stable; keep this pack on 1.x until then.
 
 ## Biome diagnostics
@@ -83,9 +78,9 @@ madge + dependency-cruiser need patches under TS7 (`ts.sys` removed). **rev-dep 
 
 ## Placement kinds
 
-Everything not listed is **owned** (audit reports drift).
+Everything not listed is **owned** (audit reports drift). Shared-layer files: see [languages/shared/MODULE.md](../shared/MODULE.md).
 
-- **seed:** `biome.complexity.json`, `rev-dep.config.json`, `baselines/complexity.json`, `baselines/biome-diagnostics.json`, `.betterleaksignore`, `.gitignore`
+- **seed:** `biome.complexity.json`, `rev-dep.config.json`, `baselines/complexity.json`, `baselines/biome-diagnostics.json`, `.gitignore`
 - **merge-into:** `AGENTS.quality.md` → `AGENTS.md` (`## Definition of Done (Mandatory Gate)`); `pnpm-workspace.yaml` → itself (`esbuild: true`); `.npmrc` → itself (`engine-strict=true`)
 
 ## Post-apply
@@ -94,7 +89,7 @@ Everything not listed is **owned** (audit reports drift).
 
 1. Adjust `rev-dep.config.json` entry points / `moduleBoundaries`.
 2. If `pnpm-workspace.yaml` already existed, merge `allowBuilds.esbuild`.
-3. Install Betterleaks v1 on the host (see Secrets).
+3. Install Betterleaks v1 on the host (see languages/shared/MODULE.md).
 4. `pnpm install`.
 5. Seed complexity: `pnpm lint:complexity -- --update`.
 6. Seed rev-dep: `pnpm lint:graph -- --update-snapshot` (creates `.rev-dep.*.json`; do not hand-write).

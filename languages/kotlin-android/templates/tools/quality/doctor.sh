@@ -70,7 +70,7 @@ fi
 if command -v betterleaks >/dev/null 2>&1 || command -v betterleaks-v1 >/dev/null 2>&1; then
 	ok "betterleaks"
 else
-	bad "betterleaks 1.x not on PATH (see languages/kotlin-android/MODULE.md)"
+	bad "betterleaks 1.x not on PATH (Linux: ./tools/quality/install-betterleaks.sh; see quality-kit languages/shared/MODULE.md)"
 fi
 if command -v lefthook >/dev/null 2>&1; then ok "lefthook"; else warn "lefthook not on PATH (hooks inactive)"; fi
 if ktfmt_bin="$(quality_ktfmt_bin 2>/dev/null)"; then ok "ktfmt ${KTFMT_VERSION} (${ktfmt_bin})"; else bad "ktfmt download failed"; fi
